@@ -170,14 +170,6 @@ def load_main_config(config_path: str):
             "replyText": "any"
         },
 
-        "OrderReminders": {
-            "enabled": ["0", "1"],
-            "timeout": "any",
-            "template": "any",
-            "repeatCount": "any",
-            "interval": "any"
-        },
-
         "ReviewReply": {
             "star1Reply": ["0", "1"],
             "star2Reply": ["0", "1"],
@@ -272,6 +264,18 @@ def load_main_config(config_path: str):
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
             # END OF UPDATE
+
+        # UPDATE: Add missing sections
+        if "OrderReminders" not in config.sections():
+            config.add_section("OrderReminders")
+            config.set("OrderReminders", "enabled", "0")
+            config.set("OrderReminders", "timeout", "60")
+            config.set("OrderReminders", "template", "Напоминание: Заказ #$order_id ожидает подтверждения. $order_link")
+            config.set("OrderReminders", "repeatCount", "3")
+            config.set("OrderReminders", "interval", "30")
+            save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
+
+        # END OF UPDATE
 
             try:
                 if values[section_name][param_name] == "any":

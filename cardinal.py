@@ -22,6 +22,7 @@ import random
 import time
 import sys
 import os
+import json
 from pip._internal.cli.main import main
 import FunPayAPI
 import handlers
@@ -161,7 +162,8 @@ class Cardinal(object):
         # пороговое значение для определения новых чатов (для приветствия)
 
         # Заказы, ожидающие подтверждения для напоминаний
-        self.pending_orders = {}  # {order_id: {"created_time": timestamp, "reminder_count": int, "last_reminder": timestamp}}
+        self.pending_orders_file = "storage/pending_orders.json"
+        self.pending_orders = self.load_pending_orders()
 
         # Хэндлеры
         self.pre_init_handlers = []
@@ -210,6 +212,31 @@ class Cardinal(object):
         self.plugins: dict[str, PluginData] = {}
         self.disabled_plugins = cardinal_tools.load_disabled_plugins()
         self.builtin_tg_commands = {}  # Команды от встроенных модулей {module_name: [(cmd, desc, is_admin)]}
+
+    def load_pending_orders(self) -> dict:
+        """
+        Загружает данные о заказах, ожидающих напоминаний, из JSON файла.
+        """
+        try:
+            if os.path.exists(self.pending_orders_file):
+                with open(self.pending_orders_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    # Преобразуем ключи обратно в строки (JSON требует строковых ключей)
+                    return {str(k): v for k, v in data.items()}
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить данные о заказах из {self.pending_orders_file}: {e}")
+        return {}
+
+    def save_pending_orders(self) -> None:
+        """
+        Сохраняет данные о заказах, ожидающих напоминаний, в JSON файл.
+        """
+        try:
+            os.makedirs(os.path.dirname(self.pending_orders_file), exist_ok=True)
+            with open(self.pending_orders_file, 'w', encoding='utf-8') as f:
+                json.dump(self.pending_orders, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить данные о заказах в {self.pending_orders_file}: {e}")
 
     def __init_account(self) -> None:
         """
@@ -509,6 +536,7 @@ class Cardinal(object):
                                 self.send_order_reminder(order)
                                 order_data["reminder_count"] += 1
                                 order_data["last_reminder"] = current_time
+                                self.save_pending_orders()
                             else:
                                 # Заказ уже подтвержден или отменен
                                 orders_to_remove.append(order_id)

@@ -814,6 +814,7 @@ def add_order_to_reminders_handler(c: Cardinal, e: NewOrderEvent, *args):
             "reminder_count": 0,
             "last_reminder": 0
         }
+        c.save_pending_orders()
         logger.info(f"Заказ {order_id} добавлен в список для напоминаний о подтверждении")
 
 
