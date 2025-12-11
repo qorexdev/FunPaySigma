@@ -113,7 +113,19 @@ class Runner:
 
         response = self.account.method("post", "runner/", headers, payload, raise_not_200=True)
         json_response = response.json()
-        logger.debug(f"Получены данные о событиях: {json_response}")
+        if logger.isEnabledFor(logging.DEBUG):
+            log_data = json_response.copy()
+            if "objects" in log_data:
+                log_data["objects"] = []
+                for obj in json_response.get("objects", []):
+                    if isinstance(obj.get("data"), dict) and "html" in obj["data"]:
+                        new_obj = obj.copy()
+                        new_obj["data"] = obj["data"].copy()
+                        new_obj["data"]["html"] = "<HTML_HIDDEN>"
+                        log_data["objects"].append(new_obj)
+                    else:
+                        log_data["objects"].append(obj)
+            logger.debug(f"Получены данные о событиях: {log_data}")
         return json_response
 
     def parse_updates(self, updates: dict) -> list[InitialChatEvent | ChatsListChangedEvent |
