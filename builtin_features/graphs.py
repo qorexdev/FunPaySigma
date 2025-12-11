@@ -1,6 +1,9 @@
 """
 Построение графиков статистики продаж.
 Команда /graphs для генерации графиков.
+
+ОПТИМИЗАЦИЯ RAM: matplotlib, pandas, numpy, mplcyberpunk импортируются ЛЕНИВО
+(только при первом вызове /graphs), что экономит ~100-150 MB RAM при старте бота.
 """
 from __future__ import annotations
 import json
@@ -10,27 +13,50 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from threading import Thread
 
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
-    
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
-    
-try:
-    import mplcyberpunk
-except ImportError:
-    mplcyberpunk = None
+# ОПТИМИЗАЦИЯ: Тяжёлые библиотеки НЕ импортируются при загрузке модуля!
+# Они будут загружены только при первом использовании /graphs
+plt = None
+pd = None
+mplcyberpunk = None
+np = None
+_libs_loaded = False
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+def _lazy_load_libs():
+    """Ленивая загрузка тяжёлых библиотек (matplotlib, pandas, numpy, mplcyberpunk)."""
+    global plt, pd, mplcyberpunk, np, _libs_loaded
+    if _libs_loaded:
+        return
+    
+    logger.info(f"{LOGGER_PREFIX} Загрузка графических библиотек (это может занять несколько секунд)...")
+    
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot
+        plt = matplotlib.pyplot
+    except ImportError:
+        pass
+    
+    try:
+        import pandas
+        pd = pandas
+    except ImportError:
+        pass
+    
+    try:
+        import mplcyberpunk as _mplcyberpunk
+        mplcyberpunk = _mplcyberpunk
+    except ImportError:
+        pass
+    
+    try:
+        import numpy
+        np = numpy
+    except ImportError:
+        pass
+    
+    _libs_loaded = True
+    logger.info(f"{LOGGER_PREFIX} Графические библиотеки загружены.")
 
 from telebot.types import InputMediaPhoto
 from tg_bot import CBT
@@ -495,6 +521,9 @@ def init(cardinal: Cardinal):
 
     def get_graphs(m: telebot.types.Message):
         global in_progress
+        
+        # ОПТИМИЗАЦИЯ RAM: Загружаем тяжёлые библиотеки только при первом вызове /graphs
+        _lazy_load_libs()
         
         # Проверка зависимостей
         missing = check_dependencies()
