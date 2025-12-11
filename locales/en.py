@@ -292,21 +292,64 @@ logfile_sending = "Sending log file (it may take some time)..."
 logfile_error = "❌ Failed to send log file."
 logfile_deleted = "🗑️ Deleted {} logfile(s)."
 
-update_no_tags = "❌ Failed to get the version list. Try again later."
-update_lasted = "✅ You have the latest version FPS {}"
-update_get_error = "❌ Failed to get new version information. Try again later."
-update_available = "<b><u>New version available!</u></b>\n\n\n{}\n\n{}"
-update_update = "To update, enter the command /update"
-update_backup = "✅ Backup of configs, storage and plugins <code>backup.zip</code>.\n\n" \
-                "⚠️ DO NOT SEND this archive to ANYONE. It contains ABSOLUTELY ALL content and settings of the bot (including golden_key and product files)."
-update_backup_error = "❌ Failed to back up configs, storage and plugins."
-update_backup_not_found = "❌ Backup not found."
-update_downloaded = "✅ The update {} is downloaded (skipped {} items). Installing..."
-update_download_error = "❌ An error occurred while downloading the update."
-update_done = "✅ The update is installed! Restart the FPS with the /restart command."
-update_done_exe = "✅ The update is installed! New <code>FPS.exe</code> is in <code>update</code> folder. " \
-                  "Turn off <i>FPS</i>, replace old <code>FPS.exe</code> with new one and run <code>Start.bat</code>. "
-update_install_error = "❌ An error occurred while installing the update."
+update_no_tags = "❌ <b>Update Check Failed</b>\n\nFailed to retrieve release list from GitHub. Try again later."
+update_lasted = "✅ <b>You have the latest version!</b>\n\n📌 <b>Version:</b> <code>{}</code>"
+update_get_error = "❌ <b>Data Error</b>\n\nFailed to get new version information. Try again later."
+
+update_available = """<b>✨ NEW UPDATE AVAILABLE ✨</b>
+
+🚀 <b>Version:</b> <code>{}</code>
+
+📋 <b>Changelog:</b>
+{}"""
+
+update_update = """<b>ℹ️ INSTALL UPDATE</b>
+
+To install automatically enter command:
+<code>/update</code>
+
+<i>⚠️ It is recommended to create a backup before updating.</i>"""
+
+update_backup = """<b>📦 BACKUP CREATED</b>
+
+Archive: <code>backup.zip</code>
+
+⚠️ <b>IMPORTANT:</b>
+This archive contains <b>all your data</b> (configs, golden_key, products).
+Do not share this file with anyone!"""
+
+update_backup_error = "❌ <b>Backup Error</b>\n\nFailed to create backup. Update aborted."
+update_backup_not_found = "❌ <b>Backup not found</b>\n\nBackup file is missing."
+
+update_downloaded = """<b>🔽 DOWNLOADING UPDATE</b>
+
+📦 <b>Version:</b> <code>{}</code>
+📊 <b>Skipped releases:</b> <code>{}</code>
+
+<i>⏳ Download complete. Installing...</i>"""
+
+update_download_error = "❌ <b>Download Error</b>\n\nFailed to download update files."
+
+update_done = """<b>✅ UPDATE COMPLETED SUCCESSFULLY!</b>
+
+🎉 <b>FunPay Sigma updated!</b>
+
+🔄 <i>Please restart the bot with command:</i>
+👉 <code>/restart</code>"""
+
+update_done_exe = """<b>✅ UPDATE COMPLETED!</b>
+
+📥 <b>New file:</b> <code>update/FPS.exe</code>
+
+<b>⚙️ Installation details:</b>
+1. Turn off the bot with <code>/power_off</code>
+2. Move <code>FPS.exe</code> from <code>update</code> folder to root folder.
+3. Run <code>Start.bat</code>.
+
+<i>⚠️ Old file will be replaced.</i>"""
+
+update_install_error = "❌ <b>Installation Error</b>\n\nError occurred during extraction or copying."
+update_ask = "\n\n<b>❓ Do you want to install this update automatically?</b>"
 
 send_backup = "Send me the backup.\n\n<b>⚠️ WARNING! Uploading backups from untrusted sources may lead to serious consequences.</b>"
 
