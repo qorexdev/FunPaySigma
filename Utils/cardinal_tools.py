@@ -5,6 +5,8 @@ import bcrypt
 import requests
 from cryptography.fernet import Fernet
 import base64
+import socket
+import socks
 
 from locales.localizer import Localizer
 
@@ -12,6 +14,10 @@ if TYPE_CHECKING:
     from cardinal import Cardinal
 
 import FunPayAPI.types
+
+# Сохраняем оригинальный сокет
+if not hasattr(socket, '_original_socket'):
+    socket._original_socket = socket.socket
 
 from datetime import datetime
 import Utils.exceptions
@@ -89,14 +95,49 @@ def check_proxy(proxy: dict) -> bool:
     :return: True, если прокси работает, иначе - False.
     """
     logger.info(_("crd_checking_proxy"))
+    original_socket = socket.socket
+    
     try:
-        response = requests.get("https://api.ipify.org/", proxies=proxy, timeout=10)
-    except:
+        # Проверяем, является ли прокси SOCKS5
+        if any("socks5" in proxy.get(key, "") for key in proxy.keys()):
+            # Для SOCKS5 прокси используем специальную проверку
+            proxy_url = proxy.get("http") or proxy.get("https")
+            if proxy_url and "socks5" in proxy_url:
+                # Извлекаем данные из URL прокси
+                from urllib.parse import urlparse
+                parsed = urlparse(proxy_url)
+                if parsed.hostname and parsed.port:
+                    # Создаем SOCKS-прокси-сокет
+                    socks.set_default_proxy(socks.SOCKS5, parsed.hostname, parsed.port,
+                                            username=parsed.username, password=parsed.password)
+                    socket.socket = socks.socksocket
+                    
+                    # Проверяем подключение
+                    response = requests.get("https://api.ipify.org/", timeout=10)
+                    
+                    # Восстанавливаем обычный сокет
+                    socket.socket = original_socket
+                    socks.set_default_proxy()
+                    
+                    logger.info(_("crd_proxy_success", response.content.decode()))
+                    return True
+                else:
+                    return False
+        else:
+            # Для HTTP/HTTPS прокси используем обычную проверку
+            response = requests.get("https://api.ipify.org/", proxies=proxy, timeout=10)
+            logger.info(_("crd_proxy_success", response.content.decode()))
+            return True
+    except Exception as e:
         logger.error(_("crd_proxy_err"))
         logger.debug("TRACEBACK", exc_info=True)
+        # Восстанавливаем обычный сокет в случае ошибки
+        try:
+            socket.socket = original_socket
+            socks.set_default_proxy()
+        except:
+            pass
         return False
-    logger.info(_("crd_proxy_success", response.content.decode()))
-    return True
 
 
 def validate_proxy(proxy: str):
@@ -527,13 +568,37 @@ def get_random_user_agent() -> str:
 # Шифрование конфигурационных файлов
 def get_encryption_key() -> bytes:
     """
-    Генерирует или загружает ключ шифрования на основе фиксированного мастер-ключа.
+    Получает ключ шифрования из переменной окружения FPC_ENCRYPTION_KEY или файла .env.
+    Если не установлена, генерирует новый ключ и сохраняет в .env.
 
     :return: ключ шифрования.
     """
-    # Фиксированный мастер-ключ (в реальном приложении лучше генерировать уникальный)
-    master_key = b'FPC_Security_Key_2024!'  # Должен быть 32 байта для Fernet
-    key = base64.urlsafe_b64encode(master_key.ljust(32)[:32])
+    key = os.getenv('FPC_ENCRYPTION_KEY')
+    if not key and os.path.exists(".env"):
+        try:
+            with open(".env", "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("FPC_ENCRYPTION_KEY="):
+                        key = line.strip().split("=", 1)[1]
+                        break
+        except Exception:
+            pass
+
+    if key:
+        try:
+            return base64.urlsafe_b64decode(key)
+        except Exception:
+            pass
+
+    # Генерируем новый ключ
+    key = Fernet.generate_key()
+    # Сохраняем в .env
+    try:
+        with open('.env', 'a', encoding="utf-8") as f:
+            f.write(f'\nFPC_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
+    except Exception as e:
+        logger.error(f"Не удалось сохранить ключ шифрования в .env: {e}")
+    
     return key
 
 
@@ -563,3 +628,27 @@ def decrypt_data(encrypted_data: str) -> str:
     except Exception as e:
         logger.error(f"Ошибка дешифрования: {e}")
         return encrypted_data  # Возвращаем как есть, если не удалось расшифровать
+
+
+def obfuscate_data(data: str) -> str:
+    """
+    Кодирует строку в base64 (легкое шифрование).
+
+    :param data: данные для кодирования.
+    :return: закодированные данные.
+    """
+    return base64.urlsafe_b64encode(data.encode()).decode()
+
+
+def deobfuscate_data(obfuscated_data: str) -> str:
+    """
+    Декодирует строку из base64.
+
+    :param obfuscated_data: закодированные данные.
+    :return: декодированные данные.
+    """
+    try:
+        return base64.urlsafe_b64decode(obfuscated_data.encode()).decode()
+    except Exception as e:
+        logger.error(f"Ошибка декодирования base64: {e}")
+        return obfuscated_data

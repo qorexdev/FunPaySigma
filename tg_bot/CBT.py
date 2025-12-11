@@ -700,7 +700,23 @@ offset: int - смещение списка прокси.
 proxy_id: int - ID proxy
 """
 
-MAIN3 = "73"
+CHANGE_PROXY_TYPE = "73"
+"""
+Callback для изменения типа прокси.
+Использование: CBT.CHANGE_PROXY_TYPE:offset
+
+offset: int - смещение списка прокси.
+"""
+
+SWITCH_PROXY_CHECK = "78"
+"""
+Callback для включения/выключения проверки прокси.
+Использование: CBT.SWITCH_PROXY_CHECK:offset
+
+offset: int - смещение списка прокси.
+"""
+
+MAIN3 = "79"
 """
 Callback для вызова третьей страницы основного меню настроек (встроенные модули).
 """

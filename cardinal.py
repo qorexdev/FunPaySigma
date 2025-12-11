@@ -107,16 +107,26 @@ class Cardinal(object):
         self.proxy = {}
         self.proxy_dict = cardinal_tools.load_proxy_dict()  # прокси {0: "login:password@ip:port", 1: "ip:port"...}
         if self.MAIN_CFG["Proxy"].getboolean("enable"):
-            if self.MAIN_CFG["Proxy"]["ip"] and self.MAIN_CFG["Proxy"]["port"].isnumeric():
+            # Проверка, что ip и port не пустые
+            if self.MAIN_CFG["Proxy"]["ip"] and self.MAIN_CFG["Proxy"]["port"]:
                 logger.info(_("crd_proxy_detected"))
 
                 ip, port = self.MAIN_CFG["Proxy"]["ip"], self.MAIN_CFG["Proxy"]["port"]
                 login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
                 proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
-                self.proxy = {
-                    "http": f"http://{proxy_str}",
-                    "https": f"http://{proxy_str}"
-                }
+                
+                # Определяем тип прокси (HTTP или SOCKS5)
+                proxy_type = self.MAIN_CFG["Proxy"].get("type", "HTTP")
+                if proxy_type == "SOCKS5":
+                    self.proxy = {
+                        "http": f"socks5://{proxy_str}",
+                        "https": f"socks5://{proxy_str}"
+                    }
+                else:  # HTTP
+                    self.proxy = {
+                        "http": f"http://{proxy_str}",
+                        "https": f"http://{proxy_str}"
+                    }
 
                 if proxy_str not in self.proxy_dict.values():
                     max_id = max(self.proxy_dict.keys(), default=-1)
@@ -124,7 +134,10 @@ class Cardinal(object):
                     cardinal_tools.cache_proxy_dict(self.proxy_dict)
 
                 if self.MAIN_CFG["Proxy"].getboolean("check") and not cardinal_tools.check_proxy(self.proxy):
+                    logger.error(_("crd_proxy_err"))
                     sys.exit()
+                elif self.MAIN_CFG["Proxy"].getboolean("enable"):
+                    logger.info(_("crd_proxy_success_init", proxy_str))
 
         # Ротация User-Agent для анонимности
         user_agent = cardinal_tools.get_random_user_agent() if not self.MAIN_CFG["FunPay"]["user_agent"] else self.MAIN_CFG["FunPay"]["user_agent"]
@@ -314,13 +327,11 @@ class Cardinal(object):
         try:
             self.telegram = tg_bot.bot.TGBot(self)
             self.telegram.init()
-        except ValueError as e:
-            if "Token must contain a colon" in str(e):
-                logger.error("Неверный токен Telegram бота. Проверьте настройки в configs/_main.cfg [Telegram] token")
-                logger.error("Токен должен быть в формате bot_id:token")
-                sys.exit(1)
-            else:
-                raise
+        except Exception as e:
+            logger.error(f"Не удалось инициализировать Telegram бота: {e}")
+            logger.debug("TRACEBACK", exc_info=True)
+            self.telegram = None
+            self.MAIN_CFG["Telegram"]["enabled"] = "0"
 
     def get_balance(self, attempts: int = 3) -> FunPayAPI.types.Balance:
         subcategories = self.account.get_sorted_subcategories()[FunPayAPI.enums.SubCategoryTypes.COMMON]
@@ -775,13 +786,14 @@ class Cardinal(object):
 
         if self.MAIN_CFG["Telegram"].getboolean("enabled"):
             self.__init_telegram()
-            for module in [auto_response_cp, auto_delivery_cp, config_loader_cp, templates_cp, plugins_cp,
-                           file_uploader, authorized_users_cp, proxy_cp, default_cp]:
-                self.add_handlers_from_plugin(module)
+            if self.telegram:
+                for module in [auto_response_cp, auto_delivery_cp, config_loader_cp, templates_cp, plugins_cp,
+                               file_uploader, authorized_users_cp, proxy_cp, default_cp]:
+                    self.add_handlers_from_plugin(module)
 
         self.run_handlers(self.pre_init_handlers, (self,))
 
-        if self.MAIN_CFG["Telegram"].getboolean("enabled"):
+        if self.MAIN_CFG["Telegram"].getboolean("enabled") and self.telegram:
             # Инициализация встроенных модулей ПЕРЕД запуском telegram
             self.init_builtin_features()
             
@@ -1037,7 +1049,7 @@ class Cardinal(object):
         """
         for func in handlers_list:
             try:
-                plugin_uuid = getattr(func, "plugin_uuid")
+                plugin_uuid = getattr(func, "plugin_uuid", None)
                 if plugin_uuid is None or (plugin_uuid in self.plugins and self.plugins[plugin_uuid].enabled):
                     func(*args)
             except Exception as ex:
@@ -1165,3 +1177,36 @@ class Cardinal(object):
     @property
     def block_tg_login(self) -> bool:
         return self.MAIN_CFG["Telegram"].getboolean("blockLogin")
+
+    def toggle_proxy(self, enabled: bool) -> None:
+        """
+        Включает/выключает прокси "на лету".
+        
+        :param enabled: включить (True) или выключить (False) прокси
+        """
+        self.MAIN_CFG["Proxy"]["enable"] = "1" if enabled else "0"
+        self.save_config(self.MAIN_CFG, "configs/_main.cfg")
+        
+        if enabled:
+            # Если включаем прокси, устанавливаем его для аккаунта
+            ip, port = self.MAIN_CFG["Proxy"]["ip"], self.MAIN_CFG["Proxy"]["port"]
+            login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
+            proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
+            
+            proxy_type = self.MAIN_CFG["Proxy"]["type"]
+            if proxy_type == "SOCKS5":
+                self.proxy = {
+                    "http": f"socks5://{proxy_str}",
+                    "https": f"socks5://{proxy_str}"
+                }
+            else:  # HTTP
+                self.proxy = {
+                    "http": f"http://{proxy_str}",
+                    "https": f"http://{proxy_str}"
+                }
+            
+            self.account.proxy = self.proxy
+        else:
+            # Если выключаем прокси, убираем его у аккаунта
+            self.proxy = {}
+            self.account.proxy = None

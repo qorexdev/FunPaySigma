@@ -262,6 +262,12 @@ if ! sudo -u $username /home/$username/pyvenv/bin/pip install -U -r /home/$usern
   exit 2
 fi
 
+#20.1
+if ! sudo -u $username /home/$username/pyvenv/bin/pip install cryptography ; then
+  echo -e "${start_process_line}\nПроизошла ошибка при установке cryptography. (20.1/${commands})\n${end_process_line}"
+  exit 2
+fi
+
 
 clear
 echo -e "$start_process_line\nСоздаю ссылку на файл фонового процесса...\n$end_process_line"

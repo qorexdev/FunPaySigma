@@ -12,3 +12,4 @@ matplotlib>=3.8.0
 pandas>=2.2.0
 mplcyberpunk>=0.7.1
 numpy>=1.26.0
+PySocks>=1.7.1

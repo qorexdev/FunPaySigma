@@ -263,6 +263,19 @@ def proxy(c: Cardinal, offset: int, proxies: dict[str, bool]):
     ip, port = c.MAIN_CFG["Proxy"]["ip"], c.MAIN_CFG["Proxy"]["port"]
     login, password = c.MAIN_CFG["Proxy"]["login"], c.MAIN_CFG["Proxy"]["password"]
     now_proxy = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
+    
+    # Добавляем переключатель включения/выключения прокси
+    proxy_enabled = bool_to_text(c.MAIN_CFG["Proxy"].getboolean("enable"))
+    kb.row(B(_("prx_proxy_enabled", proxy_enabled), callback_data=f"{CBT.SWITCH}:Proxy:enable:{offset}"))
+
+    # Добавляем переключатель проверки прокси
+    check_enabled = bool_to_text(c.MAIN_CFG["Proxy"].getboolean("check"))
+    kb.row(B(_("prx_proxy_check", check_enabled), callback_data=f"{CBT.SWITCH}:Proxy:check:{offset}"))
+    
+    # Добавляем кнопку выбора типа прокси
+    proxy_type = c.MAIN_CFG["Proxy"]["type"] if c.MAIN_CFG["Proxy"]["type"] in ["HTTP", "SOCKS5"] else "HTTP"
+    kb.row(B(_("prx_proxy_type", proxy_type), callback_data=f"{CBT.CHANGE_PROXY_TYPE}:{offset}"))
+    
     kb.row(B(f"", callback_data=CBT.EMPTY))
     for i, p in ps:
         work = proxies.get(p)

@@ -7,7 +7,7 @@ from configparser import ConfigParser
 import time
 import telebot
 from colorama import Fore, Style
-from Utils.cardinal_tools import validate_proxy, hash_password
+from Utils.cardinal_tools import validate_proxy, hash_password, obfuscate_data
 
 # locale#locale#locale
 default_config = {
@@ -144,7 +144,7 @@ def first_setup():
             print(
                 f"\n{Fore.CYAN}{Style.BRIGHT}Неверный формат токена. Попробуй еще раз! {Fore.RED}\(!!˚0˚)/{Style.RESET_ALL}")
             continue
-        config.set("FunPay", "golden_key", golden_key)
+        config.set("FunPay", "golden_key", f"b64:{obfuscate_data(golden_key)}")
         break
 
     while True:
@@ -194,7 +194,7 @@ def first_setup():
         break
 
     config.set("Telegram", "enabled", "1")
-    config.set("Telegram", "token", token)
+    config.set("Telegram", "token", f"b64:{obfuscate_data(token)}")
     config.set("Telegram", "secretKeyHash", hash_password(password))
 
     while True:
@@ -208,10 +208,10 @@ def first_setup():
                 login, password, ip, port = validate_proxy(proxy)
                 config.set("Proxy", "enable", "1")
                 config.set("Proxy", "check", "1")
-                config.set("Proxy", "login", login)
-                config.set("Proxy", "password", password)
-                config.set("Proxy", "ip", ip)
-                config.set("Proxy", "port", port)
+                config.set("Proxy", "login", f"b64:{obfuscate_data(login)}")
+                config.set("Proxy", "password", f"b64:{obfuscate_data(password)}")
+                config.set("Proxy", "ip", f"b64:{obfuscate_data(ip)}")
+                config.set("Proxy", "port", f"b64:{obfuscate_data(port)}")
                 break
             except:
                 print(

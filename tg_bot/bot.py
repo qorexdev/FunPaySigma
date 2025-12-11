@@ -382,7 +382,7 @@ class TGBot:
                    f"{new_account.username}</a>)"
 
         # Шифруем golden_key перед сохранением
-        encrypted_key = f"enc:{cardinal_tools.encrypt_data(golden_key)}"
+        encrypted_key = f"b64:{cardinal_tools.obfuscate_data(golden_key)}"
         self.cardinal.MAIN_CFG.set("FunPay", "golden_key", encrypted_key)
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         self.bot.send_message(m.chat.id, f'{_("cookie_changed", accs)}{_("cookie_changed2") if not one_acc else ""}',
@@ -557,7 +557,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("about", self.cardinal.VERSION))
 
     def check_updates(self, m: Message):
-        curr_tag = self.cardinal.VERSION
+        curr_tag = f"v{self.cardinal.VERSION}"
         releases = updater.get_new_releases(curr_tag)
         if isinstance(releases, int):
             errors = {
@@ -592,7 +592,7 @@ class TGBot:
         return True
 
     def update(self, m: Message):
-        curr_tag = self.cardinal.VERSION
+        curr_tag = f"v{self.cardinal.VERSION}"
         releases = updater.get_new_releases(curr_tag)
         if isinstance(releases, int):
             errors = {
@@ -814,7 +814,7 @@ class TGBot:
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
                      "v_order_id", "v_order_link", "v_order_title", "v_game", "v_category", "v_category_fullname",
                      "v_photo", "v_sleep"]
-        text = f"{_('v_edit_order_reminders_template', utils.escape(self.cardinal.MAIN_CFG['OrderReminders']['template']))}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        text = f"{_('v_edit_order_reminders_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
         result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_TEMPLATE)
         self.bot.answer_callback_query(c.id)
@@ -1054,6 +1054,11 @@ class TGBot:
         section, option = split[1], split[2]
         if section == "FunPay" and option == "oldMsgGetMode":
             self.cardinal.switch_msg_get_mode()
+        elif section == "Proxy" and option == "enable":
+            # Обработка переключения прокси "на лету"
+            current_state = self.cardinal.MAIN_CFG[section].getboolean(option)
+            new_state = not current_state
+            self.cardinal.toggle_proxy(new_state)
         else:
             self.cardinal.MAIN_CFG[section][option] = str(int(not int(self.cardinal.MAIN_CFG[section][option])))
             self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
@@ -1065,11 +1070,17 @@ class TGBot:
             "Greetings": kb.greeting_settings,
             "OrderConfirm": kb.order_confirm_reply_settings,
             "OrderReminders": kb.order_reminders_settings,
-            "ReviewReply": kb.review_reply_settings
+            "ReviewReply": kb.review_reply_settings,
+            "Proxy": kb.proxy  # Добавляем поддержку обновления клавиатуры прокси
         }
         if section == "Telegram":
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=kb.authorized_users(self.cardinal, offset=int(split[3])))
+        elif section == "Proxy":
+            # Обработка обновления клавиатуры прокси с учетом смещения
+            offset = int(split[3]) if len(split) > 3 else 0
+            self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
+                                               reply_markup=kb.proxy(self.cardinal, offset, {}))
         else:
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=sections[section](self.cardinal))
@@ -1110,7 +1121,7 @@ class TGBot:
                    kb.greeting_settings, [self.cardinal]),
             "oc": (_("desc_oc", utils.escape(self.cardinal.MAIN_CFG['OrderConfirm']['replyText'])),
                    kb.order_confirm_reply_settings, [self.cardinal]),
-            "or": (_("desc_order_reminders", utils.escape(self.cardinal.MAIN_CFG['OrderReminders']['template'])), kb.order_reminders_settings, [self.cardinal])
+            "or": (_("desc_order_reminders"), kb.order_reminders_settings, [self.cardinal])
         }
 
         curr = sections[section]
@@ -1157,7 +1168,7 @@ class TGBot:
         self.bot.send_message(c.message.chat.id, _("old_mode_help"))
 
     def empty_callback(self, c: CallbackQuery):
-        self.bot.answer_callback_query(c.id, "🤑 @sidor_donate 🤑")
+        self.bot.answer_callback_query(c.id, "¯\_(ツ)_/¯")
 
     def switch_lang(self, c: CallbackQuery):
         lang = c.data.split(":")[1]
@@ -1166,11 +1177,11 @@ class TGBot:
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         if localizer.current_language == "en":
             self.bot.answer_callback_query(c.id, "The translation may be incomplete and contain errors.\n\n"
-                                                 "If you find errors in the translation, let @sidor0912 know.\n\n"
+                                                 "If you find errors in the translation, let us know.\n\n"
                                                  "Thank you :)", show_alert=True)
         elif localizer.current_language == "uk":
             self.bot.answer_callback_query(c.id, "Переклад складено за допомогою ChatGPT.\n"
-                                                 "Повідомте @sidor0912, якщо знайдете помилки.", show_alert=True)
+                                                 "Повідомте, якщо знайдете помилки.", show_alert=True)
         elif localizer.current_language == "ru":
             self.bot.answer_callback_query(c.id, '«А я сейчас вам покажу, откуда на Беларусь готовилось нападение»',
                                            show_alert=True)

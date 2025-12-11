@@ -6,45 +6,13 @@ from configparser import ConfigParser, SectionProxy
 import codecs
 import os
 import base64
+import copy
 from cryptography.fernet import Fernet
 
 from Utils.exceptions import (ParamNotFoundError, EmptyValueError, ValueNotValidError, SectionNotFoundError,
                               ConfigParseError, ProductsFileNotFoundError, NoProductVarError,
                               SubCommandAlreadyExists, DuplicateSectionErrorWrapper)
-from Utils.cardinal_tools import hash_password, encrypt_data, decrypt_data
-
-
-def get_encryption_key():
-    """
-    Получает ключ шифрования из переменной окружения FPC_ENCRYPTION_KEY.
-    Если не установлена, генерирует новый ключ и сохраняет в .env.
-    """
-    key = os.getenv('FPC_ENCRYPTION_KEY')
-    if key:
-        return base64.urlsafe_b64decode(key)
-    else:
-        # Генерируем новый ключ
-        key = Fernet.generate_key()
-        # Сохраняем в .env
-        with open('.env', 'a') as f:
-            f.write(f'FPC_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
-        return key
-
-
-def encrypt_value(value: str) -> str:
-    """
-    Шифрует значение.
-    """
-    f = Fernet(get_encryption_key())
-    return f.encrypt(value.encode()).decode()
-
-
-def decrypt_value(encrypted: str) -> str:
-    """
-    Дешифрует значение.
-    """
-    f = Fernet(get_encryption_key())
-    return f.decrypt(encrypted.encode()).decode()
+from Utils.cardinal_tools import hash_password, encrypt_data, decrypt_data, obfuscate_data, deobfuscate_data
 
 
 def check_param(param_name: str, section: SectionProxy, valid_values: list[str | None] | None = None,
@@ -78,9 +46,17 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
     elif value.startswith('enc:'):
         encrypted = value[4:]
         try:
-            value = decrypt_value(encrypted)
+            value = decrypt_data(encrypted)
         except Exception:
             raise ValueNotValidError(param_name, value, ["valid encrypted value"])
+
+    # Обработка облегченного шифрования
+    elif value.startswith('b64:'):
+        encoded = value[4:]
+        try:
+            value = deobfuscate_data(encoded)
+        except Exception:
+            raise ValueNotValidError(param_name, value, ["valid base64 value"])
 
     # Если значение пустое ("", оно не может быть None)
     if not value:
@@ -189,6 +165,7 @@ def load_main_config(config_path: str):
             "port": "any+empty",
             "login": "any+empty",
             "password": "any+empty",
+            "type": ["HTTP", "SOCKS5"],
             "check": ["0", "1"]
         },
 
@@ -270,7 +247,7 @@ def load_main_config(config_path: str):
             config.add_section("OrderReminders")
             config.set("OrderReminders", "enabled", "0")
             config.set("OrderReminders", "timeout", "60")
-            config.set("OrderReminders", "template", "Напоминание: Заказ #$order_id ожидает подтверждения. $order_link")
+            config.set("OrderReminders", "template", "Необходимо подтвердить заказ по ссылке: $order_link")
             config.set("OrderReminders", "repeatCount", "3")
             config.set("OrderReminders", "interval", "30")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
@@ -292,10 +269,24 @@ def load_main_config(config_path: str):
         encrypted_key = config["FunPay"]["golden_key"]
         if encrypted_key.startswith("enc:"):
             config.set("FunPay", "golden_key", decrypt_data(encrypted_key[4:]))
+        elif encrypted_key.startswith("b64:"):
+            config.set("FunPay", "golden_key", deobfuscate_data(encrypted_key[4:]))
+
     if config.has_section("Telegram") and config.has_option("Telegram", "token"):
         encrypted_token = config["Telegram"]["token"]
         if encrypted_token.startswith("enc:"):
             config.set("Telegram", "token", decrypt_data(encrypted_token[4:]))
+        elif encrypted_token.startswith("b64:"):
+            config.set("Telegram", "token", deobfuscate_data(encrypted_token[4:]))
+
+    if config.has_section("Proxy"):
+        for field in ["login", "password", "ip", "port"]:
+            if config.has_option("Proxy", field):
+                val = config["Proxy"][field]
+                if val.startswith("enc:"):
+                    config.set("Proxy", field, decrypt_data(val[4:]))
+                elif val.startswith("b64:"):
+                    config.set("Proxy", field, deobfuscate_data(val[4:]))
 
     return config
 
@@ -305,24 +296,27 @@ def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool 
     Сохраняет конфиг, опционально шифруя чувствительные поля.
     """
     if encrypt_sensitive:
+        config_to_save = copy.deepcopy(config)
         sensitive_fields = {
             'FunPay': ['golden_key'],
             'Telegram': ['token'],
-            'Proxy': ['login', 'password']
+            'Proxy': ['login', 'password', 'ip', 'port']
         }
 
         for section_name, fields in sensitive_fields.items():
-            if section_name in config.sections():
+            if section_name in config_to_save.sections():
                 for field in fields:
-                    if field in config[section_name]:
-                        value = config[section_name][field]
-                        if not value.startswith('env:') and not value.startswith('enc:'):
-                            # Шифруем
-                            encrypted = encrypt_value(value)
-                            config.set(section_name, field, f'enc:{encrypted}')
+                    if field in config_to_save[section_name]:
+                        value = config_to_save[section_name][field]
+                        if not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
+                            # Шифруем (облегченное шифрование)
+                            encrypted = obfuscate_data(value)
+                            config_to_save.set(section_name, field, f'b64:{encrypted}')
+    else:
+        config_to_save = config
 
     with open(config_path, "w", encoding="utf-8") as f:
-        config.write(f)
+        config_to_save.write(f)
 
 
 def load_auto_response_config(config_path: str):
