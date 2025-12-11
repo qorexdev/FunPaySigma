@@ -59,7 +59,7 @@ def get_next_tag(tags: list[str], current_tag: str):
     Если не находит текущий тег, возвращает первый.
     Если текущий тег - последний, возвращает None.
 
-    :param tags: список тегов.
+    :param tags: список тегов (отсортированы от нового к старому).
     :param current_tag: текущий тег.
 
     :return: след. тег / первый тег / None
@@ -67,9 +67,11 @@ def get_next_tag(tags: list[str], current_tag: str):
     try:
         curr_index = tags.index(current_tag)
     except ValueError:
-        return tags[len(tags) - 1]
+        # Текущий тег не найден — возвращаем самый новый
+        return tags[0] if tags else None
 
-    if not curr_index:
+    if curr_index == 0:
+        # Текущий тег уже самый новый
         return None
     return tags[curr_index - 1]
 
