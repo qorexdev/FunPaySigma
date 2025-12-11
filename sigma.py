@@ -1172,7 +1172,7 @@ class Cardinal(object):
             for func in functions:
                 func.plugin_uuid = uuid
             self.handler_bind_var_names[name].extend(functions)
-        logger.info(_("crd_handlers_registered", plugin.__name__))
+        logger.debug(_("crd_handlers_registered", plugin.__name__))
 
     def add_handlers(self):
         """

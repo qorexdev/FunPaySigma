@@ -200,7 +200,7 @@ FunPay может ограничить видимость ваших лотов 
         ("sras_info", "Текущие ограничения рейтинга", True)
     ])
     
-    logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+    logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 
 def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
