@@ -184,7 +184,7 @@ def split_by_limit(list_of_str: list[str], limit: int = 4096):
     return result
 
 
-def bool_to_text(value: bool | int | str | None, on: str = "🟢", off: str = "🔴"):
+def bool_to_text(value: bool | int | str | None, on: str = "✅", off: str = "❌"):
     if value is not None and int(value):
         return on
     return off

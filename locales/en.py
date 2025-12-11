@@ -1,10 +1,14 @@
-# Global
-gl_next = "▶️ Next"
-gl_back = "◀️ Back"
+# ═══════════════════════════════════════════════════════════════
+#                    🎨 FUNPAY SIGMA - LOCALIZATION EN
+# ═══════════════════════════════════════════════════════════════
+
+# ─────────────────── 🔘 GLOBAL ELEMENTS ───────────────────
+gl_next = "➡️ Next"
+gl_back = "⬅️ Back"
 gl_yes = "✅ Yes"
 gl_yep = "✅ yep"
 gl_no = "❌ No"
-gl_cancel = "❌ Cancel"
+gl_cancel = "✖️ Cancel"
 gl_error = "⚠️ Error"
 gl_try_again = "Try again"
 gl_error_try_again = f"{gl_error}. {gl_try_again}."
@@ -15,22 +19,22 @@ gl_configure = "⚙️ Configure"
 gl_pcs = "pcs."
 gl_last_update = "Last update"
 
-# Main menu
-mm_language = "🗣️ Language"
-mm_global = "⚙️ Global switches"
-mm_notifications = "🔔 Notification settings"
-mm_autoresponse = "🤖 Autoresponse settings"
-mm_autodelivery = "📦 Auto-delivery settings"
-mm_blacklist = "🚫 Blacklist settings"
-mm_templates = "📝 Answer templates"
-mm_greetings = "👋 Greeting message"
-mm_order_confirm = "✅ Order confirmation response"
-mm_review_reply = "⭐ Response to reviews"
-mm_new_msg_view = "✉️ Appearance of new msg. notification"
+# ─────────────────── 📋 MAIN MENU ───────────────────
+mm_language = "🌐 Language"
+mm_global = "⚡ Main Features"
+mm_notifications = "🔔 Notifications"
+mm_autoresponse = "🤖 Autoresponse"
+mm_autodelivery = "📦 Auto-delivery"
+mm_blacklist = "🚫 Blacklist"
+mm_templates = "📝 Templates"
+mm_greetings = "👋 Greeting"
+mm_order_confirm = "✅ Order Confirmation"
+mm_review_reply = "⭐ Reviews"
+mm_new_msg_view = "💬 Message View"
 mm_plugins = "🧩 Plugins"
-mm_configs = "📁 Configs"
-mm_authorized_users = "👥 Authorized Users"
-mm_proxy = "🌐 Proxy"
+mm_configs = "📁 Configuration"
+mm_authorized_users = "👤 Users"
+mm_proxy = "🌍 Proxy"
 
 # Global switches
 gs_autoraise = "{} Auto-raise"

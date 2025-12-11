@@ -93,7 +93,7 @@ def main_settings(c: Cardinal) -> K:
     p = f"{CBT.SWITCH}:FunPay"
 
     def l(s):
-        return '🟢' if c.MAIN_CFG["FunPay"].getboolean(s) else '🔴'
+        return '✅' if c.MAIN_CFG["FunPay"].getboolean(s) else '❌'
 
     kb = K() \
         .row(B(_("gs_autoraise", l('autoRaise')), None, f"{p}:autoRaise"),
@@ -121,7 +121,7 @@ def new_message_view_settings(c: Cardinal) -> K:
     p = f"{CBT.SWITCH}:NewMessageView"
 
     def l(s):
-        return '🟢' if c.MAIN_CFG["NewMessageView"].getboolean(s) else '🔴'
+        return '✅' if c.MAIN_CFG["NewMessageView"].getboolean(s) else '❌'
 
     kb = K() \
         .add(B(_("mv_incl_my_msg", l("includeMyMessages")), None, f"{p}:includeMyMessages")) \
@@ -146,7 +146,7 @@ def greeting_settings(c: Cardinal):
     p = f"{CBT.SWITCH}:Greetings"
 
     def l(s):
-        return '🟢' if c.MAIN_CFG["Greetings"].getboolean(s) else '🔴'
+        return '✅' if c.MAIN_CFG["Greetings"].getboolean(s) else '❌'
 
     cd = float(c.MAIN_CFG["Greetings"]["greetingsCooldown"])
     cd = int(cd) if int(cd) == cd else cd
@@ -217,7 +217,7 @@ def authorized_users(c: Cardinal, offset: int):
     p = f"{CBT.SWITCH}:Telegram"
 
     def l(s):
-        return '🟢' if c.MAIN_CFG["Telegram"].getboolean(s) else '🔴'
+        return '✅' if c.MAIN_CFG["Telegram"].getboolean(s) else '❌'
 
     kb.add(B(_("tg_block_login", l("blockLogin")), None, f"{p}:blockLogin:{offset}"))
     users = list(c.telegram.authorized_users.keys())[offset: offset + MENU_CFG.AUTHORIZED_USERS_BTNS_AMOUNT]
@@ -279,7 +279,7 @@ def proxy(c: Cardinal, offset: int, proxies: dict[str, bool]):
     kb.row(B(f"", callback_data=CBT.EMPTY))
     for i, p in ps:
         work = proxies.get(p)
-        e = "🟢" if work else "🟡" if work is None else "🔴"
+        e = "✅" if work else "🟡" if work is None else "❌"
         if p == now_proxy:
             b1 = B(f"{e}✅ {p}", callback_data=CBT.EMPTY)
         else:
@@ -374,7 +374,7 @@ def blacklist_settings(c: Cardinal) -> K:
     p = f"{CBT.SWITCH}:BlockList"
 
     def l(s):
-        return '🟢' if c.MAIN_CFG["BlockList"].getboolean(s) else '🔴'
+        return '✅' if c.MAIN_CFG["BlockList"].getboolean(s) else '❌'
 
     kb = K() \
         .add(B(_("bl_autodelivery", l("blockDelivery")), None, f"{p}:blockDelivery")) \
@@ -577,7 +577,7 @@ def edit_lot(c: Cardinal, lot_number: int, offset: int) -> K:
     info, sl, dis = f"{lot_number}:{offset}", "switch_lot", CBT.PARAM_DISABLED
 
     def l(s):
-        return '⚪' if not p[s][0] else '🔴' if lot_obj.getboolean(p[s][1]) else '🟢'
+        return '⚪' if not p[s][0] else '❌' if lot_obj.getboolean(p[s][1]) else '✅'
 
     kb.row(B(_("ea_delivery", l("ad")), None, f"{f'{sl}:disable:{info}' if p['ad'][0] else dis}"),
            B(_("ea_multidelivery", l("md")), None, f"{f'{sl}:disableMultiDelivery:{info}' if p['md'][0] else dis}")) \
