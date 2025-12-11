@@ -113,28 +113,7 @@ class Runner:
 
         response = self.account.method("post", "runner/", headers, payload, raise_not_200=True)
         json_response = response.json()
-        # Логируем только если есть реальные события (не пустые objects)
-        if logger.isEnabledFor(logging.DEBUG):
-            objects = json_response.get("objects", [])
-            has_real_events = any(
-                obj.get("data") and (
-                    isinstance(obj.get("data"), dict) and obj["data"].get("html")
-                    or obj.get("data") != False
-                )
-                for obj in objects
-            )
-            if has_real_events:
-                log_data = json_response.copy()
-                log_data["objects"] = []
-                for obj in objects:
-                    if isinstance(obj.get("data"), dict) and "html" in obj["data"]:
-                        new_obj = obj.copy()
-                        new_obj["data"] = obj["data"].copy()
-                        new_obj["data"]["html"] = "<HTML_HIDDEN>"
-                        log_data["objects"].append(new_obj)
-                    else:
-                        log_data["objects"].append(obj)
-                logger.debug(f"Новые события: {len(objects)} объектов")
+
         return json_response
 
     def parse_updates(self, updates: dict) -> list[InitialChatEvent | ChatsListChangedEvent |

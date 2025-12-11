@@ -482,8 +482,7 @@ class Cardinal(object):
                 if e.error_message is not None:
                     error_text = e.error_message
                 if e.wait_time is not None:
-                    logger.warning(_("crd_raise_time_err", subcat.category.name, error_text,
-                                     cardinal_tools.time_to_str(e.wait_time)))
+
                     next_time = int(time.time()) + e.wait_time
                 else:
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
@@ -496,7 +495,7 @@ class Cardinal(object):
             except Exception as e:
                 t = 10
                 if isinstance(e, FunPayAPI.exceptions.RequestFailedError) and e.status_code in (503, 403, 429):
-                    logger.warning(_("crd_raise_status_code_err", e.status_code, subcat.category.name))
+
                     t = 60
                 else:
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
@@ -933,7 +932,7 @@ class Cardinal(object):
         logger.info("Запущен цикл проверки обновлений.")
         from Utils import updater
         while True:
-            time.sleep(30)  # Проверка каждые 30 секунд
+            time.sleep(420)  # Проверка каждые 7 минут
             
             # Полная очистка памяти (garbage collection)
             try:
