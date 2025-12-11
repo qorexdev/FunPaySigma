@@ -39,8 +39,9 @@ telebot.apihelper.ENABLE_MIDDLEWARE = True
 class TGBot:
     def __init__(self, cardinal: Cardinal):
         self.cardinal = cardinal
+        # Оптимизация RAM: уменьшено количество потоков с 5 до 2
         self.bot = telebot.TeleBot(self.cardinal.MAIN_CFG["Telegram"]["token"], parse_mode="HTML",
-                                   allow_sending_without_reply=True, num_threads=5)
+                                   allow_sending_without_reply=True, num_threads=2)
 
         self.file_handlers = {}  # хэндлеры, привязанные к получению файла.
         self.attempts = {}  # {user_id: attempts} - попытки авторизации в Telegram ПУ.
