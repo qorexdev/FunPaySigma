@@ -47,7 +47,8 @@ GC_COLLECT_INTERVAL = 60  # Интервал сборки мусора (секу
 gc.set_threshold(700, 10, 5)  # Более агрессивная сборка мусора
 
 # Встроенные модули (бывшие плагины)
-from builtin_features import adv_profile_stat, review_chat_reply, sras_info, graphs, chat_sync
+from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
+# ОПТИМИЗАЦИЯ RAM: graphs импортируется лениво (только при использовании) для экономии ~100-150 MB
 
 logger = logging.getLogger("FPS")
 localizer = Localizer()
@@ -1052,7 +1053,9 @@ class Cardinal(object):
         except Exception as e:
             logger.error(f"Ошибка инициализации sras_info: {e}")
             logger.debug("TRACEBACK", exc_info=True)
+        # ОПТИМИЗАЦИЯ RAM: ленивый импорт graphs (matplotlib, pandas, numpy) для экономии ~100-150 MB
         try:
+            from builtin_features import graphs
             graphs.init(self)
         except Exception as e:
             logger.error(f"Ошибка инициализации graphs: {e}")
