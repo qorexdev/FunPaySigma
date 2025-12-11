@@ -7,7 +7,7 @@ import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from FunPayAPI.updater.events import *
 from FunPayAPI.common.utils import RegularExpressions
 from os.path import exists
@@ -19,7 +19,7 @@ import time
 from logging import getLogger
 
 LOGGER_PREFIX = "[ADV_PROFILE_STAT]"
-logger = getLogger("FPC.adv_profile_stat")
+logger = getLogger("FPS.adv_profile_stat")
 
 ADV_PROFILE_CB = "adv_profile_1"
 ORDER_CONFIRMED = {}

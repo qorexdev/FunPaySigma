@@ -184,7 +184,7 @@ access_denied = "👋 Hi, <b><i>{}</i></b>!\n\n❌ You are an unauthorized user.
 access_granted = "🔓 Access granted!\n\n" \
                  "🔕 Keep in mind that I <b><u>don't send any notifications to this chat</u></b>.\n\n" \
                  "🔔 You can set up notifications for <b><u>this chat</u></b> in the settings menu.\n\n" \
-                 "⚙️ To open the <i>FunPay Cardinal</i> settings menu, send me /menu."
+                 "⚙️ To open the <i>FunPay Sigma</i> settings menu, send me /menu."
 
 access_granted_notification = "<b>🚨 ATTENTION! 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 \"<a href=\"tg://user?id={1}\"> {0} </a>\" <b>(ID: {1}) has just accessed the Telegram Control Panel! 🔓</b>"
 
@@ -193,34 +193,34 @@ param_disabled = "❌ This parameter is disabled globally and cannot be changed 
                  "(/menu -> ⚙️ Global switches)."
 
 old_mode_help = """<b>New Message Receiving Mode</b>
-✅ <i>FPC</i> gets the full chat history and sees all data about all new messages.
-✅ <i>FPC</i> can see images in chat and forward them to <i>Telegram</i> chat.
-✅ <i>FPC</i> can determine exactly who wrote, whether it was you, your interlocutor, or a 3rd party (arbitrator).
-❌ Because <i>FPC</i> gets the full chat history to detect new messages, the chat becomes "read" (not lit orange).
+✅ <i>FPS</i> gets the full chat history and sees all data about all new messages.
+✅ <i>FPS</i> can see images in chat and forward them to <i>Telegram</i> chat.
+✅ <i>FPS</i> can determine exactly who wrote, whether it was you, your interlocutor, or a 3rd party (arbitrator).
+❌ Because <i>FPS</i> gets the full chat history to detect new messages, the chat becomes "read" (not lit orange).
 
 <b>Old Message Receiving Mode</b>
 ✅ Chats that you have not personally read remain unread (lit orange).
 ✅ Works a little bit faster than the new mode.
-❌ <i>FPC</i> doesn't get the full chat history, so it sees only the last message. If the user quickly writes several messages, <i>FPC</i> will see only the last one.
-❌ <i>FPC</i> cannot see images in chat and forward them to <i>Telegram</i> chat.
-❌ <i>FPC</i> cannot determine exactly who wrote: you or the person you are chatting with. If the chat is not read, then the message is from the interlocutor, otherwise it is from you. However, if you are viewing the chat when you receive messages, this logic can sometimes fail. Also, <i>FPC</i> will not be able to determine if a 3rd party (arbitrator) wrote into the chat.
+❌ <i>FPS</i> doesn't get the full chat history, so it sees only the last message. If the user quickly writes several messages, <i>FPS</i> will see only the last one.
+❌ <i>FPS</i> cannot see images in chat and forward them to <i>Telegram</i> chat.
+❌ <i>FPS</i> cannot determine exactly who wrote: you or the person you are chatting with. If the chat is not read, then the message is from the interlocutor, otherwise it is from you. However, if you are viewing the chat when you receive messages, this logic can sometimes fail. Also, <i>FPS</i> will not be able to determine if a 3rd party (arbitrator) wrote into the chat.
 
-❗ If you click the <code>More</code> button in a new message notification, <i>FPC</i> will "read" the chat and show the last 15 messages, including images. <i>FPC</i> will also be able to determine who the author of the messages is."""
+❗ If you click the <code>More</code> button in a new message notification, <i>FPS</i> will "read" the chat and show the last 15 messages, including images. <i>FPS</i> will also be able to determine who the author of the messages is."""
 
 bot_started = """✅ Telegram bot is running!\n
 ✅ You can <b><u>customize configurations</u></b> and <b><u>make full use of the <i>Telegram</i> bot's functionality.</u></b>.\n
-❌ <i>FunPay Cardinal</i> is not initialized yet and none of its functions work.\n
-🔃 As soon as <i>FunPay Cardinal</i> is initialized, this message will change.\n
-📋 If <i>FPC</i> does not initialize for a long time, check the logs with /logs"""
+❌ <i>FunPay Sigma</i> is not initialized yet and none of its functions work.\n
+🔃 As soon as <i>FunPay Sigma</i> is initialized, this message will change.\n
+📋 If <i>FPS</i> does not initialize for a long time, check the logs with /logs"""
 
-fpc_init = """✅ <b><u>FPC Fork initialized!</u></b>\n
+fps_init = """✅ <b><u>FPS initialized!</u></b>\n
 ℹ️ <b><i>Version:</i></b> <code>{}</code>
 👑 <b><i>Account:</i></b>  <code>{}</code> | <code>{}</code>
 💰 <b><i>Balance:</i></b> <code>{}₽, {}$, {}€</code>
 📊 <b><i>Active orders:</i></b>  <code>{}</code>
 
 👨‍💻 <b>Developers:</b> @qorexdev, @sidor0912
-📢 <b>Updates:</b> @fpcfork"""
+📢 <b>Updates:</b> @fpsfork"""
 
 create_test_ad_key = "Enter the name of the lot whose auto-delivery you want to test."
 
@@ -228,24 +228,24 @@ test_ad_key_created = """✅ A one-time key for <code>{}</code> delivery has bee
 Send the command from below to chat with the user to whom you want to deliver the item.\n
 <code>!автовыдача {}</code>"""
 
-about = """<b>🤖 FPC Fork v{}</b>
-<i>Fork based on FunPay Cardinal</i>
+about = """<b>🤖 FunPay Sigma v{}</b>
+<i>Fork based on FunPayCardinal</i>
 
 👨‍💻 <b>Developers:</b> @qorexdev, @sidor0912
-📢 <b>Updates channel:</b> @fpcfork
-🔗 <b>Repository:</b> https://github.com/qorexdev/FunPayCardinalFork"""
+📢 <b>Updates channel:</b> @fpsfork
+🔗 <b>Repository:</b> https://github.com/qorexdev/FunPaySigma"""
 
 sys_info = """<b><u>Data summary</u></b>
 
 <b>CPU:</b>
 {}
-    Used by <i>FPC</i>: <code>{}%</code>
+    Used by bot: <code>{}%</code>
 
 <b>RAM:</b>
     Total:  <code>{} MB</code>
     Used:  <code>{} MB</code>
     Free:  <code>{} MB</code>
-    Used by <i>FPC</i>:  <code>{} MB</code>
+    Used by <i>FPS</i>:  <code>{} MB</code>
 
 <b>Other:</b>
     Uptime:  <code>{}</code>
@@ -274,7 +274,7 @@ act_edit_watermark = "Enter a new watermark text. For example:\n{}\n" \
                      "<code>𝗙𝘂𝗻𝗣𝗮𝘆 𝗖𝗮𝗿𝗱𝗶𝗻𝗮𝗹</code>\n<code>𝘍𝘶𝘯𝘗𝘢𝘺 𝘊𝘢𝘳𝘥𝘪𝘯𝘢𝘭</code>\n" \
                      "<code>𝙁𝙪𝙣𝙋𝙖𝙮 𝘾𝙖𝙧𝙙𝙞𝙣𝙖𝙡</code>\n<code>𝙵𝚞𝚗𝙿𝚊𝚢 𝙲𝚊𝚛𝚍𝚒𝚗𝚊𝚕</code>\n" \
                      "<code>ᖴᑌᑎᑭᗩY ᑕᗩᖇᗪIᑎᗩᒪ</code>\n" \
-                     "<code>FunPay Cardinal</code>\n<code>[FunPay / Cardinal]</code>\n" \
+                     "<code>FunPay Sigma</code>\n<code>[FunPay / Sigma]</code>\n" \
                      "<code>🤖</code>\n<code>🐦</code>\n\n" \
                      "You can tap on the examples to copy and edit them to your liking.\nNote that on FunPay, the emoji " \
                      "🐦 looks different than in Telegram." \
@@ -289,7 +289,7 @@ logfile_error = "❌ Failed to send log file."
 logfile_deleted = "🗑️ Deleted {} logfile(s)."
 
 update_no_tags = "❌ Failed to get the version list. Try again later."
-update_lasted = "✅ You have the latest version FPC Fork {}"
+update_lasted = "✅ You have the latest version FPS {}"
 update_get_error = "❌ Failed to get new version information. Try again later."
 update_available = "<b><u>New version available!</u></b>\n\n\n{}\n\n{}"
 update_update = "To update, enter the command /update"
@@ -299,9 +299,9 @@ update_backup_error = "❌ Failed to back up configs, storage and plugins."
 update_backup_not_found = "❌ Backup not found."
 update_downloaded = "✅ The update {} is downloaded (skipped {} items). Installing..."
 update_download_error = "❌ An error occurred while downloading the update."
-update_done = "✅ The update is installed! Restart the FPC with the /restart command."
-update_done_exe = "✅ The update is installed! New <code>FPC.exe</code> is in <code>update</code> folder. " \
-                  "Turn off <i>FPC</i>, replace old <code>FPC.exe</code> with new one and run <code>Start.bat</code>. "
+update_done = "✅ The update is installed! Restart the FPS with the /restart command."
+update_done_exe = "✅ The update is installed! New <code>FPS.exe</code> is in <code>update</code> folder. " \
+                  "Turn off <i>FPS</i>, replace old <code>FPS.exe</code> with new one and run <code>Start.bat</code>. "
 update_install_error = "❌ An error occurred while installing the update."
 
 send_backup = "Send me the backup.\n\n<b>⚠️ WARNING! Uploading backups from untrusted sources may lead to serious consequences.</b>"
@@ -411,15 +411,15 @@ tmplt_added = "✅ Template added."
 tmplt_msg_sent = "✅ Message sent to <a href=\"https://funpay.com/chat/?node={}\">{}</a> chat.\n\n<code>{}</code>"
 
 pl_not_found_err = "❌ Plugin with UUID <code>{}</code> not found."
-pl_file_not_found_err = "❌  File <code>{}</code> not found.\nRestart <i>FPC</i> with command /restart."
+pl_file_not_found_err = "❌  File <code>{}</code> not found.\nRestart <i>FPS</i> with command /restart."
 pl_commands_list = "<b><i>{}</i></b> plugin commands list."
 pl_author = "Dev"
 pl_new = "Send me a plugin.\n\n<b>⚠️ ATTENTION! Downloading plugins from questionable sources may lead to unfortunate consequences.\n" \
-         "@fpc_plugins solves most potential issues.</b>"
+         "@fps_plugins solves most potential issues.</b>"
 
 au_user_settings = "Settings for user {}"
-adv_fpc = "😎 FunPay Cardinal - the best bot for FunPay"
-adv_description = """🤖 FPC Fork v{}🤖
+adv_fps = "😎 FunPay Sigma - the best bot for FunPay"
+adv_description = """🤖 FunPay Sigma v{}🤖
 
 🤖 Automatic product delivery
 🚀 Auto-raise of lots
@@ -435,7 +435,7 @@ adv_description = """🤖 FPC Fork v{}🤖
 # - Menus desc
 desc_main = "Select a settings category."
 desc_lang = desc_main
-desc_gs = "Here you can turn the basic <i>FPC</i> functions on and off."
+desc_gs = "Here you can turn the basic <i>FPS</i> functions on and off."
 desc_ns = """Here you can configure notifications.\n
 <b><u>Settings are separate for each <i>Telegram</i> chat!</u></b>\n
 Current chat ID: <code>{}</code>"""
@@ -485,8 +485,8 @@ cmd_sys = "system load information"
 cmd_create_backup = "create backup"
 cmd_get_backup = "get backup"
 cmd_upload_backup = "upload backup"
-cmd_restart = "restart FPC"
-cmd_power_off = "shutdown FPC"
+cmd_restart = "restart FPS"
+cmd_power_off = "shutdown FPS"
 
 # - Variables desc
 v_edit_greeting_text = "Enter the text of the welcome message."

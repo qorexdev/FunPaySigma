@@ -10,7 +10,7 @@ import os
 from FunPayAPI.updater.events import NewMessageEvent, LastChatMessageChangedEvent
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from FunPayAPI.types import MessageTypes
 import tg_bot.static_keyboards
 from tg_bot import CBT
@@ -20,7 +20,7 @@ import logging
 from locales.localizer import Localizer
 from Utils.cardinal_tools import format_order_text
 
-logger = logging.getLogger("FPC.review_chat_reply")
+logger = logging.getLogger("FPS.review_chat_reply")
 localizer = Localizer()
 _ = localizer.translate
 
@@ -167,7 +167,7 @@ def init(cardinal: Cardinal):
 3. 🗑 — ответ на удалённый отзыв
 
 <b>⚙️ Настройки:</b>
-• <b>Вотермарка</b> — добавлять подпись FPC к сообщениям
+• <b>Вотермарка</b> — добавлять подпись FPS к сообщениям
 • <b>При изменении</b> — отвечать когда отзыв изменяется
 
 <b>📝 Переменные для текста:</b>

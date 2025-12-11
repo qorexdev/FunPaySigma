@@ -11,7 +11,7 @@ from FunPayAPI import Account
 from tg_bot.utils import NotificationTypes
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 import os
 import sys
@@ -320,7 +320,7 @@ class TGBot:
                           c.message.chat.id))
         self.attempts[c.from_user.id] = self.attempts.get(c.from_user.id, 0) + 1
         if self.attempts[c.from_user.id] <= 5:
-            self.bot.answer_callback_query(c.id, _("adv_fpc", language=c.from_user.language_code), show_alert=True)
+            self.bot.answer_callback_query(c.id, _("adv_fps", language=c.from_user.language_code), show_alert=True)
         return
 
     # Команды
@@ -650,7 +650,7 @@ class TGBot:
 
     def ask_power_off(self, m: Message):
         """
-        Просит подтверждение на отключение FPC.
+        Просит подтверждение на отключение FPS.
         """
         self.bot.send_message(m.chat.id, _("power_off_0"), reply_markup=kb.power_off(self.cardinal.instance_id, 0))
 
@@ -663,7 +663,7 @@ class TGBot:
 
     def power_off(self, c: CallbackQuery):
         """
-        Отключает FPC.
+        Отключает FPS.
         """
         split = c.data.split(":")
         state = int(split[1])
@@ -926,7 +926,7 @@ class TGBot:
                     last_by_vertex == i.by_vertex:
                 author = ""
             elif i.author_id == self.cardinal.account.id:
-                author = f"<i><b>🤖 {_('you')} (<i>FPC</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
+                author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
                 if i.is_autoreply:
                     author = f"<i><b>📦 {_('you')} ({i.badge}):</b></i> "
             elif i.author_id == 0:
@@ -1048,7 +1048,7 @@ class TGBot:
 
     def switch_param(self, c: CallbackQuery):
         """
-        Переключает переключаемые настройки FPC.
+        Переключает переключаемые настройки FPS.
         """
         split = c.data.split(":")
         section, option = split[1], split[2]
@@ -1373,7 +1373,7 @@ class TGBot:
                     break
             if new_name != name:
                 self.bot.set_my_name(new_name)
-        sh_text = "🤖 FPC Fork - бот для FunPay"
+        sh_text = "🤖 FPS Fork - бот для FunPay"
         res = self.bot.get_my_short_description().short_description
         if res != sh_text:
             self.bot.set_my_short_description(sh_text)

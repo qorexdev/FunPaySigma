@@ -19,7 +19,7 @@ from FunPayAPI.updater.events import NewMessageEvent
 from FunPayAPI.updater import events
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, CallbackQuery, \
     ReplyKeyboardMarkup as RKM, KeyboardButton
 from tg_bot import CBT, static_keyboards as skb, utils, keyboards
@@ -28,7 +28,7 @@ import telebot
 from PIL import Image
 
 LOGGER_PREFIX = "[CHAT_SYNC]"
-logger = getLogger("FPC.chat_sync")
+logger = getLogger("FPS.chat_sync")
 
 localizer = Localizer()
 _ = localizer.translate
@@ -480,7 +480,7 @@ class ChatSync:
                     and i.message.badge == last_badge and text != "" and last_by_vertex == i.message.by_vertex:
                 author = ""
             elif i.message.author_id == c.account.id:
-                author = f"<i><b>🤖 FPC:</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
+                author = f"<i><b>🤖 FPS:</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
                 if i.message.is_autoreply:
                     author = f"<i><b>📦 {_('you')} ({i.message.badge}):</b></i> "
             elif i.message.author_id == 0:
@@ -621,7 +621,7 @@ class ChatSync:
                         last_by_vertex == i.by_vertex:
                     author = ""
                 elif i.author_id == self.cardinal.account.id:
-                    author = f"<i><b>🤖 {_('you')} (<i>FPC</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
+                    author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
                     if i.is_autoreply:
                         author = f"<i><b>📦 {_('you')} ({i.badge}):</b></i> "
                 elif i.author_id == 0:

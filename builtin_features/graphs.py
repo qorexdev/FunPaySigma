@@ -36,7 +36,7 @@ from telebot.types import InputMediaPhoto
 from tg_bot import CBT
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from FunPayAPI.updater.events import *
 import tg_bot.static_keyboards
 import telebot
@@ -45,7 +45,7 @@ from logging import getLogger
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
 
 LOGGER_PREFIX = "[GRAPHS]"
-logger = getLogger("FPC.graphs")
+logger = getLogger("FPS.graphs")
 
 CBT_TEXT_CHANGE_COUNT = "graphs_ChangeCount"
 CBT_TEXT_EDITED = "graphs_Edited"

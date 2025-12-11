@@ -8,7 +8,7 @@ import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
 import configparser
@@ -162,7 +162,7 @@ def has_brand_mark(watermark: str) -> bool:
     """
     simplified = (unicodedata.normalize("NFKD", watermark)
                   .encode("ascii", "ignore").decode("ascii").lower())
-    ascii_hits = any(kw in simplified for kw in ("cardinal", "fpc"))
+    ascii_hits = any(kw in simplified for kw in ("cardinal", "fps"))
     raw_hits = any(kw in watermark.lower() for kw in ("кардинал", "🐦", "ᴄᴀʀᴅɪɴᴀʟ"))
 
     return ascii_hits or raw_hits or "ᑕᗩᖇᗪIᑎᗩᒪ" in watermark

@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
     from tg_bot.bot import TGBot
 
 from Utils import config_loader as cfg_loader, exceptions as excs, cardinal_tools, updater
@@ -258,7 +258,7 @@ def init_uploader(cardinal: Cardinal):
             .add(Button("◀️Назад", callback_data=f"{CBT.PLUGINS_LIST}:{offset}"))
         bot.send_message(m.chat.id,
                          f"✅ Плагин <code>{utils.escape(m.document.file_name)}</code> успешно загружен.\n\n"
-                         f"⚠️Чтобы плагин активировался, <u><b>перезагрузите FPC!</b></u> (/restart)",
+                         f"⚠️Чтобы плагин активировался, <u><b>перезагрузите FPS!</b></u> (/restart)",
                          reply_markup=keyboard)
 
     def send_funpay_image(m: types.Message):

@@ -1,6 +1,6 @@
 [
   "hooks",
-  "FunPay Cardinal.spec",
+  "FunPay Sigma.spec",
   "plugins/del_old_users.py",
   "storage/plugins/del_old_users_plugin_data.json",
   "storage/plugins/del_old_users_settings.json",

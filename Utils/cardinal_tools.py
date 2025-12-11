@@ -11,7 +11,7 @@ import socks
 from locales.localizer import Localizer
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 import FunPayAPI.types
 
@@ -32,7 +32,7 @@ import logging
 
 PHOTO_RE = re.compile(r'\$photo=[\d]+')
 ENTITY_RE = re.compile(r"\$photo=\d+|\$new|(\$sleep=(\d+\.\d+|\d+))")
-logger = logging.getLogger("FPC.cardinal_tools")
+logger = logging.getLogger("FPS.cardinal_tools")
 localizer = Localizer()
 _ = localizer.translate
 
@@ -490,7 +490,7 @@ def format_order_text(text: str, order: FunPayAPI.types.OrderShortcut | FunPayAP
 
 def restart_program():
     """
-    Полный перезапуск FPC.
+    Полный перезапуск FPS.
     """
     python = sys.executable
     os.execl(python, python, *sys.argv)
@@ -506,7 +506,7 @@ def restart_program():
 
 def shut_down():
     """
-    Полное отключение FPC.
+    Полное отключение FPS.
     """
     try:
         process = psutil.Process()
@@ -568,17 +568,17 @@ def get_random_user_agent() -> str:
 # Шифрование конфигурационных файлов
 def get_encryption_key() -> bytes:
     """
-    Получает ключ шифрования из переменной окружения FPC_ENCRYPTION_KEY или файла .env.
+    Получает ключ шифрования из переменной окружения FPS_ENCRYPTION_KEY или файла .env.
     Если не установлена, генерирует новый ключ и сохраняет в .env.
 
     :return: ключ шифрования.
     """
-    key = os.getenv('FPC_ENCRYPTION_KEY')
+    key = os.getenv('FPS_ENCRYPTION_KEY')
     if not key and os.path.exists(".env"):
         try:
             with open(".env", "r", encoding="utf-8") as f:
                 for line in f:
-                    if line.startswith("FPC_ENCRYPTION_KEY="):
+                    if line.startswith("FPS_ENCRYPTION_KEY="):
                         key = line.strip().split("=", 1)[1]
                         break
         except Exception:
@@ -595,7 +595,7 @@ def get_encryption_key() -> bytes:
     # Сохраняем в .env
     try:
         with open('.env', 'a', encoding="utf-8") as f:
-            f.write(f'\nFPC_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
+            f.write(f'\nFPS_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
     except Exception as e:
         logger.error(f"Не удалось сохранить ключ шифрования в .env: {e}")
     

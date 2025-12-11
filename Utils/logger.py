@@ -150,7 +150,7 @@ LOGGER_CONFIG = {
             "handlers": ["cli_handler", "file_handler"],
             "level": "DEBUG"
         },
-        "FPC": {
+        "FPS": {
             "handlers": ["cli_handler", "file_handler"],
             "level": "DEBUG"
         },

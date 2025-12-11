@@ -13,7 +13,7 @@ from Utils.cardinal_tools import validate_proxy, cache_proxy_dict, check_proxy
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from tg_bot import keyboards as kb, CBT
 from telebot.types import CallbackQuery, Message
 import logging

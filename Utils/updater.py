@@ -10,7 +10,7 @@ import zipfile
 import shutil
 import json
 
-logger = getLogger("FPC.update_checker")
+logger = getLogger("FPS.update_checker")
 localizer = Localizer()
 _ = localizer.translate
 
@@ -44,7 +44,7 @@ def get_tags(current_tag: str) -> list[str] | None:
     :return: список тегов или None в случае ошибки.
     """
     try:
-        response = requests.get("https://api.github.com/repos/qorexdev/FunPayCardinalFork/tags", headers=HEADERS)
+        response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/tags", headers=HEADERS)
         response.raise_for_status()
         tags = [tag["name"] for tag in response.json()]
         return tags
@@ -82,7 +82,7 @@ def get_releases(from_tag: str) -> list[Release] | None:
     :return: список релизов или None в случае ошибки.
     """
     try:
-        response = requests.get("https://api.github.com/repos/qorexdev/FunPayCardinalFork/releases", headers=HEADERS)
+        response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases", headers=HEADERS)
         response.raise_for_status()
         releases_data = response.json()
         releases = []

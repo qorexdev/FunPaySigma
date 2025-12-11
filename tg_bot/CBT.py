@@ -398,7 +398,7 @@ Callback для отключения бота.
 Использование: CBT.SHUT_DOWN:stage:instance_id
 
 stage: int - текущая стадия подтверждения (0-6).
-instance_id: int - ID запуска FPC.
+instance_id: int - ID запуска FPS.
 """
 
 CANCEL_SHUTTING_DOWN = "38"

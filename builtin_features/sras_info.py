@@ -13,7 +13,7 @@ import time
 from tg_bot import CBT
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 from FunPayAPI.updater.events import *
 import telebot
 from logging import getLogger
@@ -22,7 +22,7 @@ from FunPayAPI.types import MessageTypes as MT
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
 
 LOGGER_PREFIX = "[SRAS_INFO]"
-logger = getLogger("FPC.sras_info")
+logger = getLogger("FPS.sras_info")
 
 CBT_TEXT_SWITCH = "sras_info.switch"
 CBT_OPEN_SETTINGS = "sras_info.settings"

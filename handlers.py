@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 from FunPayAPI.types import OrderShortcut, Order
 from FunPayAPI import exceptions, utils as fp_utils
@@ -26,7 +26,7 @@ import re
 LAST_STACK_ID = ""
 MSG_LOG_LAST_STACK_ID = ""
 
-logger = logging.getLogger("FPC.handlers")
+logger = logging.getLogger("FPS.handlers")
 localizer = Localizer()
 _ = localizer.translate
 
@@ -277,7 +277,7 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
                 i.message.badge == last_badge and i.message.by_vertex == last_by_vertex:
             author = ""
         elif i.message.author_id == c.account.id:
-            author = f"<i><b>🤖 {_('you')} (<i>FPC</i>):</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
+            author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
             if i.message.is_autoreply:
                 author = f"<i><b>📦 {_('you')} ({i.message.badge}):</b></i> "
         elif i.message.author_id == 0:
@@ -868,7 +868,7 @@ def send_bot_started_notification_handler(c: Cardinal, *args):
     """
     if c.telegram is None:
         return
-    text = _("fpc_init", c.VERSION, c.account.username, c.account.id,
+    text = _("fps_init", c.VERSION, c.account.username, c.account.id,
              c.balance.total_rub, c.balance.total_usd, c.balance.total_eur, c.account.active_sales)
     for i in c.telegram.init_messages:
         try:

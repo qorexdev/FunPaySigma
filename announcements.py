@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 from tg_bot.utils import NotificationTypes
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
@@ -14,7 +14,7 @@ import json
 import os
 import time
 
-logger = getLogger("FPC.announcements")
+logger = getLogger("FPS.announcements")
 localizer = Localizer()
 _ = localizer.translate
 

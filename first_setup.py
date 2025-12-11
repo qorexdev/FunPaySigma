@@ -1,5 +1,5 @@
 """
-В данном модуле написана подпрограмма первичной настройки FunPayCardinal'а.
+В данном модуле написана подпрограмма первичной настройки FunPay Sigma'а.
 """
 
 import os
@@ -224,7 +224,7 @@ def first_setup():
           f"{Fore.RED}ʘ>ʘ{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{Style.BRIGHT}Запусти меня снова и напиши своему Telegram-боту. "
           f"Все остальное ты сможешь настроить через него. {Fore.RED}ʕ•ᴥ•ʔ{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{Style.BRIGHT}Репозиторий: https://github.com/qorexdev/FunPayCardinalFork{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{Style.BRIGHT}Репозиторий: https://github.com/qorexdev/FunPaySigma{Style.RESET_ALL}")
     with open("configs/_main.cfg", "w", encoding="utf-8") as f:
         config.write(f)
     time.sleep(10)

@@ -37,7 +37,7 @@ from threading import Thread
 # Встроенные модули (бывшие плагины)
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, graphs, chat_sync
 
-logger = logging.getLogger("FPC")
+logger = logging.getLogger("FPS")
 localizer = Localizer()
 _ = localizer.translate
 
@@ -260,7 +260,7 @@ class Cardinal(object):
                 self.account.get()
                 self.balance = self.get_balance()
                 greeting_text = cardinal_tools.create_greeting_text(self)
-                cardinal_tools.set_console_title(f"FunPay Cardinal - {self.account.username} ({self.account.id})")
+                cardinal_tools.set_console_title(f"FunPay Sigma - {self.account.username} ({self.account.id})")
                 for line in greeting_text.split("\n"):
                     logger.info(line)
                 break

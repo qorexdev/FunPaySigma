@@ -9,7 +9,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cardinal import Cardinal
+    from sigma import Cardinal
 
 from tg_bot import utils, keyboards as kb, CBT, MENU_CFG
 from tg_bot.static_keyboards import CLEAR_STATE_BTN

@@ -3,21 +3,21 @@ WantedBy=multi-user.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/%i/FunPayCardinal
-ExecStart=/home/%i/pyvenv/bin/python /home/%i/FunPayCardinal/main.py
+WorkingDirectory=/home/%i/FunPaySigma
+ExecStart=/home/%i/pyvenv/bin/python /home/%i/FunPaySigma/main.py
 Restart=always
 RestartSec=10s
-SyslogIdentifier=FunPayCardinal-%i
+SyslogIdentifier=FunPaySigma-%i
 User=%i
 Environment="LANG=en_US.utf8"
-Environment="FPC_IS_RUNNIG_AS_SERVICE=1"
+Environment="FPS_IS_RUNNIG_AS_SERVICE=1"
 
-ExecStartPre=+/usr/bin/install -m 755 -o root -g root -d /run/FunPayCardinal
-ExecStartPre=+/usr/bin/install -m 755 -o %i -g root -d /run/FunPayCardinal/%i
+ExecStartPre=+/usr/bin/install -m 755 -o root -g root -d /run/FunPaySigma
+ExecStartPre=+/usr/bin/install -m 755 -o %i -g root -d /run/FunPaySigma/%i
 
-PIDFile=/run/FunPayCardinal/%i/FunPayCardinal.pid
+PIDFile=/run/FunPaySigma/%i/FunPaySigma.pid
 
-# FunPayCardinal security hardening, all of the below entries are optional, but their existence improves security of your system
+# FunPaySigma security hardening, all of the below entries are optional, but their existence improves security of your system
 # * As stated above this entries are optional, if some of the below entries are not supported by your system, you can safely remove them
 # * If something doesn't work, you can try to remove some of the below entries, but please do it one by one, so you can identify which entry is causing the issue
 DevicePolicy=closed
@@ -29,11 +29,11 @@ PrivateUsers=yes
 ProtectHostname=yes
 # Prevent writes to /usr, /boot, and /etc
 ProtectSystem=full
-ReadWritePaths=/home/%i/FunPayCardinal /home/%i/pyvenv -/run/FunPayCardinal
+ReadWritePaths=/home/%i/FunPaySigma /home/%i/pyvenv -/run/FunPaySigma
 # Prevent other services from accessing PID file
 # UMask=0077
-# End of FunPayCardinal security hardening
+# End of FunPaySigma security hardening
 
 [Unit]
 After=network.target
-Description=FPC Fork Bot Service (on %I)
+Description=FPS Fork Bot Service (on %I)
