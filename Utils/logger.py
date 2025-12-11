@@ -144,19 +144,19 @@ LOGGER_CONFIG = {
     "loggers": {
         "main": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "DEBUG"
+            "level": "INFO"
         },
         "FunPayAPI": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "DEBUG"
+            "level": "INFO"
         },
         "FPS": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "DEBUG"
+            "level": "INFO"
         },
         "TGBot": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "DEBUG"
+            "level": "INFO"
         },
         "TeleBot": {
             "handlers": ["file_handler"],

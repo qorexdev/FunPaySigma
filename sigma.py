@@ -34,6 +34,8 @@ import tg_bot.bot
 
 from threading import Thread
 
+import gc
+
 # Встроенные модули (бывшие плагины)
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, graphs, chat_sync
 
@@ -822,6 +824,35 @@ class Cardinal(object):
         
         return self
 
+    def check_updates_loop(self):
+        """
+        Запускает цикл проверки обновлений.
+        """
+        logger.info("Запущен цикл проверки обновлений.")
+        from Utils import updater
+        while True:
+            time.sleep(3600 * 2)  # Проверка каждые 2 часа
+            
+            # Очистка памяти (garbage collection)
+            try:
+                gc.collect()
+            except:
+                pass
+
+            try:
+                curr_tag = f"v{self.VERSION}"
+                releases = updater.get_new_releases(curr_tag)
+                
+                # Если найдены новые релизы
+                if isinstance(releases, list) and releases:
+                    logger.info(f"Обнаружено новое обновление: {releases[0].name}")
+                    if self.telegram:
+                         self.telegram.send_update_confirmation(releases[0])
+                         # Если отправили уведомление, ждем сутки перед следующим возможным напоминанием
+                         time.sleep(86400) 
+            except Exception as e:
+                logger.error(f"Ошибка при проверке обновлений: {e}")
+
     def run(self):
         """
         Запускает кардинал после инициализации. Используется для первого старта.
@@ -834,6 +865,7 @@ class Cardinal(object):
         Thread(target=self.lots_raise_loop, daemon=True).start()
         Thread(target=self.update_session_loop, daemon=True).start()
         Thread(target=self.order_reminders_loop, daemon=True).start()
+        Thread(target=self.check_updates_loop, daemon=True).start()
         self.process_events()
 
     def start(self):

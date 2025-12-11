@@ -256,14 +256,21 @@ def generate_profile_text(cardinal: Cardinal) -> str:
     """
     account = cardinal.account  # locale
     balance = cardinal.balance
+    
+    # Проверяем, загружен ли баланс
+    if balance is None:
+        balance_text = "    <i>⏳ Баланс загружается...</i>"
+    else:
+        balance_text = f"""    <b>₽:</b> <code>{balance.total_rub}₽</code>, доступно для вывода <code>{balance.available_rub}₽</code>.
+    <b>$:</b> <code>{balance.total_usd}$</code>, доступно для вывода <code>{balance.available_usd}$</code>.
+    <b>€:</b> <code>{balance.total_eur}€</code>, доступно для вывода <code>{balance.available_eur}€</code>."""
+    
     return f"""Статистика аккаунта <b><i>{account.username}</i></b>
 
 <b>ID:</b> <code>{account.id}</code>
 <b>Незавершенных заказов:</b> <code>{account.active_sales}</code>
 <b>Баланс:</b> 
-    <b>₽:</b> <code>{balance.total_rub}₽</code>, доступно для вывода <code>{balance.available_rub}₽</code>.
-    <b>$:</b> <code>{balance.total_usd}$</code>, доступно для вывода <code>{balance.available_usd}$</code>.
-    <b>€:</b> <code>{balance.total_eur}€</code>, доступно для вывода <code>{balance.available_eur}€</code>.
+{balance_text}
 
 <i>Обновлено:</i>  <code>{time.strftime('%H:%M:%S', time.localtime(account.last_update))}</code>"""
 

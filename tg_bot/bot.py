@@ -629,6 +629,40 @@ class TGBot:
         else:
             self.bot.send_message(m.chat.id, _("update_done"))
 
+    def send_update_confirmation(self, release):
+        """
+        Отправляет уведомление о новой версии с кнопками подтверждения.
+        """
+        keyboard = K().row(B("✅ Да", callback_data="update:yes"), B("❌ Нет", callback_data="update:no"))
+        text = _("update_available", release.name, release.description) + "\n\n<b>Обновить автоматически?</b>"
+        
+        # Получаем админов из authorized_users если есть, иначе ничего не делаем
+        if not self.authorized_users:
+            return
+
+        for user_id in self.authorized_users:
+            try:
+                self.bot.send_message(user_id, text, reply_markup=keyboard)
+            except:
+                pass
+
+    def confirm_update_handler(self, c: CallbackQuery):
+        """
+        Обрабатывает ответ на вопрос об обновлении.
+        """
+        answer = c.data.split(":")[1]
+        try:
+            self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id, reply_markup=None)
+        except:
+            pass
+
+        if answer == "yes":
+            self.bot.send_message(c.message.chat.id, "Начинаю обновление...")
+            self.update(c.message)
+        else:
+            self.bot.send_message(c.message.chat.id, "Обновление отменено.")
+        self.bot.answer_callback_query(c.id)
+
     def send_system_info(self, m: Message):
         """
         Отправляет информацию о нагрузке на систему.
@@ -1280,7 +1314,8 @@ class TGBot:
         self.cbq_handler(self.send_old_mode_help_text, lambda c: c.data == CBT.OLD_MOD_HELP)
         self.cbq_handler(self.empty_callback, lambda c: c.data == CBT.EMPTY)
         self.cbq_handler(self.switch_lang, lambda c: c.data.startswith(f"{CBT.LANG}:"))
-        
+        self.cbq_handler(self.confirm_update_handler, lambda c: c.data.startswith("update:"))
+
         # Fallback обработчик для отладки - ловит все необработанные callback'и
         # Закомментируйте после отладки!
         # self.cbq_handler(self._fallback_callback, lambda c: True)
