@@ -181,6 +181,29 @@ def order_confirm_reply_settings(c: Cardinal):
     return kb
 
 
+def order_reminders_settings(c: Cardinal):
+    """
+    Генерирует клавиатуру настроек напоминаний о подтверждении заказа (CBT.CATEGORY:orderReminders).
+
+    :param c: объект кардинала.
+
+    :return: объект клавиатуры настроек напоминаний о подтверждении заказа.
+    """
+    enabled = bool_to_text(int(c.MAIN_CFG['OrderReminders']['enabled']))
+    timeout = c.MAIN_CFG['OrderReminders']['timeout']
+    repeat_count = c.MAIN_CFG['OrderReminders']['repeatCount']
+    interval = c.MAIN_CFG['OrderReminders']['interval']
+
+    kb = K() \
+        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled")) \
+        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT)) \
+        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE)) \
+        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT)) \
+        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL)) \
+        .add(B(_("gl_back"), None, CBT.MAIN2))
+    return kb
+
+
 def authorized_users(c: Cardinal, offset: int):
     """
     Генерирует клавиатуру со списком авторизованных пользователей (CBT.AUTHORIZED_USERS:<offset>).

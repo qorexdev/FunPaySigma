@@ -789,6 +789,86 @@ class TGBot:
                  B(_("gl_edit"), callback_data=CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT))
         self.bot.reply_to(m, _("order_confirm_changed"), reply_markup=keyboard)
 
+    def act_edit_order_reminders_timeout(self, c: CallbackQuery):
+        text = _("v_edit_order_reminders_timeout")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_TIMEOUT)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_order_reminders_timeout(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            timeout = int(m.text)
+            if timeout <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["OrderReminders"]["timeout"] = str(timeout)
+        logger.info(_("log_order_reminders_timeout_changed", m.from_user.username, m.from_user.id, timeout))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.order_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("order_reminders_timeout_changed", timeout), reply_markup=keyboard)
+
+    def act_edit_order_reminders_template(self, c: CallbackQuery):
+        variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
+                     "v_order_id", "v_order_link", "v_order_title", "v_game", "v_category", "v_category_fullname",
+                     "v_photo", "v_sleep"]
+        text = f"{_('v_edit_order_reminders_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_TEMPLATE)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_order_reminders_template(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        self.cardinal.MAIN_CFG["OrderReminders"]["template"] = m.text
+        logger.info(_("log_order_reminders_template_changed", m.from_user.username, m.from_user.id, m.text))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.order_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("order_reminders_template_changed"), reply_markup=keyboard)
+
+    def act_edit_order_reminders_repeat_count(self, c: CallbackQuery):
+        text = _("v_edit_order_reminders_repeat_count")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_order_reminders_repeat_count(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            repeat_count = int(m.text)
+            if repeat_count < 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["OrderReminders"]["repeatCount"] = str(repeat_count)
+        logger.info(_("log_order_reminders_repeat_count_changed", m.from_user.username, m.from_user.id, repeat_count))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.order_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("order_reminders_repeat_count_changed", repeat_count), reply_markup=keyboard)
+
+    def act_edit_order_reminders_interval(self, c: CallbackQuery):
+        text = _("v_edit_order_reminders_interval")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_INTERVAL)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_order_reminders_interval(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            interval = int(m.text)
+            if interval <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["OrderReminders"]["interval"] = str(interval)
+        logger.info(_("log_order_reminders_interval_changed", m.from_user.username, m.from_user.id, interval))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.order_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("order_reminders_interval_changed", interval), reply_markup=keyboard)
+
     def act_edit_review_reply_text(self, c: CallbackQuery):
         stars = int(c.data.split(":")[1])
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
@@ -984,6 +1064,7 @@ class TGBot:
             "NewMessageView": kb.new_message_view_settings,
             "Greetings": kb.greeting_settings,
             "OrderConfirm": kb.order_confirm_reply_settings,
+            "OrderReminders": kb.order_reminders_settings,
             "ReviewReply": kb.review_reply_settings
         }
         if section == "Telegram":
@@ -1028,7 +1109,8 @@ class TGBot:
             "gr": (_("desc_gr", utils.escape(self.cardinal.MAIN_CFG['Greetings']['greetingsText'])),
                    kb.greeting_settings, [self.cardinal]),
             "oc": (_("desc_oc", utils.escape(self.cardinal.MAIN_CFG['OrderConfirm']['replyText'])),
-                   kb.order_confirm_reply_settings, [self.cardinal])
+                   kb.order_confirm_reply_settings, [self.cardinal]),
+            "or": (_("desc_order_reminders"), kb.order_reminders_settings, [self.cardinal])
         }
 
         curr = sections[section]
@@ -1125,6 +1207,18 @@ class TGBot:
         self.cbq_handler(self.act_edit_order_confirm_reply_text, lambda c: c.data == CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT)
         self.msg_handler(self.edit_order_confirm_reply_text,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT))
+        self.cbq_handler(self.act_edit_order_reminders_timeout, lambda c: c.data == CBT.EDIT_ORDER_REMINDERS_TIMEOUT)
+        self.msg_handler(self.edit_order_reminders_timeout,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))
+        self.cbq_handler(self.act_edit_order_reminders_template, lambda c: c.data == CBT.EDIT_ORDER_REMINDERS_TEMPLATE)
+        self.msg_handler(self.edit_order_reminders_template,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))
+        self.cbq_handler(self.act_edit_order_reminders_repeat_count, lambda c: c.data == CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT)
+        self.msg_handler(self.edit_order_reminders_repeat_count,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))
+        self.cbq_handler(self.act_edit_order_reminders_interval, lambda c: c.data == CBT.EDIT_ORDER_REMINDERS_INTERVAL)
+        self.msg_handler(self.edit_order_reminders_interval,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_INTERVAL))
         self.cbq_handler(self.act_edit_review_reply_text, lambda c: c.data.startswith(f"{CBT.EDIT_REVIEW_REPLY_TEXT}:"))
         self.msg_handler(self.edit_review_reply_text,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REPLY_TEXT))
