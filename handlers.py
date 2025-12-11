@@ -800,6 +800,23 @@ def update_lots_state_handler(cardinal: Cardinal, event: NewOrderEvent, *args):
     Thread(target=update_lots_states, args=(cardinal, event), daemon=True).start()
 
 
+def add_order_to_reminders_handler(c: Cardinal, e: NewOrderEvent, *args):
+    """
+    Добавляет новый заказ в список для напоминаний о подтверждении.
+    """
+    if not c.MAIN_CFG["OrderReminders"].getboolean("enabled"):
+        return
+
+    order_id = e.order.id
+    if order_id not in c.pending_orders:
+        c.pending_orders[order_id] = {
+            "created_time": int(time.time()),
+            "reminder_count": 0,
+            "last_reminder": 0
+        }
+        logger.info(f"Заказ {order_id} добавлен в список для напоминаний о подтверждении")
+
+
 # BIND_TO_ORDER_STATUS_CHANGED
 def send_thank_u_message_handler(c: Cardinal, e: OrderStatusChangedEvent):
     """
@@ -832,6 +849,16 @@ def send_order_confirmed_notification_handler(cardinal: Cardinal, event: OrderSt
                keyboards.new_order(event.order.id, event.order.buyer_username, chat.id),
                utils.NotificationTypes.order_confirmed),
            daemon=True).start()
+
+
+def remove_order_from_reminders_handler(c: Cardinal, e: OrderStatusChangedEvent):
+    """
+    Удаляет заказ из списка напоминаний при подтверждении или отмене.
+    """
+    order_id = e.order.id
+    if order_id in c.pending_orders:
+        del c.pending_orders[order_id]
+        logger.info(f"Заказ {order_id} удален из списка напоминаний (статус: {e.order.status.name})")
 
 
 def send_bot_started_notification_handler(c: Cardinal, *args):
@@ -877,9 +904,10 @@ BIND_TO_ORDERS_LIST_CHANGED = [update_current_lots_handler, update_profile_lots_
 
 BIND_TO_NEW_ORDER = [log_new_order_handler, setup_event_attributes_handler,
                      send_new_order_notification_handler, deliver_product_handler,
-                     update_lots_state_handler]
+                     update_lots_state_handler, add_order_to_reminders_handler]
 
-BIND_TO_ORDER_STATUS_CHANGED = [send_thank_u_message_handler, send_order_confirmed_notification_handler]
+BIND_TO_ORDER_STATUS_CHANGED = [send_thank_u_message_handler, send_order_confirmed_notification_handler,
+                                remove_order_from_reminders_handler]
 
 BIND_TO_POST_DELIVERY = [send_delivery_notification_handler]
 

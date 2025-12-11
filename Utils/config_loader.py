@@ -170,6 +170,14 @@ def load_main_config(config_path: str):
             "replyText": "any"
         },
 
+        "OrderReminders": {
+            "enabled": ["0", "1"],
+            "timeout": "any",
+            "template": "any",
+            "repeatCount": "any",
+            "interval": "any"
+        },
+
         "ReviewReply": {
             "star1Reply": ["0", "1"],
             "star2Reply": ["0", "1"],

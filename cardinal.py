@@ -160,6 +160,9 @@ class Cardinal(object):
         self.greeting_chat_id_threshold = max(self.old_users.keys(), default=0)
         # пороговое значение для определения новых чатов (для приветствия)
 
+        # Заказы, ожидающие подтверждения для напоминаний
+        self.pending_orders = {}  # {order_id: {"created_time": timestamp, "reminder_count": int, "last_reminder": timestamp}}
+
         # Хэндлеры
         self.pre_init_handlers = []
         self.post_init_handlers = []
@@ -446,6 +449,80 @@ class Cardinal(object):
                 entities.extend(self.split_text(text))
         return entities
 
+    def send_order_reminder(self, order: types.OrderShortcut) -> None:
+        """
+        Отправляет напоминание о подтверждении заказа.
+        """
+        if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
+            return
+
+        template = self.MAIN_CFG["OrderReminders"]["template"]
+        if not template:
+            return
+
+        # Форматируем шаблон
+        formatted_text = cardinal_tools.format_order_text(template, order)
+
+        # Получаем чат с покупателем
+        try:
+            chat = self.account.get_chat_by_name(order.buyer_username, True)
+        except:
+            logger.warning(f"Не удалось получить чат с покупателем {order.buyer_username} для заказа {order.id}")
+            return
+
+        # Отправляем сообщение
+        result = self.send_message(chat.id, formatted_text, order.buyer_username)
+        if result:
+            logger.info(f"Отправлено напоминание о подтверждении заказа {order.id} покупателю {order.buyer_username}")
+        else:
+            logger.warning(f"Не удалось отправить напоминание о подтверждении заказа {order.id}")
+
+    def check_order_reminders(self) -> None:
+        """
+        Проверяет заказы и отправляет напоминания при необходимости.
+        """
+        if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
+            return
+
+        current_time = int(time.time())
+        timeout = int(self.MAIN_CFG["OrderReminders"]["timeout"]) * 60  # в секундах
+        interval = int(self.MAIN_CFG["OrderReminders"]["interval"]) * 60  # в секундах
+        max_reminders = int(self.MAIN_CFG["OrderReminders"]["repeatCount"])
+
+        orders_to_remove = []
+
+        for order_id, order_data in self.pending_orders.items():
+            created_time = order_data["created_time"]
+            reminder_count = order_data["reminder_count"]
+            last_reminder = order_data.get("last_reminder", 0)
+
+            # Если заказ старше таймаута
+            if current_time - created_time >= timeout:
+                # Если еще не отправляли максимум напоминаний
+                if reminder_count < max_reminders:
+                    # Если прошло достаточно времени с последнего напоминания
+                    if current_time - last_reminder >= interval:
+                        # Получаем информацию о заказе
+                        try:
+                            order = self.account.get_order_shortcut(order_id)
+                            if order.status == types.OrderStatuses.PAID:  # Заказ еще не подтвержден
+                                self.send_order_reminder(order)
+                                order_data["reminder_count"] += 1
+                                order_data["last_reminder"] = current_time
+                            else:
+                                # Заказ уже подтвержден или отменен
+                                orders_to_remove.append(order_id)
+                        except:
+                            logger.warning(f"Не удалось получить информацию о заказе {order_id} для напоминания")
+                            orders_to_remove.append(order_id)
+                else:
+                    # Достигнут лимит напоминаний, удаляем заказ
+                    orders_to_remove.append(order_id)
+
+        # Удаляем обработанные заказы
+        for order_id in orders_to_remove:
+            del self.pending_orders[order_id]
+
     def send_message(self, chat_id: int | str, message_text: str, chat_name: str | None = None,
                      interlocutor_id: int | None = None, attempts: int = 3,
                      watermark: bool = True) -> list[FunPayAPI.types.Message] | None:
@@ -636,6 +713,19 @@ class Cardinal(object):
             result = self.update_session()
             sleep_time = 60 if not result else 3600
 
+    def order_reminders_loop(self):
+        """
+        Запускает бесконечный цикл проверки напоминаний о подтверждении заказов.
+        """
+        logger.info(_("crd_order_reminders_loop_started"))
+        while True:
+            try:
+                self.check_order_reminders()
+            except Exception as e:
+                logger.error(f"Ошибка в цикле напоминаний о заказах: {e}")
+                logger.debug("TRACEBACK", exc_info=True)
+            time.sleep(60)  # Проверяем каждую минуту
+
     # Управление процессом
     def init(self):
         """
@@ -695,6 +785,7 @@ class Cardinal(object):
 
         Thread(target=self.lots_raise_loop, daemon=True).start()
         Thread(target=self.update_session_loop, daemon=True).start()
+        Thread(target=self.order_reminders_loop, daemon=True).start()
         self.process_events()
 
     def start(self):
