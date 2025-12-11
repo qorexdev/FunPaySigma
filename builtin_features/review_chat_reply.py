@@ -186,9 +186,9 @@ def init(cardinal: Cardinal):
     tg.cbq_handler(switch, lambda c: f"{CBT_TEXT_SWITCH}" in c.data)
     tg.cbq_handler(open_settings, lambda c: c.data == CBT_OPEN_SETTINGS)
     
-    logger.info(f"{LOGGER_PREFIX} CBT_OPEN_SETTINGS = {CBT_OPEN_SETTINGS}")
-    logger.info(f"{LOGGER_PREFIX} Зарегистрировано callback обработчиков: {len(tg.bot.callback_query_handlers)}")
-    logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+    logger.debug(f"{LOGGER_PREFIX} CBT_OPEN_SETTINGS = {CBT_OPEN_SETTINGS}")
+    logger.debug(f"{LOGGER_PREFIX} Зарегистрировано callback обработчиков: {len(tg.bot.callback_query_handlers)}")
+    logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 
 def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):

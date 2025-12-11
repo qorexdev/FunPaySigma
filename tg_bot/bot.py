@@ -245,7 +245,6 @@ class TGBot:
         @bot_instance.callback_query_handler(func, **kwargs)
         def run_handler(call: CallbackQuery):
             try:
-                logger.debug(f"CBQ Handler: {handler.__name__} triggered for callback: {call.data}")
                 handler(call)
             except:
                 logger.error(_("log_tg_handler_error"))

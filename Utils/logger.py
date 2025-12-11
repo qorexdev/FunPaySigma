@@ -126,7 +126,7 @@ LOGGER_CONFIG = {
 
         "cli_handler": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "cli_formatter"
         }
     },

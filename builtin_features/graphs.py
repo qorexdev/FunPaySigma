@@ -644,7 +644,7 @@ def init(cardinal: Cardinal):
     tg.msg_handler(edited, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, f"{CBT_TEXT_EDITED}:min4line"))
     tg.cbq_handler(switch, lambda c: f"{CBT_TEXT_SWITCH}" in c.data)
     
-    logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+    logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 
 def get_settings_button():

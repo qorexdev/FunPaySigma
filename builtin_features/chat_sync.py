@@ -313,7 +313,7 @@ class ChatSync:
         self.initialized = True
         if self.settings["chat_id"] and len(self.bots) >= MIN_BOTS and not self.cardinal.old_mode_enabled:
             self.ready = True
-        logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+        logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
     def setup_event_attributes(self, c, e):
         if e.stack.id() == self.attributation_last_stack_id:
@@ -1107,7 +1107,7 @@ def init(cardinal: Cardinal):
     cardinal.init_message_handlers.append(cs.sync_chat_on_start_handler)
     cardinal.new_order_handlers.insert(0, cs.new_order_handler)
 
-    logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+    logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 
 def message_hook(cardinal: Cardinal, e: NewMessageEvent):

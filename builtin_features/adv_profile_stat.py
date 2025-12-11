@@ -245,7 +245,7 @@ def init(cardinal: Cardinal):
     # Регистрируем обработчик
     tg.cbq_handler(profile_handler, lambda c: c.data == ADV_PROFILE_CB)
     
-    logger.info(f"{LOGGER_PREFIX} Модуль инициализирован.")
+    logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 
 def message_hook(cardinal: Cardinal, event: NewMessageEvent):
