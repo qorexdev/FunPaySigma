@@ -36,4 +36,4 @@ ReadWritePaths=/home/%i/FunPaySigma /home/%i/pyvenv -/run/FunPaySigma
 
 [Unit]
 After=network.target
-Description=FPS Fork Bot Service (on %I)
+Description=FunPaySigma Bot Service (on %I)

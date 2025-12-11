@@ -1376,7 +1376,7 @@ class TGBot:
                     break
             if new_name != name:
                 self.bot.set_my_name(new_name)
-        sh_text = "🤖 FPS Fork - бот для FunPay"
+        sh_text = "🤖 FPS - бот для FunPay"
         res = self.bot.get_my_short_description().short_description
         if res != sh_text:
             self.bot.set_my_short_description(sh_text)
