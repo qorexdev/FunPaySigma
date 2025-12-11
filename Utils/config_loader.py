@@ -270,7 +270,7 @@ def load_main_config(config_path: str):
             config.add_section("OrderReminders")
             config.set("OrderReminders", "enabled", "0")
             config.set("OrderReminders", "timeout", "60")
-            config.set("OrderReminders", "template", "Напоминание: Заказ #$order_id ожидает подтверждения. $order_link")
+            config.set("OrderReminders", "template", "Необходимо подтвердить заказ по ссылке: $order_link")
             config.set("OrderReminders", "repeatCount", "3")
             config.set("OrderReminders", "interval", "30")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
