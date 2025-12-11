@@ -573,6 +573,9 @@ class TGBot:
             latest_release = releases[0]
             self.bot.send_message(m.chat.id, _("update_available", latest_release.name, latest_release.description))
             self.bot.send_message(m.chat.id, _("update_update"))
+        else:
+            # Нет обновлений - список пустой
+            self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
 
     def get_backup(self, m: Message):
         logger.info(
@@ -609,7 +612,8 @@ class TGBot:
             return
 
         if not releases:
-            self.bot.send_message(m.chat.id, _("update_no_tags"))
+            # Нет обновлений - список пустой
+            self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
             return
 
         # Берём самый новый релиз (первый в списке)

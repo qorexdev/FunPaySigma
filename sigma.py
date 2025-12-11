@@ -942,6 +942,7 @@ class Cardinal(object):
 
             try:
                 curr_tag = f"v{self.VERSION}"
+                logger.debug(f"Проверка обновлений для версии {curr_tag}...")
                 releases = updater.get_new_releases(curr_tag)
                 
                 # Если найдены новые релизы
@@ -950,9 +951,14 @@ class Cardinal(object):
                     if self.telegram:
                          self.telegram.send_update_confirmation(releases[0])
                          # Если отправили уведомление, ждем сутки перед следующим возможным напоминанием
-                         time.sleep(86400) 
+                         time.sleep(86400)
+                elif isinstance(releases, int):
+                    logger.debug(f"Проверка обновлений: код ответа {releases} (2=последняя версия, 3=ошибка)")
+                else:
+                    logger.debug(f"Обновлений не найдено. Текущая версия {curr_tag} актуальна.")
             except Exception as e:
                 logger.error(f"Ошибка при проверке обновлений: {e}")
+                logger.debug("TRACEBACK", exc_info=True)
 
     def run(self):
         """
