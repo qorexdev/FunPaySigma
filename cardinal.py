@@ -311,8 +311,16 @@ class Cardinal(object):
         """
         Инициализирует Telegram бота.
         """
-        self.telegram = tg_bot.bot.TGBot(self)
-        self.telegram.init()
+        try:
+            self.telegram = tg_bot.bot.TGBot(self)
+            self.telegram.init()
+        except ValueError as e:
+            if "Token must contain a colon" in str(e):
+                logger.error("Неверный токен Telegram бота. Проверьте настройки в configs/_main.cfg [Telegram] token")
+                logger.error("Токен должен быть в формате bot_id:token")
+                sys.exit(1)
+            else:
+                raise
 
     def get_balance(self, attempts: int = 3) -> FunPayAPI.types.Balance:
         subcategories = self.account.get_sorted_subcategories()[FunPayAPI.enums.SubCategoryTypes.COMMON]
