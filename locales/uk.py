@@ -231,7 +231,8 @@ about = """<b>🤖 FPC Fork v{}</b>
 <i>Форк на базі FunPay Cardinal</i>
 
 👨‍💻 <b>Розробники:</b> @qorexdev, @sidor0912
-📢 <b>Канал оновлень:</b> @fpcfork"""
+📢 <b>Канал оновлень:</b> @fpcfork
+🔗 <b>Репозиторій:</b> https://github.com/qorexdev/FunPayCardinalFork"""
 
 sys_info = """<b><u>Дані системи</u></b>
 

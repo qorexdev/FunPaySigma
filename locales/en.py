@@ -230,7 +230,8 @@ about = """<b>🤖 FPC Fork v{}</b>
 <i>Fork based on FunPay Cardinal</i>
 
 👨‍💻 <b>Developers:</b> @qorexdev, @sidor0912
-📢 <b>Updates channel:</b> @fpcfork"""
+📢 <b>Updates channel:</b> @fpcfork
+🔗 <b>Repository:</b> https://github.com/qorexdev/FunPayCardinalFork"""
 
 sys_info = """<b><u>Data summary</u></b>
 

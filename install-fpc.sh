@@ -216,11 +216,9 @@ if ! sudo mkdir /home/$username/fpc-install ; then
   exit 2
 fi
 
-# NOTE: Обновления отключены в форке
-# gh_repo="YOUR_USERNAME/YOUR_REPO"
-# LOCATION=$(curl -sS https://api.github.com/repos/$gh_repo/releases/latest | grep "zipball_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g' )
-echo -e "${RED}ВНИМАНИЕ: Автоматическая загрузка отключена в форке. Используйте ручную установку.${RESET}"
-exit 1
+# NOTE: Автоматическая загрузка включена для форка
+gh_repo="qorexdev/FunPayCardinalFork"
+LOCATION=$(curl -sS https://api.github.com/repos/$gh_repo/releases/latest | grep "zipball_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g' )
 
 #14
 if ! sudo curl -L $LOCATION -o /home/$username/fpc-install/fpc.zip ; then
