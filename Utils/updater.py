@@ -118,7 +118,7 @@ def get_new_releases(current_tag) -> int | list[Release]:
     if next_tag is None:
         return 2  # Текущий тег последний
 
-    releases = get_releases(next_tag)
+    releases = get_releases(current_tag)
     if releases is None:
         return 3  # Ошибка получения релизов
 

@@ -287,7 +287,7 @@ logfile_error = "❌ Failed to send log file."
 logfile_deleted = "🗑️ Deleted {} logfile(s)."
 
 update_no_tags = "❌ Failed to get the version list. Try again later."
-update_lasted = "✅ You have the latest version FunPayCardinal {}"
+update_lasted = "✅ You have the latest version FPC Fork {}"
 update_get_error = "❌ Failed to get new version information. Try again later."
 update_available = "<b><u>New version available!</u></b>\n\n\n{}\n\n{}"
 update_update = "To update, enter the command /update"

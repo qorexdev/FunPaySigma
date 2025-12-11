@@ -605,6 +605,11 @@ class TGBot:
 
         if not self.create_backup(m):
             return
+
+        if not releases:
+            self.bot.send_message(m.chat.id, _("update_no_tags"))
+            return
+
         release = releases[-1]
         if updater.download_zip(release.sources_link) \
                 or (release_folder := updater.extract_update_archive()) == 1:
