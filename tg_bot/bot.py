@@ -567,10 +567,11 @@ class TGBot:
             }
             self.bot.send_message(m.chat.id, _(errors[releases][0], *errors[releases][1]))
             return
-        for release in releases:
-            self.bot.send_message(m.chat.id, _("update_available", release.name, release.description))
-            time.sleep(1)
-        self.bot.send_message(m.chat.id, _("update_update"))
+        # Показываем только самый новый релиз (первый в списке)
+        if releases:
+            latest_release = releases[0]
+            self.bot.send_message(m.chat.id, _("update_available", latest_release.name, latest_release.description))
+            self.bot.send_message(m.chat.id, _("update_update"))
 
     def get_backup(self, m: Message):
         logger.info(
@@ -610,12 +611,14 @@ class TGBot:
             self.bot.send_message(m.chat.id, _("update_no_tags"))
             return
 
-        release = releases[-1]
+        # Берём самый новый релиз (первый в списке)
+        release = releases[0]
         if updater.download_zip(release.sources_link) \
                 or (release_folder := updater.extract_update_archive()) == 1:
             self.bot.send_message(m.chat.id, _("update_download_error"))
             return
-        self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(len(releases) - 1)))
+        # Количество пропущенных релизов = всего релизов
+        self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(len(releases))))
 
         if updater.install_release(release_folder):
             self.bot.send_message(m.chat.id, _("update_install_error"))
