@@ -17,7 +17,7 @@ LOG_COLORS = {
 }
 
 CLI_LOG_FORMAT = f"{Fore.BLACK + Style.BRIGHT}[%(asctime)s]{Style.RESET_ALL}"\
-                 f"{Fore.CYAN}>{Style.RESET_ALL} $RESET%(levelname).1s: %(message)s{Style.RESET_ALL}"
+                 f"{Fore.CYAN}[%(filename)s:%(lineno)d]>{Style.RESET_ALL} $RESET%(levelname).1s: %(message)s{Style.RESET_ALL}"
 CLI_TIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 
 FILE_LOG_FORMAT = "[%(asctime)s][%(filename)s][%(lineno)d]> %(levelname).1s: %(message)s"
@@ -126,7 +126,7 @@ LOGGER_CONFIG = {
 
         "cli_handler": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
+            "level": "DEBUG",
             "formatter": "cli_formatter"
         }
     },
@@ -144,19 +144,19 @@ LOGGER_CONFIG = {
     "loggers": {
         "main": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "INFO"
+            "level": "DEBUG"
         },
         "FunPayAPI": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "INFO"
+            "level": "DEBUG"
         },
         "FPS": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "INFO"
+            "level": "DEBUG"
         },
         "TGBot": {
             "handlers": ["cli_handler", "file_handler"],
-            "level": "INFO"
+            "level": "DEBUG"
         },
         "TeleBot": {
             "handlers": ["file_handler"],
