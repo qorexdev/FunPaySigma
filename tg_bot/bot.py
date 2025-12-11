@@ -557,7 +557,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("about", self.cardinal.VERSION))
 
     def check_updates(self, m: Message):
-        curr_tag = f"v{self.cardinal.VERSION}"
+        curr_tag = self.cardinal.VERSION
         releases = updater.get_new_releases(curr_tag)
         if isinstance(releases, int):
             errors = {
@@ -592,7 +592,7 @@ class TGBot:
         return True
 
     def update(self, m: Message):
-        curr_tag = f"v{self.cardinal.VERSION}"
+        curr_tag = self.cardinal.VERSION
         releases = updater.get_new_releases(curr_tag)
         if isinstance(releases, int):
             errors = {
@@ -814,7 +814,7 @@ class TGBot:
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
                      "v_order_id", "v_order_link", "v_order_title", "v_game", "v_category", "v_category_fullname",
                      "v_photo", "v_sleep"]
-        text = f"{_('v_edit_order_reminders_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        text = f"{_('v_edit_order_reminders_template', utils.escape(self.cardinal.MAIN_CFG['OrderReminders']['template']))}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
         result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_ORDER_REMINDERS_TEMPLATE)
         self.bot.answer_callback_query(c.id)
@@ -1110,7 +1110,7 @@ class TGBot:
                    kb.greeting_settings, [self.cardinal]),
             "oc": (_("desc_oc", utils.escape(self.cardinal.MAIN_CFG['OrderConfirm']['replyText'])),
                    kb.order_confirm_reply_settings, [self.cardinal]),
-            "or": (_("desc_order_reminders"), kb.order_reminders_settings, [self.cardinal])
+            "or": (_("desc_order_reminders", utils.escape(self.cardinal.MAIN_CFG['OrderReminders']['template'])), kb.order_reminders_settings, [self.cardinal])
         }
 
         curr = sections[section]
