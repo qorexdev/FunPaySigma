@@ -119,8 +119,8 @@ LOGGER_CONFIG = {
             "level": "DEBUG",
             "formatter": "file_formatter",
             "filename": "logs/log.log",
-            "maxBytes": 20 * 1024 * 1024,  # 20 мегабайт в байтах
-            "backupCount": 25,  # Сколько ротаций оставить
+            "maxBytes": 5 * 1024 * 1024,  # 5 мегабайт (оптимизация RAM)
+            "backupCount": 5,  # Уменьшено для экономии ресурсов
             "encoding": "utf-8"
         },
 

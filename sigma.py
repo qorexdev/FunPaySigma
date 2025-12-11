@@ -35,6 +35,16 @@ import tg_bot.bot
 from threading import Thread
 
 import gc
+import sys
+
+# Настройки оптимизации памяти
+MAX_OLD_USERS_CACHE = 1000  # Максимум записей в кэше старых пользователей
+MAX_EXCHANGE_RATES_CACHE = 50  # Максимум записей в кэше курсов валют
+MAX_PENDING_ORDERS = 100  # Максимум ожидающих заказов
+GC_COLLECT_INTERVAL = 60  # Интервал сборки мусора (секунды)
+
+# Агрессивная настройка garbage collector для снижения потребления памяти
+gc.set_threshold(700, 10, 5)  # Более агрессивная сборка мусора
 
 # Встроенные модули (бывшие плагины)
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, graphs, chat_sync
@@ -55,7 +65,10 @@ def get_cardinal() -> None | Cardinal:
 class PluginData:
     """
     Класс, описывающий плагин.
+    Использует __slots__ для оптимизации памяти.
     """
+    __slots__ = ('name', 'version', 'description', 'credits', 'uuid', 'path', 
+                 'plugin', 'settings_page', 'commands', 'delete_handler', 'enabled')
 
     def __init__(self, name: str, version: str, desc: str, credentials: str, uuid: str,
                  path: str, plugin: ModuleType, settings_page: bool, delete_handler: Callable | None, enabled: bool):
@@ -176,6 +189,13 @@ class Cardinal(object):
         self.greeting_chat_id_threshold = max(self.old_users.keys(), default=0)
         # пороговое значение для определения новых чатов (для приветствия)
 
+        # Оптимизация: Ограничиваем размер кэша старых пользователей
+        self._cleanup_old_users_cache()
+
+        # Счётчик для периодической сборки мусора
+        self._gc_counter = 0
+        self._last_gc_time = time.time()
+
         # Заказы, ожидающие подтверждения для напоминаний
         self.pending_orders_file = "storage/pending_orders.json"
         self.pending_orders = self.load_pending_orders()
@@ -227,6 +247,80 @@ class Cardinal(object):
         self.plugins: dict[str, PluginData] = {}
         self.disabled_plugins = cardinal_tools.load_disabled_plugins()
         self.builtin_tg_commands = {}  # Команды от встроенных модулей {module_name: [(cmd, desc, is_admin)]}
+
+    # ===== МЕТОДЫ ОПТИМИЗАЦИИ ПАМЯТИ =====
+    
+    def _cleanup_old_users_cache(self) -> None:
+        """
+        Очищает кэш старых пользователей, оставляя только последние MAX_OLD_USERS_CACHE записей.
+        """
+        if len(self.old_users) > MAX_OLD_USERS_CACHE:
+            # Сортируем по времени и оставляем только новые
+            sorted_users = sorted(self.old_users.items(), key=lambda x: x[1], reverse=True)
+            self.old_users = dict(sorted_users[:MAX_OLD_USERS_CACHE])
+            cardinal_tools.cache_old_users(self.old_users)
+            logger.debug(f"Очищен кэш old_users: оставлено {len(self.old_users)} записей")
+
+    def _cleanup_exchange_rates_cache(self) -> None:
+        """
+        Очищает кэш курсов валют, оставляя только последние MAX_EXCHANGE_RATES_CACHE записей.
+        """
+        if len(self.__exchange_rates) > MAX_EXCHANGE_RATES_CACHE:
+            # Сортируем по времени обновления и оставляем только новые
+            sorted_rates = sorted(self.__exchange_rates.items(), key=lambda x: x[1][1], reverse=True)
+            self.__exchange_rates = dict(sorted_rates[:MAX_EXCHANGE_RATES_CACHE])
+            logger.debug(f"Очищен кэш exchange_rates: оставлено {len(self.__exchange_rates)} записей")
+
+    def _cleanup_pending_orders(self) -> None:
+        """
+        Очищает устаревшие pending_orders, оставляя только MAX_PENDING_ORDERS записей.
+        """
+        if len(self.pending_orders) > MAX_PENDING_ORDERS:
+            # Сортируем по времени создания и удаляем старые
+            sorted_orders = sorted(self.pending_orders.items(), 
+                                   key=lambda x: x[1].get('created_time', 0), reverse=True)
+            self.pending_orders = dict(sorted_orders[:MAX_PENDING_ORDERS])
+            self.save_pending_orders()
+            logger.debug(f"Очищены pending_orders: оставлено {len(self.pending_orders)} записей")
+
+    def collect_garbage(self, force: bool = False) -> int:
+        """
+        Выполняет сборку мусора.
+        
+        :param force: принудительная полная сборка
+        :return: количество освобождённых объектов
+        """
+        current_time = time.time()
+        
+        # Не выполнять сборку чаще чем раз в GC_COLLECT_INTERVAL секунд (если не force)
+        if not force and current_time - self._last_gc_time < GC_COLLECT_INTERVAL:
+            return 0
+        
+        self._last_gc_time = current_time
+        
+        # Очистка кэшей перед сборкой мусора
+        self._cleanup_old_users_cache()
+        self._cleanup_exchange_rates_cache()
+        self._cleanup_pending_orders()
+        
+        # Полная сборка мусора всех поколений
+        collected = gc.collect(2)
+        
+        if collected > 100:
+            logger.debug(f"GC: освобождено {collected} объектов")
+        
+        return collected
+
+    def periodic_cleanup(self) -> None:
+        """
+        Периодическая очистка памяти. Вызывается в основных циклах.
+        """
+        self._gc_counter += 1
+        
+        # Каждые 100 итераций выполняем очистку
+        if self._gc_counter >= 100:
+            self._gc_counter = 0
+            self.collect_garbage()
 
     def load_pending_orders(self) -> dict:
         """
@@ -728,6 +822,8 @@ class Cardinal(object):
             if instance_id != self.run_id:
                 break
             self.run_handlers(events_handlers[event.type], (self, event))
+            # Периодическая очистка памяти
+            self.periodic_cleanup()
 
     def lots_raise_loop(self):
         """
@@ -742,12 +838,14 @@ class Cardinal(object):
             try:
                 if not self.MAIN_CFG["FunPay"].getboolean("autoRaise"):
                     time.sleep(10)
+                    self.periodic_cleanup()
                     continue
                 next_time = self.raise_lots()
                 delay = next_time - int(time.time())
                 if delay <= 0:
                     continue
                 time.sleep(delay)
+                self.periodic_cleanup()
             except:
                 logger.debug("TRACEBACK", exc_info=True)
 
@@ -761,6 +859,8 @@ class Cardinal(object):
             time.sleep(sleep_time)
             result = self.update_session()
             sleep_time = 60 if not result else 3600
+            # Полная сборка мусора каждый час
+            self.collect_garbage(force=True)
 
     def order_reminders_loop(self):
         """
@@ -770,6 +870,7 @@ class Cardinal(object):
         while True:
             try:
                 self.check_order_reminders()
+                self.periodic_cleanup()
             except Exception as e:
                 logger.error(f"Ошибка в цикле напоминаний о заказах: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
@@ -833,9 +934,9 @@ class Cardinal(object):
         while True:
             time.sleep(300)  # Проверка каждые 5 минут
             
-            # Очистка памяти (garbage collection)
+            # Полная очистка памяти (garbage collection)
             try:
-                gc.collect()
+                self.collect_garbage(force=True)
             except:
                 pass
 
