@@ -19,6 +19,7 @@ import time
 import random
 import string
 import psutil
+import hashlib
 import telebot
 from telebot.apihelper import ApiTelegramException
 import logging
@@ -303,20 +304,20 @@ class TGBot:
                 utils.save_notification_settings(self.notification_settings)
             text = _("access_granted", language=lang)
             kb_links = None
-            logger.warning(_("log_access_granted", m.from_user.username, m.from_user.id))
+            logger.warning(_("log_access_granted", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id))
         else:
             self.attempts[m.from_user.id] = self.attempts.get(m.from_user.id, 0) + 1
             text = _("access_denied", m.from_user.username, language=lang)
             kb_links = kb.LINKS_KB(language=lang)
-            logger.warning(_("log_access_attempt", m.from_user.username, m.from_user.id))
+            logger.warning(_("log_access_attempt", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id))
         self.bot.send_message(m.chat.id, text, reply_markup=kb_links)
 
     def ignore_unauthorized_users(self, c: CallbackQuery):
         """
         Игнорирует callback'и от не авторизированных пользователей.
         """
-        logger.warning(_("log_click_attempt", c.from_user.username, c.from_user.id, c.message.chat.username,
-                         c.message.chat.id))
+        logger.warning(_("log_click_attempt", hashlib.sha256(c.from_user.username.encode()).hexdigest()[:8], c.from_user.id, hashlib.sha256(c.message.chat.username.encode()).hexdigest()[:8] if c.message.chat.username else None,
+                          c.message.chat.id))
         self.attempts[c.from_user.id] = self.attempts.get(c.from_user.id, 0) + 1
         if self.attempts[c.from_user.id] <= 5:
             self.bot.answer_callback_query(c.id, _("adv_fpc", language=c.from_user.language_code), show_alert=True)
@@ -380,7 +381,9 @@ class TGBot:
                    f"{self.cardinal.account.username}</a> ➔ <a href='https://funpay.com/users/{new_account.id}/'>" \
                    f"{new_account.username}</a>)"
 
-        self.cardinal.MAIN_CFG.set("FunPay", "golden_key", golden_key)
+        # Шифруем golden_key перед сохранением
+        encrypted_key = f"enc:{cardinal_tools.encrypt_data(golden_key)}"
+        self.cardinal.MAIN_CFG.set("FunPay", "golden_key", encrypted_key)
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         self.bot.send_message(m.chat.id, f'{_("cookie_changed", accs)}{_("cookie_changed2") if not one_acc else ""}',
                               disable_web_page_preview=True)
@@ -416,7 +419,7 @@ class TGBot:
         key = "".join(random.sample(string.ascii_letters + string.digits, 50))
         self.cardinal.delivery_tests[key] = lot_name
 
-        logger.info(_("log_new_ad_key", m.from_user.username, m.from_user.id, lot_name, key))
+        logger.info(_("log_new_ad_key", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, lot_name, key))
         self.bot.send_message(m.chat.id, _("test_ad_key_created", utils.escape(lot_name), key))
 
     def act_ban(self, m: Message):
@@ -439,7 +442,7 @@ class TGBot:
 
         self.cardinal.blacklist.append(nickname)
         cardinal_tools.cache_blacklist(self.cardinal.blacklist)
-        logger.info(_("log_user_blacklisted", m.from_user.username, m.from_user.id, nickname))
+        logger.info(_("log_user_blacklisted", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, nickname))
         self.bot.send_message(m.chat.id, _("user_blacklisted", nickname))
 
     def act_unban(self, m: Message):
@@ -460,7 +463,7 @@ class TGBot:
             return
         self.cardinal.blacklist.remove(nickname)
         cardinal_tools.cache_blacklist(self.cardinal.blacklist)
-        logger.info(_("log_user_unbanned", m.from_user.username, m.from_user.id, nickname))
+        logger.info(_("log_user_unbanned", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, nickname))
         self.bot.send_message(m.chat.id, _("user_unbanned", nickname))
 
     def send_ban_list(self, m: Message):

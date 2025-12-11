@@ -125,9 +125,11 @@ class Cardinal(object):
                 if self.MAIN_CFG["Proxy"].getboolean("check") and not cardinal_tools.check_proxy(self.proxy):
                     sys.exit()
 
+        # Ротация User-Agent для анонимности
+        user_agent = cardinal_tools.get_random_user_agent() if not self.MAIN_CFG["FunPay"]["user_agent"] else self.MAIN_CFG["FunPay"]["user_agent"]
         self.account = FunPayAPI.Account(self.MAIN_CFG["FunPay"]["golden_key"],
-                                         self.MAIN_CFG["FunPay"]["user_agent"],
-                                         proxy=self.proxy)
+                                          user_agent,
+                                          proxy=self.proxy)
         self.runner: FunPayAPI.Runner | None = None
         self.telegram: tg_bot.bot.TGBot | None = None
 
@@ -739,8 +741,8 @@ class Cardinal(object):
         :param config: объект конфига.
         :param file_path: путь до файла, в который нужно сохранить конфиг.
         """
-        with open(file_path, "w", encoding="utf-8") as f:
-            config.write(f)
+        from Utils.config_loader import save_config as save_config_func
+        save_config_func(config, file_path)
 
     def add_builtin_telegram_commands(self, module_name: str, commands: list) -> None:
         """

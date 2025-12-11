@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 
 import bcrypt
 import requests
+from cryptography.fernet import Fernet
+import base64
 
 from locales.localizer import Localizer
 
@@ -496,3 +498,68 @@ def hash_password(password: str) -> str:
 # Проверка пароля
 def check_password(password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed_password.encode())  # Кодируем для проверки
+
+
+# Ротация User-Agents для анонимности
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/120.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.46"
+]
+
+
+def get_random_user_agent() -> str:
+    """
+    Возвращает случайный User-Agent из списка для анонимности запросов.
+
+    :return: случайный User-Agent.
+    """
+    import random
+    return random.choice(USER_AGENTS)
+
+
+# Шифрование конфигурационных файлов
+def get_encryption_key() -> bytes:
+    """
+    Генерирует или загружает ключ шифрования на основе фиксированного мастер-ключа.
+
+    :return: ключ шифрования.
+    """
+    # Фиксированный мастер-ключ (в реальном приложении лучше генерировать уникальный)
+    master_key = b'FPC_Security_Key_2024!'  # Должен быть 32 байта для Fernet
+    key = base64.urlsafe_b64encode(master_key.ljust(32)[:32])
+    return key
+
+
+def encrypt_data(data: str) -> str:
+    """
+    Шифрует строку данных.
+
+    :param data: данные для шифрования.
+    :return: зашифрованные данные в base64.
+    """
+    f = Fernet(get_encryption_key())
+    encrypted = f.encrypt(data.encode())
+    return base64.urlsafe_b64encode(encrypted).decode()
+
+
+def decrypt_data(encrypted_data: str) -> str:
+    """
+    Дешифрует зашифрованные данные.
+
+    :param encrypted_data: зашифрованные данные в base64.
+    :return: расшифрованные данные.
+    """
+    try:
+        f = Fernet(get_encryption_key())
+        decrypted = f.decrypt(base64.urlsafe_b64decode(encrypted_data.encode()))
+        return decrypted.decode()
+    except Exception as e:
+        logger.error(f"Ошибка дешифрования: {e}")
+        return encrypted_data  # Возвращаем как есть, если не удалось расшифровать

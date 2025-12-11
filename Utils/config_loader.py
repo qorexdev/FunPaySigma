@@ -5,11 +5,46 @@ import configparser
 from configparser import ConfigParser, SectionProxy
 import codecs
 import os
+import base64
+from cryptography.fernet import Fernet
 
 from Utils.exceptions import (ParamNotFoundError, EmptyValueError, ValueNotValidError, SectionNotFoundError,
                               ConfigParseError, ProductsFileNotFoundError, NoProductVarError,
                               SubCommandAlreadyExists, DuplicateSectionErrorWrapper)
-from Utils.cardinal_tools import hash_password
+from Utils.cardinal_tools import hash_password, encrypt_data, decrypt_data
+
+
+def get_encryption_key():
+    """
+    Получает ключ шифрования из переменной окружения FPC_ENCRYPTION_KEY.
+    Если не установлена, генерирует новый ключ и сохраняет в .env.
+    """
+    key = os.getenv('FPC_ENCRYPTION_KEY')
+    if key:
+        return base64.urlsafe_b64decode(key)
+    else:
+        # Генерируем новый ключ
+        key = Fernet.generate_key()
+        # Сохраняем в .env
+        with open('.env', 'a') as f:
+            f.write(f'FPC_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
+        return key
+
+
+def encrypt_value(value: str) -> str:
+    """
+    Шифрует значение.
+    """
+    f = Fernet(get_encryption_key())
+    return f.encrypt(value.encode()).decode()
+
+
+def decrypt_value(encrypted: str) -> str:
+    """
+    Дешифрует значение.
+    """
+    f = Fernet(get_encryption_key())
+    return f.decrypt(encrypted.encode()).decode()
 
 
 def check_param(param_name: str, section: SectionProxy, valid_values: list[str | None] | None = None,
@@ -31,6 +66,21 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
         return None
 
     value = section[param_name].strip()
+
+    # Обработка переменных окружения
+    if value.startswith('env:'):
+        env_var = value[4:]
+        value = os.getenv(env_var, '')
+        if not value:
+            raise EmptyValueError(f"Environment variable {env_var} not set")
+
+    # Обработка зашифрованных значений
+    elif value.startswith('enc:'):
+        encrypted = value[4:]
+        try:
+            value = decrypt_value(encrypted)
+        except Exception:
+            raise ValueNotValidError(param_name, value, ["valid encrypted value"])
 
     # Если значение пустое ("", оно не может быть None)
     if not value:
@@ -156,8 +206,7 @@ def load_main_config(config_path: str):
         # UPDATE
         if section_name == "Greetings" and "cacheInitChats" in config[section_name]:
             config.remove_option(section_name, "cacheInitChats")
-            with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                config.write(f)
+            save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
         # END OF UPDATE
 
         for param_name in values[section_name]:
@@ -165,67 +214,54 @@ def load_main_config(config_path: str):
             # UPDATE
             if section_name == "FunPay" and param_name == "oldMsgGetMode" and param_name not in config[section_name]:
                 config.set("FunPay", "oldMsgGetMode", "0")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Greetings" and param_name == "ignoreSystemMessages" and param_name not in config[
                 section_name]:
                 config.set("Greetings", "ignoreSystemMessages", "0")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Other" and param_name == "language" and param_name not in config[section_name]:
                 config.set("Other", "language", "ru")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Other" and param_name == "language" and config[section_name][param_name] == "eng":
                 config.set("Other", "language", "en")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Greetings" and param_name == "greetingsCooldown" and param_name not in config[
                 section_name]:
                 config.set("Greetings", "greetingsCooldown", "2")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "OrderConfirm" and param_name == "watermark" and param_name not in config[
                 section_name]:
                 config.set("OrderConfirm", "watermark", "1")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "FunPay" and param_name == "keepSentMessagesUnread" and \
                     param_name not in config[section_name]:
                 config.set("FunPay", "keepSentMessagesUnread", "0")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "NewMessageView" and param_name == "showImageName" and \
                     param_name not in config[section_name]:
                 config.set("NewMessageView", "showImageName", "1")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Telegram" and param_name == "blockLogin" and \
                     param_name not in config[section_name]:
                 config.set("Telegram", "blockLogin", "0")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Telegram" and param_name == "secretKeyHash" and \
                     param_name not in config[section_name]:
                 config.set(section_name, "secretKeyHash", hash_password(config[section_name]["secretKey"]))
                 config.remove_option(section_name, "secretKey")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "FunPay" and param_name == "locale" and \
                     param_name not in config[section_name]:
                 config.set(section_name, "locale", "ru")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Other" and param_name == "watermark" and \
                     param_name in config[section_name] and "𝑪𝒂𝒓𝒅𝒊𝒏𝒂𝒍" in config[section_name][param_name]:
                 config.set(section_name, param_name, "🐦")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Greetings" and param_name == "onlyNewChats" and param_name not in config[
                 section_name]:
                 config.set("Greetings", "onlyNewChats", "0")
-                with open("configs/_main.cfg", "w", encoding="utf-8") as f:
-                    config.write(f)
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
             # END OF UPDATE
 
@@ -239,7 +275,42 @@ def load_main_config(config_path: str):
             except (ParamNotFoundError, EmptyValueError, ValueNotValidError) as e:
                 raise ConfigParseError(config_path, section_name, e)
 
+    # Дешифруем чувствительные данные
+    if config.has_section("FunPay") and config.has_option("FunPay", "golden_key"):
+        encrypted_key = config["FunPay"]["golden_key"]
+        if encrypted_key.startswith("enc:"):
+            config.set("FunPay", "golden_key", decrypt_data(encrypted_key[4:]))
+    if config.has_section("Telegram") and config.has_option("Telegram", "token"):
+        encrypted_token = config["Telegram"]["token"]
+        if encrypted_token.startswith("enc:"):
+            config.set("Telegram", "token", decrypt_data(encrypted_token[4:]))
+
     return config
+
+
+def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool = True):
+    """
+    Сохраняет конфиг, опционально шифруя чувствительные поля.
+    """
+    if encrypt_sensitive:
+        sensitive_fields = {
+            'FunPay': ['golden_key'],
+            'Telegram': ['token'],
+            'Proxy': ['login', 'password']
+        }
+
+        for section_name, fields in sensitive_fields.items():
+            if section_name in config.sections():
+                for field in fields:
+                    if field in config[section_name]:
+                        value = config[section_name][field]
+                        if not value.startswith('env:') and not value.startswith('enc:'):
+                            # Шифруем
+                            encrypted = encrypt_value(value)
+                            config.set(section_name, field, f'enc:{encrypted}')
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        config.write(f)
 
 
 def load_auto_response_config(config_path: str):

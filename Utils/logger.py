@@ -5,6 +5,7 @@ from colorama import Fore, Back, Style
 import logging.handlers
 import logging
 import re
+import hashlib
 
 
 LOG_COLORS = {
@@ -23,27 +24,19 @@ FILE_LOG_FORMAT = "[%(asctime)s][%(filename)s][%(lineno)d]> %(levelname).1s: %(m
 FILE_TIME_FORMAT = "%d.%m.%y %H:%M:%S"
 CLEAR_RE = re.compile(r"(\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]))|(\n)|(\r)")
 
-# Паттерны для маскировки чувствительных данных
-SENSITIVE_PATTERNS = [
-    # Telegram Bot Token
-    (re.compile(r'\d{8,10}:[A-Za-z0-9_-]{35}'), '[HIDDEN_BOT_TOKEN]'),
-    # FunPay PHPSESSID / Golden Key (32 hex chars)
-    (re.compile(r'\b[a-f0-9]{32}\b'), '[HIDDEN_KEY]'),
-    # User-Agent (partial mask to avoid tracking leakage if needed, but usually less critical. Skipping for now unless requested)
-]
 
-def mask_sensitive_data(text: str) -> str:
+def anonymize_text(text: str) -> str:
     """
-    Маскирует чувствительные данные в тексте логов.
+    Анонимизирует текст, заменяя usernames на хэши.
     """
-    try:
-        if not isinstance(text, str):
-            return text
-        for pattern, replacement in SENSITIVE_PATTERNS:
-            text = pattern.sub(replacement, text)
-        return text
-    except Exception:
-        return text 
+    # Регулярное выражение для поиска @username
+    username_re = re.compile(r'@([a-zA-Z0-9_]+)')
+    def replace_username(match):
+        username = match.group(1)
+        # Хэшируем username
+        hashed = hashlib.sha256(username.encode()).hexdigest()[:8]
+        return f'@{hashed}'
+    return username_re.sub(replace_username, text)
 
 
 def add_colors(text: str) -> str:
@@ -99,7 +92,7 @@ class CLILoggerFormatter(logging.Formatter):
         record.msg = msg
         log_format = CLI_LOG_FORMAT.replace("$RESET", Style.RESET_ALL + LOG_COLORS[record.levelno])
         formatter = logging.Formatter(log_format, CLI_TIME_FORMAT)
-        return mask_sensitive_data(formatter.format(record))
+        return formatter.format(record)
 
 
 class FileLoggerFormatter(logging.Formatter):
@@ -111,10 +104,11 @@ class FileLoggerFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         msg = record.getMessage()
+        msg = anonymize_text(msg)
         msg = CLEAR_RE.sub("", msg)
         record.msg = msg
         formatter = logging.Formatter(FILE_LOG_FORMAT, FILE_TIME_FORMAT)
-        return mask_sensitive_data(formatter.format(record))
+        return formatter.format(record)
 
 
 LOGGER_CONFIG = {
