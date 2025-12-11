@@ -932,7 +932,7 @@ class Cardinal(object):
         logger.info("Запущен цикл проверки обновлений.")
         from Utils import updater
         while True:
-            time.sleep(300)  # Проверка каждые 5 минут
+            time.sleep(60)  # Проверка каждую минуту
             
             # Полная очистка памяти (garbage collection)
             try:
