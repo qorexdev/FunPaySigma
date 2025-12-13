@@ -73,6 +73,7 @@ class TGBot:
         self.commands = {
             "menu": "cmd_menu",
             "profile": "cmd_profile",
+            "lots": "cmd_lots",
             "restart": "cmd_restart",
             "check_updates": "cmd_check_updates",
             "update": "cmd_update",
