@@ -785,6 +785,181 @@ def edit_plugin(c: Cardinal, uuid: str, offset: int, ask_to_delete: bool = False
     return kb
 
 
+# ═══════════════════════════════════════════════════════════════
+#                    📝 РЕДАКТОР ЛОТОВ FUNPAY
+# ═══════════════════════════════════════════════════════════════
+
+def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
+    """
+    Генерирует клавиатуру со списком лотов FunPay для редактирования.
+    Использует all_lots для отображения ВСЕХ лотов включая деактивированные.
+
+    :param c: объект кардинала.
+    :param offset: смещение списка лотов.
+
+    :return: объект клавиатуры со списком лотов.
+    """
+    kb = K()
+    # Используем all_lots для получения ВСЕХ лотов включая деактивированные
+    lots = c.all_lots if hasattr(c, 'all_lots') and c.all_lots else c.tg_profile.get_common_lots()
+    lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
+    
+    if not lots_slice and offset != 0:
+        offset = 0
+        lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
+
+    for index, lot in enumerate(lots_slice):
+        # Показываем: описание + цена + статус
+        status = "✅" if getattr(lot, "active", True) else "❌"
+        price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
+        desc = lot.description if lot.description else "—"
+        text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
+        kb.add(B(text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{offset}"))
+
+    kb = add_navigation_buttons(kb, offset, MENU_CFG.FP_LOTS_BTNS_AMOUNT, len(lots_slice),
+                                len(lots), CBT.FP_LOT_EDIT_LIST)
+
+    kb.row(B(_("gl_refresh"), None, f"{CBT.UPDATE_FP_EDIT_LOTS}:{offset}"))
+    kb.add(B(_("gl_back"), None, CBT.MAIN))
+    return kb
+
+
+def edit_funpay_lot(lot_fields, offset: int, confirm_delete: bool = False) -> K:
+    """
+    Генерирует клавиатуру редактирования лота FunPay.
+
+    :param lot_fields: объект LotFields с полями лота.
+    :param offset: смещение списка лотов.
+    :param confirm_delete: показывать ли подтверждение удаления.
+
+    :return: объект клавиатуры редактирования лота.
+    """
+    lot_id = lot_fields.lot_id
+    kb = K()
+    
+    # Если режим подтверждения удаления
+    if confirm_delete:
+        kb.row(
+            B(_("le_confirm_delete"), None, f"{CBT.FP_LOT_CONFIRM_DELETE}:{lot_id}:{offset}"),
+            B(_("le_cancel_delete"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}")
+        )
+        return kb
+    
+    # Статус активности
+    active_icon = "✅" if lot_fields.active else "❌"
+    kb.add(B(_("le_toggle_active", active_icon), None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{offset}"))
+    
+    # Цена и количество
+    price_str = str(lot_fields.price) if lot_fields.price else "—"
+    amount_str = str(lot_fields.amount) if lot_fields.amount else "∞"
+    kb.row(
+        B(_("le_edit_price", price_str, lot_fields.currency), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{offset}"),
+        B(_("le_edit_amount", amount_str), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:amount:{offset}")
+    )
+    
+    # Параметры категории (специфичные поля) - показываем над названиями/описаниями
+    category_fields = _get_category_fields(lot_fields)
+    if category_fields:
+        for key, (name, value) in category_fields.items():
+            display_value = str(value)[:15] + "..." if len(str(value)) > 15 else str(value)
+            kb.add(B(f"⚙️ {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{offset}"))
+    
+    # Названия - только RU редактируется, EN автопереводится
+    kb.row(
+        B(_("le_edit_title_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{offset}"),
+        B(_("le_edit_title_en_auto"), None, CBT.EMPTY)  # EN автопереводится
+    )
+    
+    # Описания - только RU редактируется, EN автопереводится
+    kb.row(
+        B(_("le_edit_desc_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{offset}"),
+        B(_("le_edit_desc_en_auto"), None, CBT.EMPTY)  # EN автопереводится
+    )
+    
+    # Авто-ответ - только RU редактируется, EN автопереводится
+    kb.row(
+        B(_("le_edit_payment_msg_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{offset}"),
+        B(_("le_edit_payment_msg_en_auto"), None, CBT.EMPTY)  # EN автопереводится
+    )
+    
+    # Товары автовыдачи (если есть)
+    secrets_count = len(lot_fields.secrets) if lot_fields.secrets else 0
+    kb.add(B(f"{_('le_edit_secrets')} ({secrets_count})", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:secrets:{offset}"))
+    
+    # Деактивация после продажи
+    deact_icon = "✅" if lot_fields.deactivate_after_sale else "❌"
+    kb.add(B(_("le_toggle_deactivate", deact_icon), None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{offset}"))
+    
+    # Кнопка сохранения и удаления в ряд
+    kb.row(
+        B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{offset}"),
+        B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{offset}")
+    )
+    
+    # Ссылка на FunPay
+    kb.add(B(_("le_open_fp"), url=lot_fields.public_link))
+    
+    # Назад
+    kb.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT_LIST}:{offset}"))
+    
+    return kb
+
+
+def _get_category_fields(lot_fields) -> dict:
+    """
+    Извлекает специфичные поля категории из LotFields.
+    
+    :param lot_fields: объект LotFields с полями лота.
+    :return: словарь {ключ: (название, значение)}
+    """
+    category_fields = {}
+    standard_keys = [
+        "offer_id", "node_id", "csrf_token", "active", "price", "amount",
+        "secrets", "auto_delivery", "deactivate_after_sale",
+        "fields[summary][ru]", "fields[summary][en]",
+        "fields[desc][ru]", "fields[desc][en]",
+        "fields[payment_msg][ru]", "fields[payment_msg][en]",
+        "fields[images]"
+    ]
+    
+    for key, value in lot_fields.fields.items():
+        if key not in standard_keys and key.startswith("fields["):
+            # Получаем название из field_labels или извлекаем из ключа
+            if hasattr(lot_fields, 'field_labels') and key in lot_fields.field_labels:
+                field_name = lot_fields.field_labels[key]
+            else:
+                # Фоллбек: извлекаем имя из ключа
+                field_name = key.replace("fields[", "").rstrip("]").replace("][", " > ")
+            category_fields[key] = (field_name, value)
+    
+    return category_fields
+
+
+def category_fields_keyboard(lot_fields, offset: int) -> K:
+    """
+    Генерирует клавиатуру со специфичными полями категории.
+
+    :param lot_fields: объект LotFields с полями лота.
+    :param offset: смещение списка лотов.
+
+    :return: объект клавиатуры с полями категории.
+    """
+    lot_id = lot_fields.lot_id
+    kb = K()
+    
+    category_fields = _get_category_fields(lot_fields)
+    
+    if category_fields:
+        for key, (name, value) in category_fields.items():
+            display_value = str(value)[:20] + "..." if len(str(value)) > 20 else str(value)
+            kb.add(B(f"📝 {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{offset}"))
+    else:
+        kb.add(B("📭 Нет специфичных полей", None, CBT.EMPTY))
+    
+    kb.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
+    return kb
+
+
 def LINKS_KB(language: None | str = None) -> K:
     """Клавиатура без внешних ссылок (форк)."""
     return K()

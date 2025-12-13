@@ -685,11 +685,17 @@ class LotFields:
     """
 
     def __init__(self, lot_id: int, fields: dict, subcategory: SubCategory | None = None,
-                 currency: Currency = Currency.UNKNOWN, calc_result: CalcResult | None = None):
+                 currency: Currency = Currency.UNKNOWN, calc_result: CalcResult | None = None,
+                 field_labels: dict[str, str] | None = None,
+                 field_options: dict[str, list[tuple[str, str]]] | None = None):
         self.lot_id: int = lot_id
         """ID лота."""
         self.__fields: dict = fields
         """Поля лота."""
+        self.__field_labels: dict[str, str] = field_labels or {}
+        """Названия полей категории (label-ы с FunPay)."""
+        self.__field_options: dict[str, list[tuple[str, str]]] = field_options or {}
+        """Варианты выбора для select-полей категории {field_name: [(value, text), ...]}."""
 
         self.title_ru: str = self.__fields.get("fields[summary][ru]", "")
         """Русское краткое описание (название) лота."""
@@ -728,6 +734,26 @@ class LotFields:
         self.csrf_token: str | None = self.__fields.get("csrf_token")
         """CSRF-токен"""
         self.calc_result: CalcResult | None = calc_result
+
+    @property
+    def field_labels(self) -> dict[str, str]:
+        """
+        Возвращает названия полей категории (label-ы с FunPay).
+
+        :return: словарь {ключ_поля: название_поля}
+        :rtype: :obj:`dict` {:obj:`str`: :obj:`str`}
+        """
+        return self.__field_labels
+
+    @property
+    def field_options(self) -> dict[str, list[tuple[str, str]]]:
+        """
+        Возвращает варианты выбора для select-полей категории.
+
+        :return: словарь {ключ_поля: [(значение, текст), ...]}
+        :rtype: :obj:`dict` {:obj:`str`: :obj:`list` of :obj:`tuple`}
+        """
+        return self.__field_options
 
     @property
     def fields(self) -> dict[str, str]:

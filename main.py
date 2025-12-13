@@ -1,4 +1,5 @@
 import time
+import subprocess
 
 import Utils.cardinal_tools
 import Utils.config_loader as cfg_loader
@@ -13,6 +14,71 @@ from sigma import Cardinal
 import Utils.exceptions as excs
 from locales.localizer import Localizer
 
+
+# ═══════════════════════════════════════════════════════════════
+#                    🔧 ПРОВЕРКА ЗАВИСИМОСТЕЙ
+# ═══════════════════════════════════════════════════════════════
+
+def check_and_install_dependencies():
+    """Проверяет наличие необходимых библиотек и устанавливает если нужно."""
+    required_packages = {
+        "googletrans": "googletrans==4.0.0-rc1"  # Для автоперевода RU→EN
+    }
+    
+    missing_packages = []
+    
+    for package_name, install_name in required_packages.items():
+        try:
+            __import__(package_name)
+        except ImportError:
+            missing_packages.append((package_name, install_name))
+    
+    if missing_packages:
+        print(f"{Fore.YELLOW}[!] Обнаружены недостающие библиотеки для автоперевода...{Style.RESET_ALL}")
+        
+        for package_name, install_name in missing_packages:
+            print(f"{Fore.CYAN}[*] Устанавливаю {install_name}...{Style.RESET_ALL}")
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", install_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+                if result.returncode == 0:
+                    print(f"{Fore.GREEN}[✓] {package_name} успешно установлен!{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.RED}[✗] Ошибка установки {package_name}: {result.stderr[:200]}{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}[!] Автоперевод будет недоступен.{Style.RESET_ALL}")
+                    return False
+            except subprocess.TimeoutExpired:
+                print(f"{Fore.RED}[✗] Таймаут при установке {package_name}{Style.RESET_ALL}")
+                return False
+            except Exception as e:
+                print(f"{Fore.RED}[✗] Ошибка: {e}{Style.RESET_ALL}")
+                return False
+        
+        # Перезапускаем бота после установки
+        print(f"{Fore.GREEN}[✓] Все библиотеки установлены! Перезапускаю...{Style.RESET_ALL}")
+        time.sleep(2)
+        
+        # Перезапуск
+        if getattr(sys, 'frozen', False):
+            # Если это .exe
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        else:
+            # Если это .py
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+    
+    return True
+
+
+# Инициализируем colorama заранее для вывода
+colorama.init()
+
+# Проверяем зависимости перед запуском
+check_and_install_dependencies()
+
 logo = """
 ███████╗██╗░░░██╗███╗░░██╗██████╗░░█████╗░██╗░░░██╗░██████╗██╗░██████╗░███╗░░░███╗░█████╗░
 ██╔════╝██║░░░██║████╗░██║██╔══██╗██╔══██╗╚██╗░██╔╝██╔════╝██║██╔════╝░████╗░████║██╔══██╗
@@ -21,7 +87,7 @@ logo = """
 ██║░░░░░╚██████╔╝██║░╚███║██║░░░░░██║░░██║░░░██║░░░██████╔╝██║╚██████╔╝██║░╚═╝░██║██║░░██║
 ╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝╚═╝░░░░░╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░╚═╝░╚═════╝░╚═╝░░░░░╚═╝╚═╝░░╚═╝"""
 
-VERSION = "2.2.9"
+VERSION = "2.4.0"
 
 Utils.cardinal_tools.set_console_title(f"FunPay Sigma v{VERSION}")
 
@@ -41,7 +107,7 @@ for i in files:
         with open(i, "w", encoding="utf-8") as f:
             ...
 
-colorama.init()
+# colorama.init() уже вызван выше при проверке зависимостей
 
 logging.config.dictConfig(LOGGER_CONFIG)
 logging.raiseExceptions = False

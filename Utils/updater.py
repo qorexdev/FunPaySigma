@@ -91,7 +91,7 @@ def get_releases(from_tag: str) -> list[Release] | None:
         for release in releases_data:
             if release["tag_name"] == from_tag:
                 break
-            releases.append(Release(release["name"], release["body"], release["zipball_url"]))
+            releases.append(Release(release["tag_name"], release["body"], release["zipball_url"]))
         return releases
     except:
         logger.debug("TRACEBACK", exc_info=True)

@@ -13,6 +13,104 @@ from Utils.exceptions import (ParamNotFoundError, EmptyValueError, ValueNotValid
                               ConfigParseError, ProductsFileNotFoundError, NoProductVarError,
                               SubCommandAlreadyExists, DuplicateSectionErrorWrapper)
 from Utils.cardinal_tools import hash_password, encrypt_data, decrypt_data, obfuscate_data, deobfuscate_data
+import logging
+
+logger = logging.getLogger("FPS.ConfigLoader")
+
+
+def detect_config_type(config_path: str) -> str:
+    """
+    Определяет тип конфига: 'sigma' или 'cardinal'.
+    
+    Sigma конфиги имеют зашифрованные чувствительные данные (b64: префикс).
+    Cardinal конфиги хранят данные в открытом виде.
+    
+    :param config_path: путь до файла конфига.
+    :return: 'sigma' или 'cardinal'
+    """
+    config = ConfigParser(delimiters=(":"), interpolation=None)
+    config.optionxform = str
+    config.read_file(codecs.open(config_path, "r", "utf8"))
+    
+    # Проверяем наличие шифрования в golden_key или token
+    if config.has_section("FunPay") and config.has_option("FunPay", "golden_key"):
+        golden_key = config["FunPay"]["golden_key"].strip()
+        if golden_key.startswith("b64:") or golden_key.startswith("enc:"):
+            return "sigma"
+    
+    if config.has_section("Telegram") and config.has_option("Telegram", "token"):
+        token = config["Telegram"]["token"].strip()
+        if token.startswith("b64:") or token.startswith("enc:"):
+            return "sigma"
+    
+    # Если нет шифрования — это конфиг Cardinal
+    return "cardinal"
+
+
+def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> ConfigParser:
+    """
+    Конвертирует конфиг формата Cardinal в формат Sigma.
+    
+    Основные изменения:
+    - Шифрование чувствительных данных (golden_key, token, proxy credentials)
+    - Добавление недостающей секции [OrderReminders]
+    - Добавление параметра type в [Proxy] если отсутствует
+    
+    :param config_path: путь до исходного конфига Cardinal.
+    :param output_path: путь для сохранения конвертированного конфига (опционально).
+    :return: конвертированный объект конфига.
+    """
+    config = ConfigParser(delimiters=(":"), interpolation=None)
+    config.optionxform = str
+    config.read_file(codecs.open(config_path, "r", "utf8"))
+    
+    logger.info(f"$YELLOWОбнаружен конфиг формата Cardinal, выполняю конвертацию в формат Sigma...")
+    
+    # Шифруем чувствительные данные
+    sensitive_fields = {
+        'FunPay': ['golden_key'],
+        'Telegram': ['token'],
+        'Proxy': ['login', 'password', 'ip', 'port']
+    }
+    
+    for section_name, fields in sensitive_fields.items():
+        if section_name in config.sections():
+            for field in fields:
+                if field in config[section_name]:
+                    value = config[section_name][field].strip()
+                    if value and not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
+                        # Шифруем данные
+                        encrypted = obfuscate_data(value)
+                        config.set(section_name, field, f'b64:{encrypted}')
+                        logger.debug(f"Зашифровано поле [{section_name}].{field}")
+    
+    # Добавляем параметр type в [Proxy] если отсутствует
+    if config.has_section("Proxy") and not config.has_option("Proxy", "type"):
+        config.set("Proxy", "type", "HTTP")
+        logger.debug("Добавлен параметр [Proxy].type = HTTP")
+    
+    # Добавляем секцию [OrderReminders] если отсутствует
+    if "OrderReminders" not in config.sections():
+        config.add_section("OrderReminders")
+        config.set("OrderReminders", "enabled", "0")
+        config.set("OrderReminders", "timeout", "60")
+        config.set("OrderReminders", "template", "Необходимо подтвердить заказ по ссылке: $order_link")
+        config.set("OrderReminders", "repeatCount", "3")
+        config.set("OrderReminders", "interval", "30")
+        logger.debug("Добавлена секция [OrderReminders]")
+    
+    # Добавляем параметр check в [Proxy] если отсутствует
+    if config.has_section("Proxy") and not config.has_option("Proxy", "check"):
+        config.set("Proxy", "check", "0")
+        logger.debug("Добавлен параметр [Proxy].check = 0")
+    
+    # Сохраняем если указан путь
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            config.write(f)
+        logger.info(f"$GREENКонфиг успешно конвертирован и сохранен в {output_path}")
+    
+    return config
 
 
 def check_param(param_name: str, section: SectionProxy, valid_values: list[str | None] | None = None,
@@ -86,12 +184,20 @@ def create_config_obj(config_path: str) -> ConfigParser:
 def load_main_config(config_path: str):
     """
     Парсит и проверяет на правильность основной конфиг.
+    Автоматически определяет тип конфига (Sigma/Cardinal) и конвертирует при необходимости.
 
     :param config_path: путь до основного конфига.
 
     :return: спарсеный основной конфиг.
     """
-    config = create_config_obj(config_path)
+    # Определяем тип конфига
+    config_type = detect_config_type(config_path)
+    
+    if config_type == "cardinal":
+        # Конвертируем Cardinal конфиг в Sigma формат
+        config = convert_cardinal_to_sigma(config_path, config_path)
+    else:
+        config = create_config_obj(config_path)
     values = {
         "FunPay": {
             "golden_key": "any",

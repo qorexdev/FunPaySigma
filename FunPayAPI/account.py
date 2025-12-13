@@ -426,6 +426,68 @@ class Account:
             result.append(lot_obj)
         return result
 
+    def get_all_my_lots(self, profile: types.UserProfile | None = None,
+                        locale: Literal["ru", "en", "uk"] | None = None) -> list[types.MyLotShortcut]:
+        """
+        Получает ВСЕ лоты аккаунта, включая деактивированные.
+        Работает через страницы /lots/XXX/trade только для подкатегорий, где есть лоты.
+
+        :param profile: профиль пользователя для определения подкатегорий с лотами.
+        :type profile: :class:`FunPayAPI.types.UserProfile` or :obj:`None`
+        
+        :param locale: язык для парсинга.
+        :type locale: :obj:`Literal["ru", "en", "uk"]` or :obj:`None`
+
+        :return: список всех лотов аккаунта (включая деактивированные).
+        :rtype: :obj:`list` of :class:`FunPayAPI.types.MyLotShortcut`
+        """
+        if not self.is_initiated:
+            raise exceptions.AccountNotInitiatedError()
+        
+        all_lots = []
+        
+        # Получаем подкатегории, где у пользователя ЕСТЬ лоты (из профиля)
+        # Это намного быстрее, чем проходить по всем подкатегориям FunPay
+        if profile:
+            # mode=2 возвращает {подкатегория: {ID: лот}}
+            subcategories_with_lots = profile.get_sorted_lots(2)
+            subcategory_ids = set()
+            for subcat in subcategories_with_lots.keys():
+                if subcat and hasattr(subcat, 'id') and subcat.type == enums.SubCategoryTypes.COMMON:
+                    subcategory_ids.add(subcat.id)
+            
+            logger.info(f"Загрузка лотов из {len(subcategory_ids)} подкатегорий...")
+        else:
+            # Фоллбек: все COMMON подкатегории (медленно!)
+            subcategories = self.get_sorted_subcategories().get(enums.SubCategoryTypes.COMMON, {})
+            subcategory_ids = set(subcategories.keys())
+            logger.warning(f"Профиль не передан, загрузка из всех {len(subcategory_ids)} подкатегорий (медленно)...")
+        
+        total = len(subcategory_ids)
+        loaded = 0
+        
+        for subcategory_id in subcategory_ids:
+            try:
+                lots = self.get_my_subcategory_lots(subcategory_id, locale)
+                all_lots.extend(lots)
+                loaded += 1
+                
+                # Логируем каждую успешную загрузку
+                active = sum(1 for l in lots if l.active)
+                inactive = len(lots) - active
+                logger.info(f"[{loaded}/{total}] Подкатегория {subcategory_id}: {len(lots)} лотов (✅{active} ❌{inactive})")
+                
+            except Exception as e:
+                loaded += 1
+                logger.warning(f"[{loaded}/{total}] Подкатегория {subcategory_id}: ошибка - {e}")
+                continue
+        
+        active_total = sum(1 for l in all_lots if l.active)
+        inactive_total = len(all_lots) - active_total
+        logger.info(f"Загружено всего: {len(all_lots)} лотов (✅{active_total} активных, ❌{inactive_total} деактивированных)")
+        
+        return all_lots
+
     def get_lot_page(self, lot_id: int, locale: Literal["ru", "en", "uk"] | None = None):
         """
         Возвращает страницу лота.
@@ -1793,7 +1855,42 @@ class Account:
             payment_methods.append(PaymentMethod(pm.find("th").text, pm_price, pm_currency, i))
         calc_result = CalcResult(types.SubCategoryTypes.COMMON, subcategory.id, payment_methods,
                                  float(result["price"]), None, types.Currency.UNKNOWN, currency)
-        return types.LotFields(lot_id, result, subcategory, currency, calc_result)
+        
+        # Парсим названия полей (labels) и варианты для select для категории
+        field_labels = {}
+        field_options = {}  # Для хранения вариантов выбора select'ов
+        
+        for form_group in bs.find_all("div", class_="form-group"):
+            label_tag = form_group.find("label")
+            if not label_tag:
+                continue
+            label_text = label_tag.get_text(strip=True)
+            
+            # Ищем связанный input/select/textarea
+            input_tag = form_group.find(["input", "select", "textarea"])
+            if input_tag and input_tag.get("name"):
+                field_name = input_tag["name"]
+                # Пропускаем стандартные поля
+                if field_name.startswith("fields[") and field_name not in [
+                    "fields[summary][ru]", "fields[summary][en]",
+                    "fields[desc][ru]", "fields[desc][en]",
+                    "fields[payment_msg][ru]", "fields[payment_msg][en]",
+                    "fields[images]"
+                ]:
+                    field_labels[field_name] = label_text
+                    
+                    # Если это select - собираем варианты выбора
+                    if input_tag.name == "select":
+                        options = []
+                        for option in input_tag.find_all("option"):
+                            option_value = option.get("value", "")
+                            option_text = option.get_text(strip=True)
+                            if option_value:  # Пропускаем пустые варианты
+                                options.append((option_value, option_text))
+                        if options:
+                            field_options[field_name] = options
+        
+        return types.LotFields(lot_id, result, subcategory, currency, calc_result, field_labels, field_options)
 
     def get_chip_fields(self, subcategory_id: int) -> types.ChipFields:
         if not self.is_initiated:

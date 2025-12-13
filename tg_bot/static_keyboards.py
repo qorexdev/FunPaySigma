@@ -24,6 +24,7 @@ def SETTINGS_SECTIONS() -> K:
              B(_("mm_autoresponse"), callback_data=f"{CBT.CATEGORY}:ar")) \
         .row(B(_("mm_templates"), callback_data=f"{CBT.TMPLT_LIST}:0"),
              B(_("mm_plugins"), callback_data=f"{CBT.PLUGINS_LIST}:0")) \
+        .row(B(_("mm_lots_editor"), callback_data=f"{CBT.FP_LOT_EDIT_LIST}:0")) \
         .add(B(_("gl_next"), callback_data=CBT.MAIN2))
 
 

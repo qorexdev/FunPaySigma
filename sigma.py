@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from configparser import ConfigParser
 
 from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader, \
-    authorized_users_cp, proxy_cp, default_cp
+    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp
 from types import ModuleType
 import Utils.exceptions
 from uuid import UUID
@@ -174,6 +174,8 @@ class Cardinal(object):
         self.profile: FunPayAPI.types.UserProfile | None = None  # FunPay профиль для всего кардинала (+ хэндлеров)
         self.tg_profile: FunPayAPI.types.UserProfile | None = None  # FunPay профиль (для Telegram-ПУ)
         self.last_tg_profile_update = datetime.datetime.now()  # Последнее время обновления профиля для TG-ПУ
+        self.all_lots: list = []  # ВСЕ лоты аккаунта включая деактивированные (MyLotShortcut)
+        self.last_telegram_lots_update = datetime.datetime.now()  # Последнее время обновления лотов для редактора
         self.curr_profile: FunPayAPI.types.UserProfile | None = None  # Текущий профиль (для восст. / деакт. лотов.)
         # Тег последнего event'а, после которого обновлялся self.current_profile
         self.curr_profile_last_tag: str | None = None
@@ -413,6 +415,15 @@ class Cardinal(object):
             logger.info(_("crd_profile_updated", len(profile.get_lots()), len(profile.get_sorted_lots(2))))
         if update_telegram_profile:
             self.tg_profile = profile
+            # Получаем ВСЕ лоты включая деактивированные
+            # Передаём профиль для оптимизации - загружаем только подкатегории с лотами
+            try:
+                logger.info("Начинаем загрузку всех лотов (включая деактивированные)...")
+                self.all_lots = self.account.get_all_my_lots(profile=profile)
+            except Exception as e:
+                logger.error(f"Ошибка при получении всех лотов: {e}")
+                logger.debug("TRACEBACK", exc_info=True)
+                self.all_lots = []
             self.last_telegram_lots_update = datetime.datetime.now()
             logger.info(_("crd_tg_profile_updated", len(profile.get_lots()), len(profile.get_sorted_lots(2))))
         return True
@@ -891,7 +902,7 @@ class Cardinal(object):
             self.__init_telegram()
             if self.telegram:
                 for module in [auto_response_cp, auto_delivery_cp, config_loader_cp, templates_cp, plugins_cp,
-                               file_uploader, authorized_users_cp, proxy_cp, default_cp]:
+                               file_uploader, authorized_users_cp, proxy_cp, lot_editor_cp, default_cp]:
                     self.add_handlers_from_plugin(module)
 
         self.run_handlers(self.pre_init_handlers, (self,))
@@ -932,7 +943,7 @@ class Cardinal(object):
         logger.info("Запущен цикл проверки обновлений.")
         from Utils import updater
         while True:
-            time.sleep(420)  # Проверка каждые 7 минут
+            time.sleep(180)  # Проверка каждые 3 минуты
             
             # Полная очистка памяти (garbage collection)
             try:
@@ -996,7 +1007,8 @@ class Cardinal(object):
 
     def update_lots_and_categories(self):
         """
-        Парсит лоты (для ПУ TG).
+        Парсит лоты (для ПУ TG). Получает ВСЕ лоты включая деактивированные.
+        Лоты загружаются автоматически в __update_profile при update_telegram_profile=True.
         """
         result = self.__update_profile(infinite_polling=False, attempts=3, update_main_profile=False)
         return result
