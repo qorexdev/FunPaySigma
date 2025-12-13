@@ -1,5 +1,6 @@
 import time
 import subprocess
+import shutil
 
 import Utils.cardinal_tools
 import Utils.config_loader as cfg_loader
@@ -87,7 +88,7 @@ logo = """
 ██║░░░░░╚██████╔╝██║░╚███║██║░░░░░██║░░██║░░░██║░░░██████╔╝██║╚██████╔╝██║░╚═╝░██║██║░░██║
 ╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝╚═╝░░░░░╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░╚═╝░╚═════╝░╚═╝░░░░░╚═╝╚═╝░░╚═╝"""
 
-VERSION = "2.4.3"
+VERSION = "2.4.4"
 
 Utils.cardinal_tools.set_console_title(f"FunPay Sigma v{VERSION}")
 
@@ -100,6 +101,13 @@ folders = ["configs", "logs", "storage", "storage/cache", "storage/plugins", "st
 for i in folders:
     if not os.path.exists(i):
         os.makedirs(i)
+
+if os.path.exists("configsexample"):
+    try:
+        shutil.rmtree("configsexample")
+        print(f"{Fore.GREEN}[✓] Папка configsexample успешно удалена!{Style.RESET_ALL}")
+    except Exception as e:
+        print(f"{Fore.RED}[✗] Не удалось удалить configsexample: {e}{Style.RESET_ALL}")
 
 files = ["configs/auto_delivery.cfg", "configs/auto_response.cfg"]
 for i in files:
