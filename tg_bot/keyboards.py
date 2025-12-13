@@ -802,11 +802,11 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
     kb = K()
     # Используем all_lots для получения ВСЕХ лотов включая деактивированные
     lots = c.all_lots if hasattr(c, 'all_lots') and c.all_lots else c.tg_profile.get_common_lots()
-    lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
+    lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT]
     
     if not lots_slice and offset != 0:
         offset = 0
-        lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
+        lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT]
 
     for index, lot in enumerate(lots_slice):
         # Показываем: описание + цена + статус
@@ -816,7 +816,7 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
         text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
         kb.add(B(text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{offset}"))
 
-    kb = add_navigation_buttons(kb, offset, MENU_CFG.FP_LOTS_BTNS_AMOUNT, len(lots_slice),
+    kb = add_navigation_buttons(kb, offset, MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT, len(lots_slice),
                                 len(lots), CBT.FP_LOT_EDIT_LIST)
 
     kb.row(B(_("gl_refresh"), None, f"{CBT.UPDATE_FP_EDIT_LOTS}:{offset}"))
