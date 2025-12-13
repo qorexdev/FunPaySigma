@@ -334,8 +334,8 @@ update_done = """<b>✅ UPDATE COMPLETED SUCCESSFULLY!</b>
 
 🎉 <b>FunPay Sigma updated!</b>
 
-🔄 <i>Please restart the bot with command:</i>
-👉 <code>/restart</code>"""
+🔄 <i>Bot is restarting automatically...</i>
+⏳ <i>Please wait a few seconds.</i>"""
 
 update_done_exe = """<b>✅ UPDATE COMPLETED!</b>
 

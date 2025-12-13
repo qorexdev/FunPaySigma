@@ -630,9 +630,14 @@ class TGBot:
             return
 
         if getattr(sys, 'frozen', False):
-            self.bot.send_message(m.chat.id, _("update_done_exe"))
+            # Для .exe версии нужен ручной перенос файла
+            self.bot.send_message(m.chat.id, _(("update_done_exe")))
         else:
-            self.bot.send_message(m.chat.id, _("update_done"))
+            # Для .py версии - автоматический рестарт после обновления
+            self.bot.send_message(m.chat.id, _(("update_done")))
+            logger.info("Обновление установлено. Выполняю автоматический рестарт...")
+            time.sleep(2)  # Даём время отправить сообщение
+            cardinal_tools.restart_program()
 
     def send_update_confirmation(self, release):
         """
