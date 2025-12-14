@@ -105,7 +105,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         logger.info(_("log_ar_added", m.from_user.username, m.from_user.id, raw_command))
         bot.reply_to(m, _("ar_cmd_added", utils.escape(raw_command)), reply_markup=keyboard)
 
-    def open_edit_command_cp(c: CallbackQuery):
+    def open_edit_command_cp(c: CallbackQuery, answer: bool = True):
         """
         Открывает панель редактирования команды.
         """
@@ -128,7 +128,8 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
 <b><i>{_('ar_notification_text')}:</i></b> <code>{utils.escape(notification_text)}</code>\n
 <i>{_('gl_last_update')}:</i>  <code>{datetime.datetime.now().strftime('%H:%M:%S')}</code>"""
         bot.edit_message_text(message, c.message.chat.id, c.message.id, reply_markup=keyboard)
-        bot.answer_callback_query(c.id)
+        if answer:
+            bot.answer_callback_query(c.id)
 
     def act_edit_command_response(c: CallbackQuery):
         """
@@ -219,7 +220,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         """
         split = c.data.split(":")
         command_index, offset = int(split[1]), int(split[2])
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id, text="✅", show_alert=False)
         if not check_command_exists(command_index, c.message, reply_mode=False):
             bot.answer_callback_query(c.id)
             return
@@ -236,7 +237,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
             cardinal.AR_CFG.set(cmd, "telegramNotification", value)
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
         logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, command, value))
-        open_edit_command_cp(c)
+        open_edit_command_cp(c, answer=False)
 
     def del_command(c: CallbackQuery):
         """
@@ -257,7 +258,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         logger.info(_("log_ar_cmd_deleted", c.from_user.username, c.from_user.id, command))
         bot.edit_message_text(_("desc_ar_list"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.commands_list(cardinal, offset))
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
 
     # Регистрируем хэндлеры
     tg.cbq_handler(open_commands_list, lambda c: c.data.startswith(f"{CBT.CMD_LIST}:"))

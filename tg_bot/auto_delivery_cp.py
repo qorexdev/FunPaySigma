@@ -348,7 +348,7 @@ $product""")  # todo
         logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, param, lot, value))
         bot.edit_message_text(utils.generate_lot_info_text(lot_obj), c.message.chat.id, c.message.id,
                               reply_markup=kb.edit_lot(crd, lot_number, offset))
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def create_lot_delivery_test(c: CallbackQuery):
         """
@@ -391,7 +391,7 @@ $product""")  # todo
         logger.info(_("log_ad_deleted", c.from_user.username, c.from_user.id, lot))
         bot.edit_message_text(_("desc_ad_list"), c.message.chat.id, c.message.id,
                               reply_markup=kb.lots_list(crd, offset))
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
 
     # Меню добавления лота с FunPay
     def update_funpay_lots_list(c: CallbackQuery):
@@ -442,7 +442,7 @@ $product""")  # todo
         logger.info(_("log_ad_linked", c.from_user.username, c.from_user.id, lot.title))
 
         bot.send_message(c.message.chat.id, _("ad_lot_linked", utils.escape(lot.title)), reply_markup=keyboard)
-        bot.answer_callback_query(c.id)
+        bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     # Меню управления файлов с товарами.
     def open_gf_settings(c: CallbackQuery):
@@ -601,7 +601,7 @@ $product""")  # todo
             bot.edit_message_text(_("desc_gf"), c.message.chat.id, c.message.id,
                                   reply_markup=kb.products_files_list(offset))
 
-            bot.answer_callback_query(c.id)
+            bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
         except:
             keyboard = K() \
                 .add(B(_("gl_back"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))

@@ -1133,7 +1133,7 @@ class TGBot:
                                                reply_markup=sections[section](self.cardinal))
         logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, option, section,
                       self.cardinal.MAIN_CFG[section][option]))
-        self.bot.answer_callback_query(c.id)
+        self.bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def switch_chat_notification(self, c: CallbackQuery):
         split = c.data.split(":")
@@ -1147,7 +1147,7 @@ class TGBot:
             else kb.notifications_settings
         self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                            reply_markup=keyboard(self.cardinal, c.message.chat.id))
-        self.bot.answer_callback_query(c.id)
+        self.bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def open_settings_section(self, c: CallbackQuery):
         """
