@@ -46,16 +46,17 @@ def init_plugins_cp(cardinal: Cardinal, *args):
             return False
         return True
 
-    def open_plugins_list(c: CallbackQuery):
+    def open_plugins_list(c: CallbackQuery, answer: bool = True):
         """
         Открывает список плагинов.
         """
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_pl"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.plugins_list(cardinal, offset))
-        bot.answer_callback_query(c.id)
+        if answer:
+            bot.answer_callback_query(c.id)
 
-    def open_edit_plugin_cp(c: CallbackQuery):
+    def open_edit_plugin_cp(c: CallbackQuery, answer: bool = True):
         """
         Открывает панель настроек плагина.
         """
@@ -79,7 +80,8 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         keyboard = keyboards.edit_plugin(cardinal, uuid, offset)
 
         bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
-        bot.answer_callback_query(c.id)
+        if answer:
+            bot.answer_callback_query(c.id)
 
     def open_plugin_commands(c: CallbackQuery):
         split = c.data.split(":")
@@ -115,7 +117,8 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         c.data = f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"
         logger.info(_("log_pl_activated" if cardinal.plugins[uuid].enabled else "log_pl_deactivated",
                       c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
-        open_edit_plugin_cp(c)
+        bot.answer_callback_query(c.id, text="✅", show_alert=False)
+        open_edit_plugin_cp(c, answer=False)
 
     def ask_delete_plugin(c: CallbackQuery):
         split = c.data.split(":")
@@ -165,8 +168,9 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         logger.info(_("log_pl_deleted", c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
         cardinal.plugins.pop(uuid)
 
+        bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
         c.data = f"{CBT.PLUGINS_LIST}:{offset}"
-        open_plugins_list(c)
+        open_plugins_list(c, answer=False)
 
     def act_upload_plugin(obj: CallbackQuery | Message):
         if isinstance(obj, CallbackQuery):

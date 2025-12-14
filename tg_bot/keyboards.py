@@ -222,9 +222,10 @@ def authorized_users(c: Cardinal, offset: int):
     kb.add(B(_("tg_block_login", l("blockLogin")), None, f"{p}:blockLogin:{offset}"))
     users = list(c.telegram.authorized_users.keys())[offset: offset + MENU_CFG.AUTHORIZED_USERS_BTNS_AMOUNT]
 
-    for user_id in users:
-        #  CBT.AUTHORIZED_USER_SETTINGS:user_id:смещение (для кнопки назад)
-        kb.row(B(f"{user_id}", callback_data=f"{CBT.AUTHORIZED_USER_SETTINGS}:{user_id}:{offset}"))
+    for i in range(0, len(users), 2):
+        row_users = users[i:i + 2]
+        btns = [B(f"{uid}", callback_data=f"{CBT.AUTHORIZED_USER_SETTINGS}:{uid}:{offset}") for uid in row_users]
+        kb.row(*btns)
 
     kb = add_navigation_buttons(kb, offset, MENU_CFG.AUTHORIZED_USERS_BTNS_AMOUNT, len(users),
                                 len(c.telegram.authorized_users), CBT.AUTHORIZED_USERS)
@@ -402,9 +403,10 @@ def commands_list(c: Cardinal, offset: int) -> K:
         offset = 0
         commands = c.RAW_AR_CFG.sections()[offset: offset + MENU_CFG.AR_BTNS_AMOUNT]
 
-    for index, cmd in enumerate(commands):
-        #  CBT.EDIT_CMD:номер команды:смещение (для кнопки назад)
-        kb.add(B(cmd, None, f"{CBT.EDIT_CMD}:{offset + index}:{offset}"))
+    for i in range(0, len(commands), 2):
+        row_cmds = commands[i:i + 2]
+        btns = [B(cmd, None, f"{CBT.EDIT_CMD}:{offset + i + idx}:{offset}") for idx, cmd in enumerate(row_cmds)]
+        kb.row(*btns)
 
     kb = add_navigation_buttons(kb, offset, MENU_CFG.AR_BTNS_AMOUNT, len(commands), len(c.RAW_AR_CFG.sections()),
                                 CBT.CMD_LIST)
@@ -451,9 +453,13 @@ def products_files_list(offset: int) -> K:
         offset = 0
         files = os.listdir("storage/products")[offset:offset + 5]
 
-    for index, name in enumerate(files):
-        amount = Utils.cardinal_tools.count_products(f"storage/products/{name}")
-        keyboard.add(B(f"{amount} {_('gl_pcs')}, {name}", None, f"{CBT.EDIT_PRODUCTS_FILE}:{offset + index}:{offset}"))
+    for i in range(0, len(files), 2):
+        row_files = files[i:i + 2]
+        btns = []
+        for idx, name in enumerate(row_files):
+            amount = Utils.cardinal_tools.count_products(f"storage/products/{name}")
+            btns.append(B(f"{amount} {_('gl_pcs')}, {name}", None, f"{CBT.EDIT_PRODUCTS_FILE}:{offset + i + idx}:{offset}"))
+        kb.row(*btns)
 
     keyboard = add_navigation_buttons(keyboard, offset, MENU_CFG.PF_BTNS_AMOUNT, len(files),
                                       len(os.listdir("storage/products")), CBT.PRODUCTS_FILES_LIST)
@@ -502,8 +508,10 @@ def lots_list(cardinal: Cardinal, offset: int) -> K:
         offset = 0
         lots = cardinal.AD_CFG.sections()[offset: offset + MENU_CFG.AD_BTNS_AMOUNT]
 
-    for index, lot in enumerate(lots):
-        keyboard.add(B(lot, None, f"{CBT.EDIT_AD_LOT}:{offset + index}:{offset}"))
+    for i in range(0, len(lots), 2):
+        row_lots = lots[i:i + 2]
+        btns = [B(lot, None, f"{CBT.EDIT_AD_LOT}:{offset + i + idx}:{offset}") for idx, lot in enumerate(row_lots)]
+        keyboard.row(*btns)
 
     keyboard = add_navigation_buttons(keyboard, offset, MENU_CFG.AD_BTNS_AMOUNT, len(lots),
                                       len(cardinal.AD_CFG.sections()), CBT.AD_LOTS_LIST)
@@ -529,8 +537,10 @@ def funpay_lots_list(c: Cardinal, offset: int):
         offset = 0
         lots = c.tg_profile.get_common_lots()[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
 
-    for index, lot in enumerate(lots):
-        keyboard.add(B(lot.description, None, f"{CBT.ADD_AD_TO_LOT}:{offset + index}:{offset}"))
+    for i in range(0, len(lots), 2):
+        row_lots = lots[i:i + 2]
+        btns = [B(lot.description, None, f"{CBT.ADD_AD_TO_LOT}:{offset + i + idx}:{offset}") for idx, lot in enumerate(row_lots)]
+        keyboard.row(*btns)
 
     keyboard = add_navigation_buttons(keyboard, offset, MENU_CFG.FP_LOTS_BTNS_AMOUNT, len(lots),
                                       len(c.tg_profile.get_common_lots()), CBT.FP_LOTS_LIST)
@@ -655,8 +665,10 @@ def templates_list(c: Cardinal, offset: int) -> K:
         offset = 0
         templates = c.telegram.answer_templates[offset: offset + MENU_CFG.TMPLT_BTNS_AMOUNT]
 
-    for index, tmplt in enumerate(templates):
-        kb.add(B(tmplt, None, f"{CBT.EDIT_TMPLT}:{offset + index}:{offset}"))
+    for i in range(0, len(templates), 2):
+        row_tmps = templates[i:i + 2]
+        btns = [B(tmplt, None, f"{CBT.EDIT_TMPLT}:{offset + i + idx}:{offset}") for idx, tmplt in enumerate(row_tmps)]
+        kb.row(*btns)
 
     kb = add_navigation_buttons(kb, offset, MENU_CFG.TMPLT_BTNS_AMOUNT, len(templates),
                                 len(c.telegram.answer_templates), CBT.TMPLT_LIST)
@@ -706,9 +718,12 @@ def templates_list_ans_mode(c: Cardinal, offset: int, node_id: int, username: st
         offset = 0
         templates = c.telegram.answer_templates[offset: offset + MENU_CFG.TMPLT_BTNS_AMOUNT]
 
-    for index, tmplt in enumerate(templates):
-        kb.add(B(tmplt.replace("$username", username),
-                 None, f"{CBT.SEND_TMPLT}:{offset + index}:{node_id}:{username}:{prev_page}{extra_str}"))
+    for i in range(0, len(templates), 2):
+        row_tmps = templates[i:i + 2]
+        btns = [B(tmplt.replace("$username", username), None,
+                  f"{CBT.SEND_TMPLT}:{offset + i + idx}:{node_id}:{username}:{prev_page}{extra_str}")
+                for idx, tmplt in enumerate(row_tmps)]
+        kb.row(*btns)
 
     extra_list = [node_id, username, prev_page]
     if extra:
@@ -742,10 +757,13 @@ def plugins_list(c: Cardinal, offset: int):
         offset = 0
         plugins = list(c.plugins.keys())[offset: offset + MENU_CFG.PLUGINS_BTNS_AMOUNT]
 
-    for uuid in plugins:
-        #  CBT.EDIT_PLUGIN:uuid плагина:смещение (для кнопки назад)
-        kb.add(B(f"{c.plugins[uuid].name} {bool_to_text(c.plugins[uuid].enabled)}",
-                 None, f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"))
+    for i in range(0, len(plugins), 2):
+        row_plugs = plugins[i:i + 2]
+        btns = []
+        for idx, uuid in enumerate(row_plugs):
+            btns.append(B(f"{c.plugins[uuid].name} {bool_to_text(c.plugins[uuid].enabled)}",
+                          None, f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"))
+        kb.row(*btns)
 
     kb = add_navigation_buttons(kb, offset, MENU_CFG.PLUGINS_BTNS_AMOUNT, len(plugins),
                                 len(list(c.plugins.keys())), CBT.PLUGINS_LIST)
@@ -808,13 +826,16 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
         offset = 0
         lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT]
 
-    for index, lot in enumerate(lots_slice):
-        # Показываем: описание + цена + статус
-        status = "✅" if getattr(lot, "active", True) else "❌"
-        price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
-        desc = lot.description if lot.description else "—"
-        text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
-        kb.add(B(text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{offset}"))
+    for i in range(0, len(lots_slice), 2):
+        row_lots = lots_slice[i:i + 2]
+        btns = []
+        for idx, lot in enumerate(row_lots):
+            status = "✅" if getattr(lot, "active", True) else "❌"
+            price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
+            desc = lot.description if lot.description else "—"
+            text = f"{status} {desc[:15]}{'...' if len(desc) > 15 else ''} | {price_str}"
+            btns.append(B(text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{offset}"))
+        kb.row(*btns)
 
     kb = add_navigation_buttons(kb, offset, MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT, len(lots_slice),
                                 len(lots), CBT.FP_LOT_EDIT_LIST)

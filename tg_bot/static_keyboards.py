@@ -53,15 +53,15 @@ def SETTINGS_SECTIONS_3() -> K:
 
 def AR_SETTINGS() -> K:
     return K() \
-        .add(B(_("ar_edit_commands"), callback_data=f"{CBT.CMD_LIST}:0")) \
-        .add(B(_("ar_add_command"), callback_data=CBT.ADD_CMD)) \
+        .row(B(_("ar_edit_commands"), callback_data=f"{CBT.CMD_LIST}:0"),
+             B(_("ar_add_command"), callback_data=CBT.ADD_CMD)) \
         .add(B(_("gl_back"), callback_data=CBT.MAIN))
 
 
 def AD_SETTINGS() -> K:
     return K() \
-        .add(B(_("ad_edit_autodelivery"), callback_data=f"{CBT.AD_LOTS_LIST}:0")) \
-        .add(B(_("ad_add_autodelivery"), callback_data=f"{CBT.FP_LOTS_LIST}:0")) \
+        .row(B(_("ad_edit_autodelivery"), callback_data=f"{CBT.AD_LOTS_LIST}:0"),
+             B(_("ad_add_autodelivery"), callback_data=f"{CBT.FP_LOTS_LIST}:0")) \
         .add(B(_("ad_edit_goods_file"), callback_data=f"{CBT.PRODUCTS_FILES_LIST}:0")) \
         .row(B(_("ad_create_goods_file"), callback_data=CBT.CREATE_PRODUCTS_FILE),
              B(_("ad_upload_goods_file"), callback_data=CBT.UPLOAD_PRODUCTS_FILE)) \
