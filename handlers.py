@@ -277,7 +277,7 @@ def send_review_notification(c: Cardinal, order: Order, chat_id: int, reply_text
     Thread(target=c.telegram.send_notification,
            args=(_("ntfc_new_review").format('⭐' * order.review.stars, order.id, utils.escape(order.review.text),
                                              reply_text),
-                 keyboards.new_order(order.id, order.buyer_username, chat_id),
+                 keyboards.new_review(order.id, order.buyer_username, chat_id),
                  utils.NotificationTypes.review),
            daemon=True).start()
 
