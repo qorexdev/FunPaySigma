@@ -760,7 +760,7 @@ class TGBot:
         from FunPayAPI import types
         
         try:
-            _, orders, _, _ = self.cardinal.account.get_sales(state="paid", include_closed=False, include_refunded=False)
+            cursor, orders, locale, subcats = self.cardinal.account.get_sales(state="paid", include_closed=False, include_refunded=False)
             paid_orders = [o for o in orders if o.status == types.OrderStatuses.PAID]
         except Exception as e:
             logger.warning(f"Ошибка получения заказов: {e}")
