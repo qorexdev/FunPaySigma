@@ -755,6 +755,69 @@ class TGBot:
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("order_reminders_interval_changed", interval), reply_markup=keyboard)
 
+    def send_all_reminders(self, c: CallbackQuery):
+        self.cardinal.sync_pending_orders()
+        pending_orders = self.cardinal.pending_orders.copy()
+        
+        if not pending_orders:
+            self.bot.answer_callback_query(c.id, _("or_send_all_no_orders"), show_alert=True)
+            return
+        
+        self.bot.answer_callback_query(c.id)
+        
+        template = self.cardinal.MAIN_CFG["OrderReminders"]["template"]
+        if not template:
+            template = "Привет! Напоминаю о заказе $order_id. Пожалуйста, подтверди его: $order_link"
+        
+        progress_msg = self.bot.send_message(c.message.chat.id, _("or_send_all_started"))
+        
+        sent_count = 0
+        error_count = 0
+        total = len(pending_orders)
+        
+        from Utils import cardinal_tools
+        from FunPayAPI import types
+        
+        for order_id, order_data in pending_orders.items():
+            try:
+                order = self.cardinal.account.get_order_shortcut(order_id)
+                if order.status != types.OrderStatuses.PAID:
+                    continue
+                
+                formatted_text = cardinal_tools.format_order_text(template, order)
+                
+                chat = self.cardinal.account.get_chat_by_name(order.buyer_username, True)
+                result = self.cardinal.send_message(chat.id, formatted_text, order.buyer_username)
+                
+                if result:
+                    sent_count += 1
+                else:
+                    error_count += 1
+                    
+            except Exception as e:
+                logger.warning(f"Ошибка при отправке напоминания для заказа {order_id}: {e}")
+                error_count += 1
+            
+            if (sent_count + error_count) % 3 == 0:
+                try:
+                    self.bot.edit_message_text(
+                        _("or_send_all_progress", sent_count + error_count, total),
+                        progress_msg.chat.id,
+                        progress_msg.id
+                    )
+                except:
+                    pass
+            
+            time.sleep(1)
+        
+        keyboard = kb.order_reminders_settings(self.cardinal)
+        self.bot.edit_message_text(
+            _("or_send_all_done", sent_count, error_count),
+            progress_msg.chat.id,
+            progress_msg.id,
+            reply_markup=keyboard
+        )
+
     def act_edit_review_reply_text(self, c: CallbackQuery):
         stars = int(c.data.split(":")[1])
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
@@ -1078,6 +1141,7 @@ class TGBot:
         self.cbq_handler(self.act_edit_order_reminders_interval, lambda c: c.data == CBT.EDIT_ORDER_REMINDERS_INTERVAL)
         self.msg_handler(self.edit_order_reminders_interval,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_INTERVAL))
+        self.cbq_handler(self.send_all_reminders, lambda c: c.data == CBT.SEND_ALL_REMINDERS)
         self.cbq_handler(self.act_edit_review_reply_text, lambda c: c.data.startswith(f"{CBT.EDIT_REVIEW_REPLY_TEXT}:"))
         self.msg_handler(self.edit_review_reply_text,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REPLY_TEXT))

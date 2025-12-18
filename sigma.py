@@ -295,6 +295,37 @@ class Cardinal(object):
         except Exception as e:
             logger.error(f"Не удалось сохранить данные о заказах в {self.pending_orders_file}: {e}")
 
+    def sync_pending_orders(self) -> int:
+        try:
+            logger.info("Синхронизация неподтверждённых заказов с FunPay...")
+            _, orders, _, _ = self.account.get_sales(state="paid", include_closed=False, include_refunded=False)
+            
+            current_time = int(time.time())
+            added_count = 0
+            
+            for order in orders:
+                if order.status == types.OrderStatuses.PAID:
+                    order_id = order.id
+                    if order_id not in self.pending_orders:
+                        self.pending_orders[order_id] = {
+                            "created_time": current_time,
+                            "reminder_count": 0,
+                            "last_reminder": 0
+                        }
+                        added_count += 1
+            
+            if added_count > 0:
+                self.save_pending_orders()
+                logger.info(f"Добавлено {added_count} неподтверждённых заказов в очередь напоминаний")
+            else:
+                logger.info("Все неподтверждённые заказы уже в очереди")
+            
+            return added_count
+        except Exception as e:
+            logger.warning(f"Ошибка синхронизации неподтверждённых заказов: {e}")
+            logger.debug("TRACEBACK", exc_info=True)
+            return 0
+
     def __init_account(self) -> None:
                    
         while True:
@@ -786,6 +817,7 @@ class Cardinal(object):
         self.__init_account()
         self.runner = FunPayAPI.Runner(self.account, self.old_mode_enabled)
         self.__update_profile()
+        self.sync_pending_orders()
         self.run_handlers(self.post_init_handlers, (self,))
         
         return self

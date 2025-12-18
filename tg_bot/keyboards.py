@@ -125,8 +125,9 @@ def order_reminders_settings(c: Cardinal):
     timeout = c.MAIN_CFG['OrderReminders']['timeout']
     repeat_count = c.MAIN_CFG['OrderReminders']['repeatCount']
     interval = c.MAIN_CFG['OrderReminders']['interval']
+    pending_count = len(c.pending_orders)
 
-    kb = K()        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled"))        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL))        .add(B(_("gl_back"), None, CBT.MAIN2))
+    kb = K()        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled"))        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL))        .add(B(_("or_send_all", pending_count), None, CBT.SEND_ALL_REMINDERS))        .add(B(_("gl_back"), None, CBT.MAIN2))
     return kb
 
 def authorized_users(c: Cardinal, offset: int):
