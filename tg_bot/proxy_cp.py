@@ -1,8 +1,3 @@
-"""
-В данном модууле описаны функции для ПУ настроек прокси.
-Модуль реализован в виде плагина.
-"""
-
 from __future__ import annotations
 
 import time
@@ -24,7 +19,6 @@ logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def init_proxy_cp(crd: Cardinal, *args):
     tg = crd.telegram
     bot = tg.bot
@@ -32,7 +26,7 @@ def init_proxy_cp(crd: Cardinal, *args):
 
     def check_one_proxy(proxy: str):
         try:
-            # Определяем тип прокси для проверки
+                                                
             proxy_type = crd.MAIN_CFG["Proxy"]["type"]
             if proxy_type == "SOCKS5":
                 d = {
@@ -59,20 +53,14 @@ def init_proxy_cp(crd: Cardinal, *args):
 
     Thread(target=check_proxies, daemon=True).start()
     
-    # Убедимся, что тип прокси установлен по умолчанию, если не задан
     if not crd.MAIN_CFG["Proxy"].get("type"):
         crd.MAIN_CFG["Proxy"]["type"] = "HTTP"
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
 
     def open_proxy_list(c: CallbackQuery):
-        """
-        Открывает список прокси.
-        """
+                   
         offset = int(c.data.split(":")[1])
-        text = f'\n\nПрокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("enable") else "выкл."}\n' \
-               f'Проверка прокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("check") else "выкл."}\n' \
-               f'Тип прокси: {crd.MAIN_CFG["Proxy"]["type"]}\n\n' \
-               f'⚠️ <b>Изменения вступят в силу только после перезапуска бота (/restart)!</b>'
+        text = f'\n\nПрокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("enable") else "выкл."}\n'               f'Проверка прокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("check") else "выкл."}\n'               f'Тип прокси: {crd.MAIN_CFG["Proxy"]["type"]}\n\n'               f'⚠️ <b>Изменения вступят в силу только после перезапуска бота (/restart)!</b>'
         try:
             bot.edit_message_text(f'{_("desc_proxy")}{text}', c.message.chat.id, c.message.id,
                                   reply_markup=kb.proxy(crd, offset, pr_dict))
@@ -82,18 +70,14 @@ def init_proxy_cp(crd: Cardinal, *args):
                 logger.debug("TRACEBACK", exc_info=True)
 
     def act_add_proxy(c: CallbackQuery):
-        """
-        Активирует режим ввода прокси для добавления.
-        """
+                   
         offset = int(c.data.split(":")[-1])
         result = bot.send_message(c.message.chat.id, _("act_proxy"), reply_markup=skb.CLEAR_STATE_BTN())
         crd.telegram.set_state(result.chat.id, result.id, c.from_user.id, CBT.ADD_PROXY, {"offset": offset})
         bot.answer_callback_query(c.id)
 
     def add_proxy(m: Message):
-        """
-        Добавляет прокси.
-        """
+                   
         offset = tg.get_state(m.chat.id, m.from_user.id)["data"]["offset"]
         kb = K().add(B(_("gl_back"), callback_data=f"{CBT.PROXY}:{offset}"))
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -116,9 +100,7 @@ def init_proxy_cp(crd: Cardinal, *args):
             logger.debug("TRACEBACK", exc_info=True)
 
     def choose_proxy(c: CallbackQuery):
-        """
-        Выбор прокси из списка.
-        """
+                   
         q, offset, proxy_id = c.data.split(":")
         offset = int(offset)
         proxy_id = int(proxy_id)
@@ -139,15 +121,11 @@ def init_proxy_cp(crd: Cardinal, *args):
         })
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
         
-        # Обновляем прокси в аккаунте только при следующем перезапуске,
-        # но сохраняем настройки сейчас
         bot.answer_callback_query(c.id, "✅ Настройки сохранены. Перезапустите бота для применения изменений.", show_alert=True)
         open_proxy_list(c)
 
     def delete_proxy(c: CallbackQuery):
-        """
-        Удаление прокси.
-        """
+                   
         q, offset, proxy_id = c.data.split(":")
         offset = int(offset)
         proxy_id = int(proxy_id)
@@ -162,9 +140,7 @@ def init_proxy_cp(crd: Cardinal, *args):
                 if proxy in pr_dict:
                     del pr_dict[proxy]
                 logger.info(f"Прокси {proxy} удалены.")
-                if str(crd.MAIN_CFG["Proxy"]["ip"]) == str(ip) and str(crd.MAIN_CFG["Proxy"]["login"]) == str(login) \
-                        and str(crd.MAIN_CFG["Proxy"]["port"]) == str(port) \
-                        and str(crd.MAIN_CFG["Proxy"]["password"]) == str(password):
+                if str(crd.MAIN_CFG["Proxy"]["ip"]) == str(ip) and str(crd.MAIN_CFG["Proxy"]["login"]) == str(login)                        and str(crd.MAIN_CFG["Proxy"]["port"]) == str(port)                        and str(crd.MAIN_CFG["Proxy"]["password"]) == str(password):
                     for i in ("password", "port", "login", "ip"):
                         crd.MAIN_CFG["Proxy"][i] = ""
                     crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
@@ -175,12 +151,10 @@ def init_proxy_cp(crd: Cardinal, *args):
         open_proxy_list(c)
 
     def change_proxy_type(c: CallbackQuery):
-        """
-        Изменение типа прокси (HTTP/SOCKS5).
-        """
+                   
         offset = int(c.data.split(":")[1])
         current_type = crd.MAIN_CFG["Proxy"]["type"]
-        # Переключаем между HTTP и SOCKS5
+                                         
         new_type = "SOCKS5" if current_type != "SOCKS5" else "HTTP"
         crd.MAIN_CFG["Proxy"]["type"] = new_type
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
@@ -193,6 +167,5 @@ def init_proxy_cp(crd: Cardinal, *args):
     tg.cbq_handler(delete_proxy, lambda c: c.data.startswith(f"{CBT.DELETE_PROXY}:"))
     tg.cbq_handler(change_proxy_type, lambda c: c.data.startswith(f"{CBT.CHANGE_PROXY_TYPE}:"))
     tg.msg_handler(add_proxy, func=lambda m: crd.telegram.check_state(m.chat.id, m.from_user.id, CBT.ADD_PROXY))
-
 
 BIND_TO_PRE_INIT = [init_proxy_cp]

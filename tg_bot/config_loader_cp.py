@@ -1,8 +1,3 @@
-"""
-В данном модуле описаны функции для ПУ загрузки / выгрузки конфиг-файлов.
-Модуль реализован в виде плагина.
-"""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -20,7 +15,6 @@ logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def init_config_loader_cp(cardinal: Cardinal, *args):
     tg = cardinal.telegram
     bot = tg.bot
@@ -34,11 +28,9 @@ def init_config_loader_cp(cardinal: Cardinal, *args):
                               reply_markup=static_keyboards.CONFIGS_UPLOADER())
 
     def send_config(c: types.CallbackQuery):
-        """
-        Отправляет файл конфига.
-        """
+                   
         config_type = c.data.split(":")[1]
-        if config_type == "main":  # locale
+        if config_type == "main":          
             logger.info(
                 f"[IMPORTANT] Получаю основной конфиг по запросу пользователя $MAGENTA@{c.from_user.username} (id: {c.from_user.id})$RESET.")
             path, text = "configs/_main.cfg", _("cfg_main")
@@ -50,8 +42,7 @@ def init_config_loader_cp(cardinal: Cardinal, *args):
             bot.answer_callback_query(c.id)
             return
 
-        back_button = types.InlineKeyboardMarkup() \
-            .add(types.InlineKeyboardButton(_("gl_back"), callback_data=CBT.CONFIG_LOADER))
+        back_button = types.InlineKeyboardMarkup()            .add(types.InlineKeyboardButton(_("gl_back"), callback_data=CBT.CONFIG_LOADER))
 
         if not os.path.exists(path):
             bot.answer_callback_query(c.id, _("cfg_not_found_err", path), show_alert=True)
@@ -70,6 +61,5 @@ def init_config_loader_cp(cardinal: Cardinal, *args):
 
     tg.cbq_handler(open_config_loader, lambda c: c.data == CBT.CONFIG_LOADER)
     tg.cbq_handler(send_config, lambda c: c.data.startswith(f"{CBT.DOWNLOAD_CFG}:"))
-
 
 BIND_TO_PRE_INIT = [init_config_loader_cp]

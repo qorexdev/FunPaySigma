@@ -1,7 +1,3 @@
-"""
-В данном модуле реализован загрузчик файлов из телеграм чата.
-"""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
@@ -17,21 +13,10 @@ from telebot import types
 import logging
 import os
 
-logger = logging.getLogger("TGBot")  # locale#locale#locale
-
+logger = logging.getLogger("TGBot")                        
 
 def check_file(tg: TGBot, msg: types.Message, type_: Literal["py", "cfg", "json", "txt"] | None = None) -> bool:
-    """
-    Проверяет выгруженный файл. Отправляет сообщение в TG в зависимости от ошибки.
-
-    :param tg: экземпляр TG бота.
-
-    :param msg: экземпляр сообщения.
-
-    :param type_: формат файла.
-
-    :return: True, если все ок, False, если файл проверку не прошел.
-    """
+           
     if not msg.document:
         tg.bot.send_message(msg.chat.id, "❌ Файл не обнаружен.")
         return False
@@ -49,22 +34,9 @@ def check_file(tg: TGBot, msg: types.Message, type_: Literal["py", "cfg", "json"
         return False
     return True
 
-
 def download_file(tg: TGBot, msg: types.Message, file_name: str = "temp_file.txt",
                   custom_path: str = "") -> bool:
-    """
-    Скачивает выгруженный файл и сохраняет его в папку storage/cache/.
-
-    :param tg: экземпляр TG бота.
-
-    :param msg: экземпляр сообщения.
-
-    :param file_name: название сохраненного файла.
-
-    :param custom_path: кастомный путь (если надо сохранить не в storage/cache/).
-
-    :return: True, если все ок, False, при ошибке.
-    """
+           
     tg.bot.send_message(msg.chat.id, "⏬ Загружаю файл...")
     try:
         file_info = tg.bot.get_file(msg.document.file_id)
@@ -79,7 +51,6 @@ def download_file(tg: TGBot, msg: types.Message, file_name: str = "temp_file.txt
         new_file.write(file)
     return True
 
-
 def init_uploader(cardinal: Cardinal):
     tg = cardinal.telegram
     bot = tg.bot
@@ -91,9 +62,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_products_file(m: types.Message):
-        """
-        Загружает файл с товарами.
-        """
+                   
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="txt"):
             return
@@ -110,8 +79,7 @@ def init_uploader(cardinal: Cardinal):
 
         file_number = os.listdir("storage/products").index(m.document.file_name)
 
-        keyboard = types.InlineKeyboardMarkup() \
-            .add(Button("✏️ Редактировать файл", callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_number}:0"))
+        keyboard = types.InlineKeyboardMarkup()            .add(Button("✏️ Редактировать файл", callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_number}:0"))
 
         logger.info(f"Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота файл с товарами $YELLOWstorage/products/{m.document.file_name}$RESET.")
@@ -128,9 +96,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_main_config(m: types.Message):
-        """
-        Загружает и проверяет основной конфиг.
-        """
+                   
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return
@@ -168,9 +134,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_auto_response_config(m: types.Message):
-        """
-        Загружает, проверяет и устанавливает конфиг автовыдачи.
-        """
+                   
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return
@@ -209,9 +173,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_auto_delivery_config(m: types.Message):
-        """
-        Загружает, проверяет и устанавливает конфиг автовыдачи.
-        """
+                   
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return
@@ -254,8 +216,7 @@ def init_uploader(cardinal: Cardinal):
         logger.info(f"[IMPORTANT] Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота плагин $YELLOWplugins/{m.document.file_name}$RESET.")
 
-        keyboard = types.InlineKeyboardMarkup() \
-            .add(Button("◀️Назад", callback_data=f"{CBT.PLUGINS_LIST}:{offset}"))
+        keyboard = types.InlineKeyboardMarkup()            .add(Button("◀️Назад", callback_data=f"{CBT.PLUGINS_LIST}:{offset}"))
         bot.send_message(m.chat.id,
                          f"✅ Плагин <code>{utils.escape(m.document.file_name)}</code> успешно загружен.\n\n"
                          f"⚠️Чтобы плагин активировался, <u><b>перезагрузите FPS!</b></u> (/restart)",
@@ -313,9 +274,7 @@ def init_uploader(cardinal: Cardinal):
                                f'Подробнее в файле <code>logs/log.log</code>')
             return
         if type_ == "chat":
-            s = f"Используйте этот ID в текстах автовыдачи/автоответа с переменной " \
-                f"<code>$photo</code>\n\n" \
-                f"Например: <code>$photo={image_id}</code>"
+            s = f"Используйте этот ID в текстах автовыдачи/автоответа с переменной "                f"<code>$photo</code>\n\n"                f"Например: <code>$photo={image_id}</code>"
         elif type_ == "offer":
             s = f"Используйте этот ID для добавления картинок к лотам."
         bot.reply_to(m, f"✅ Изображение выгружено на сервер FunPay.\n\n"
@@ -363,6 +322,5 @@ def init_uploader(cardinal: Cardinal):
     tg.file_handler(CBT.UPLOAD_CHAT_IMAGE, upload_chat_image)
     tg.file_handler(CBT.UPLOAD_OFFER_IMAGE, upload_offer_image)
     tg.file_handler(CBT.UPLOAD_BACKUP, upload_backup)
-
 
 BIND_TO_PRE_INIT = [init_uploader]

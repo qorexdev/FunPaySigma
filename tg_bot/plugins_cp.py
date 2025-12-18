@@ -1,8 +1,3 @@
-"""
-В данном модуле описаны функции для ПУ шаблонами ответа.
-Модуль реализован в виде плагина.
-"""
-
 from __future__ import annotations
 
 import os
@@ -23,22 +18,12 @@ logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def init_plugins_cp(cardinal: Cardinal, *args):
     tg = cardinal.telegram
     bot = tg.bot
 
     def check_plugin_exists(uuid: str, message_obj: Message) -> bool:
-        """
-        Проверяет, существует ли плагин с переданным UUID.
-        Если команда не существует - отправляет сообщение с кнопкой обновления списка плагинов.
-
-        :param uuid: UUID плагина.
-
-        :param message_obj: экземпляр Telegram-сообщения.
-
-        :return: True, если плагин существует, False, если нет.
-        """
+                   
         if uuid not in cardinal.plugins:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.PLUGINS_LIST}:0"))
             bot.edit_message_text(_("pl_not_found_err", uuid), message_obj.chat.id, message_obj.id,
@@ -47,9 +32,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         return True
 
     def open_plugins_list(c: CallbackQuery, answer: bool = True):
-        """
-        Открывает список плагинов.
-        """
+                   
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_pl"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.plugins_list(cardinal, offset))
@@ -57,9 +40,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
             bot.answer_callback_query(c.id)
 
     def open_edit_plugin_cp(c: CallbackQuery, answer: bool = True):
-        """
-        Открывает панель настроек плагина.
-        """
+                   
         split = c.data.split(":")
         uuid, offset = split[1], int(split[2])
 
@@ -193,6 +174,5 @@ def init_plugins_cp(cardinal: Cardinal, *args):
 
     tg.cbq_handler(act_upload_plugin, lambda c: c.data.startswith(f"{CBT.UPLOAD_PLUGIN}:"))
     tg.msg_handler(act_upload_plugin, commands=["upload_plugin"])
-
 
 BIND_TO_PRE_INIT = [init_plugins_cp]

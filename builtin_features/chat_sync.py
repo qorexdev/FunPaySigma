@@ -1,7 +1,3 @@
-"""
-Синхронизация FunPay чатов с Telegram форумом.
-Комплексный модуль для двусторонней синхронизации сообщений.
-"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import json
@@ -20,8 +16,7 @@ from FunPayAPI.updater import events
 
 if TYPE_CHECKING:
     from sigma import Cardinal
-from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, CallbackQuery, \
-    ReplyKeyboardMarkup as RKM, KeyboardButton
+from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, CallbackQuery,    ReplyKeyboardMarkup as RKM, KeyboardButton
 from tg_bot import CBT, static_keyboards as skb, utils, keyboards
 from locales.localizer import Localizer
 import telebot
@@ -34,11 +29,10 @@ localizer = Localizer()
 _ = localizer.translate
 
 SPECIAL_SYMBOL = "⁢"
-MIN_BOTS = 1  # Минимальное количество ботов (было 4)
+MIN_BOTS = 1                                         
 BOT_DELAY = 4
 PLUGIN_FOLDER = "storage/builtin/chat_sync/"
 
-# CALLBACKS
 ADD_SYNC_BOT = "sync.add_bot"
 CBT_SWITCH = "sync.switch"
 CBT_SWITCHERS = "sync.switchers"
@@ -48,9 +42,8 @@ DELETE_SYNC_CHAT = "sync.delete_chat"
 CBT_OPEN_SETTINGS = "sync.settings"
 PLUGIN_NO_BUTTON = "sync.no"
 
-
 def templates_kb(cs):
-    """Клавиатура с шаблонами ответов."""
+                                         
     if not cs.settings["templates"]:
         return telebot.types.ReplyKeyboardRemove()
     btns = [KeyboardButton(f"{SPECIAL_SYMBOL}{i}){SPECIAL_SYMBOL} {tpl}") for i, tpl
@@ -59,9 +52,8 @@ def templates_kb(cs):
     markup.add(*btns)
     return markup
 
-
 def switchers_kb(cs, offset):
-    """Клавиатура настроек переключателей."""
+                                             
     kb = K()
     kb.add(B(("🟢" if cs.settings["watermark_is_hidden"] else "🔴") + " Скрывать вотермарку",
              callback_data=f"{CBT_SWITCH}:watermark_is_hidden:{offset}"))
@@ -82,9 +74,8 @@ def switchers_kb(cs, offset):
     kb.add(B(_("gl_back"), callback_data=f"{CBT_OPEN_SETTINGS}"))
     return kb
 
-
 def plugin_settings_kb(cs, offset):
-    """Основная клавиатура настроек."""
+                                       
     kb = K()
     if cs.ready:
         kb.add(B(_("pl_settings"), callback_data=f"{CBT_SWITCHERS}:{offset}"))
@@ -99,10 +90,8 @@ def plugin_settings_kb(cs, offset):
     kb.add(B(_("gl_back"), callback_data=f"{CBT.MAIN3}"))
     return kb
 
-
 class ChatSync:
-    """Класс для синхронизации FunPay чатов с Telegram форумом."""
-
+                                                                  
     def __init__(self, crd: Cardinal):
         self.cardinal = crd
         self.settings = None
@@ -212,8 +201,7 @@ class ChatSync:
             self.current_bot = self.bots[0]
 
     def is_outgoing_message(self, m):
-        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"] and \
-                m.reply_to_message and m.reply_to_message.forum_topic_created:
+        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"] and                m.reply_to_message and m.reply_to_message.forum_topic_created:
             if m.entities:
                 for i in m.entities:
                     if i.type == "bot_command" and i.offset == 0:
@@ -222,19 +210,12 @@ class ChatSync:
         return False
 
     def is_template_message(self, m):
-        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"] \
-                and m.reply_to_message and m.reply_to_message.is_topic_message \
-                and m.reply_to_message.from_user.is_bot \
-                and m.reply_to_message.from_user.first_name == SPECIAL_SYMBOL \
-                and m.text \
-                and m.text.startswith(SPECIAL_SYMBOL):
+        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"]                and m.reply_to_message and m.reply_to_message.is_topic_message                and m.reply_to_message.from_user.is_bot                and m.reply_to_message.from_user.first_name == SPECIAL_SYMBOL                and m.text                and m.text.startswith(SPECIAL_SYMBOL):
             return True
         return False
 
     def is_error_message(self, m):
-        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"] \
-                and m.reply_to_message and m.message_thread_id in self.__reversed_threads \
-                and not m.reply_to_message.forum_topic_created:
+        if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"]                and m.reply_to_message and m.message_thread_id in self.__reversed_threads                and not m.reply_to_message.forum_topic_created:
             return True
         return False
 
@@ -250,9 +231,7 @@ class ChatSync:
             self.save_threads()
             logger.info(f"{LOGGER_PREFIX} FunPay чат {chat_name} связан с темой {topic.message_thread_id}.")
 
-            text = f"<a href='https://funpay.com/chat/?node={chat_id}'>{chat_name}</a>\n\n" \
-                   f"<a href='https://funpay.com/orders/trade?buyer={chat_name}'>Продажи</a> | " \
-                   f"<a href='https://funpay.com/orders/?seller={chat_name}'>Покупки</a>"
+            text = f"<a href='https://funpay.com/chat/?node={chat_id}'>{chat_name}</a>\n\n"                   f"<a href='https://funpay.com/orders/trade?buyer={chat_name}'>Продажи</a> | "                   f"<a href='https://funpay.com/orders/?seller={chat_name}'>Покупки</a>"
             self.current_bot.send_message(self.settings["chat_id"], text,
                                           message_thread_id=topic.message_thread_id,
                                           reply_markup=templates_kb(self))
@@ -266,7 +245,7 @@ class ChatSync:
                     f"{LOGGER_PREFIX} Решение: Дайте боту права администратора с разрешением 'Manage Topics' "
                     f"(Управлять темами) в настройках группы."
                 )
-                # Пытаемся уведомить основного бота, если он есть
+                                                                 
                 if self.tgbot and self.cardinal.telegram:
                     try:
                         for admin_id in self.cardinal.telegram.authorized_users:
@@ -284,9 +263,9 @@ class ChatSync:
                                 "После этого синхронизация заработает автоматически.",
                                 parse_mode="HTML"
                             )
-                            break  # Отправляем только одному админу, чтобы не спамить
+                            break                                                     
                     except Exception:
-                        pass  # Игнорируем ошибки уведомления
+                        pass                                 
             elif "chat not found" in error_msg or "chat_not_found" in error_msg:
                 logger.error(f"{LOGGER_PREFIX} Группа синхронизации не найдена. Проверьте настройки.")
             elif "bot was kicked" in error_msg or "bot is not a member" in error_msg:
@@ -328,8 +307,7 @@ class ChatSync:
     def edit_icon_and_topic_name(self, c, e, chat_id, chat_name, thread_id):
         try:
             str4topic = ""
-            if not e.message.is_employee and not \
-                    (e.message.type in (MessageTypes.REFUND, MessageTypes.ORDER_PURCHASED, MessageTypes.ORDER_CONFIRMED,
+            if not e.message.is_employee and not                    (e.message.type in (MessageTypes.REFUND, MessageTypes.ORDER_PURCHASED, MessageTypes.ORDER_CONFIRMED,
                                         MessageTypes.ORDER_REOPENED, MessageTypes.REFUND_BY_ADMIN,
                                         MessageTypes.ORDER_CONFIRMED_BY_ADMIN, MessageTypes.PARTIAL_REFUND) and
                      not e.message.i_am_buyer):
@@ -408,18 +386,14 @@ class ChatSync:
                 self.threads_info[thread_id] = (icon_custom_emoji_id, str4topic)
                 self.swap_curr_bot()
             if e.message.author_id == 0:
-                txt4tg = f"Статистика по пользователю <b>{chat_name}</b>\n\n" \
-                         f"<b>🛒 Оплачен:</b> <code>{paid}</code> {'(<code>' + paid_sum + '</code>)' if paid_sum else ''}\n" \
-                         f"<b>🏁 Закрыт:</b> <code>{closed}</code> {'(<code>' + closed_sum + '</code>)' if closed_sum else ''}\n" \
-                         f"<b>🔙 Возврат:</b> <code>{refunded}</code> {'(<code>' + refunded_sum + '</code>)' if refunded_sum else ''}"
+                txt4tg = f"Статистика по пользователю <b>{chat_name}</b>\n\n"                         f"<b>🛒 Оплачен:</b> <code>{paid}</code> {'(<code>' + paid_sum + '</code>)' if paid_sum else ''}\n"                         f"<b>🏁 Закрыт:</b> <code>{closed}</code> {'(<code>' + closed_sum + '</code>)' if closed_sum else ''}\n"                         f"<b>🔙 Возврат:</b> <code>{refunded}</code> {'(<code>' + refunded_sum + '</code>)' if refunded_sum else ''}"
                 self.current_bot.send_message(self.settings["chat_id"], txt4tg, message_thread_id=thread_id,
                                               reply_markup=templates_kb(self))
                 self.swap_curr_bot()
         except Exception as e:
             logger.error(f"{LOGGER_PREFIX} Ошибка при изменении иконки/названия чата {thread_id}")
             logger.debug("TRACEBACK", exc_info=True)
-            if isinstance(e, telebot.apihelper.ApiTelegramException) and e.result.status_code == 400 and \
-                    "message thread not found" in str(e):
+            if isinstance(e, telebot.apihelper.ApiTelegramException) and e.result.status_code == 400 and                    "message thread not found" in str(e):
                 self.threads_pop(chat_id)
                 self.save_threads()
 
@@ -444,9 +418,7 @@ class ChatSync:
             if self.settings["edit_topic"]:
                 Thread(target=self.edit_icon_and_topic_name, args=(c, i, chat_id, chat_name, thread_id),
                        daemon=True).start()
-            if self.settings["buyer_viewing"] and \
-                    (time.time() - self.chats_time.get(i.message.chat_id, 0)) > 24 * 3600 and \
-                    time.time() - c.account.last_429_err_time > 5 * 60:
+            if self.settings["buyer_viewing"] and                    (time.time() - self.chats_time.get(i.message.chat_id, 0)) > 24 * 3600 and                    time.time() - c.account.last_429_err_time > 5 * 60:
                 looking_text = ""
                 looking_link = ""
                 try:
@@ -476,8 +448,7 @@ class ChatSync:
                       i.message.i_am_seller))):
                 to_tag = True
 
-            if i.message.author_id == last_message_author_id and i.message.by_bot == last_by_bot \
-                    and i.message.badge == last_badge and text != "" and last_by_vertex == i.message.by_vertex:
+            if i.message.author_id == last_message_author_id and i.message.by_bot == last_by_bot                    and i.message.badge == last_badge and text != "" and last_by_vertex == i.message.by_vertex:
                 author = ""
             elif i.message.author_id == c.account.id:
                 author = f"<i><b>🤖 FPS:</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
@@ -501,18 +472,13 @@ class ChatSync:
                 author = f"<i><b>🆘 {i.message.author} {_('support')}: </b></i>"
 
             if not i.message.text:
-                img_name = self.settings.get('image_name') and \
-                           not (i.message.author_id == c.account.id and i.message.by_bot) and \
-                           i.message.image_name
+                img_name = self.settings.get('image_name') and                           not (i.message.author_id == c.account.id and i.message.by_bot) and                           i.message.image_name
                 msg_text = f"<a href=\"{message_text}\">{img_name or _('photo')}</a>"
             elif i.message.author_id == 0:
                 msg_text = f"<b><i>{utils.escape(message_text)}</i></b>"
             else:
                 hidden_wm = False
-                if i.message.author_id == c.account.id and i.message.by_bot and \
-                        (wm := c.MAIN_CFG["Other"].get("watermark", "")) and \
-                        self.settings.get("watermark_is_hidden") and \
-                        message_text.startswith(f"{wm}\n"):
+                if i.message.author_id == c.account.id and i.message.by_bot and                        (wm := c.MAIN_CFG["Other"].get("watermark", "")) and                        self.settings.get("watermark_is_hidden") and                        message_text.startswith(f"{wm}\n"):
                     msg_text = message_text.replace(wm, "", 1)
                     hidden_wm = True
                 else:
@@ -539,8 +505,7 @@ class ChatSync:
                 except Exception as ex:
                     logger.error(f"{LOGGER_PREFIX} Ошибка при отправке сообщения в Telegram.")
                     logger.debug("TRACEBACK", exc_info=True)
-                    if isinstance(ex, telebot.apihelper.ApiTelegramException) and ex.result.status_code == 400 and \
-                            "message thread not found" in str(ex):
+                    if isinstance(ex, telebot.apihelper.ApiTelegramException) and ex.result.status_code == 400 and                            "message thread not found" in str(ex):
                         self.threads_pop(chat_id)
                         self.save_threads()
         if text:
@@ -553,8 +518,7 @@ class ChatSync:
             except Exception as ex:
                 logger.error(f"{LOGGER_PREFIX} Ошибка при отправке сообщения в Telegram.")
                 logger.debug("TRACEBACK", exc_info=True)
-                if isinstance(ex, telebot.apihelper.ApiTelegramException) and ex.result.status_code == 400 and \
-                        "message thread not found" in str(ex):
+                if isinstance(ex, telebot.apihelper.ApiTelegramException) and ex.result.status_code == 400 and                        "message thread not found" in str(ex):
                     self.threads_pop(chat_id)
                     self.save_threads()
 
@@ -617,8 +581,7 @@ class ChatSync:
             while messages:
                 i = messages[0]
                 message_text = str(i)
-                if i.author_id == last_message_author_id and i.by_bot == last_by_bot and i.badge == last_badge and \
-                        last_by_vertex == i.by_vertex:
+                if i.author_id == last_message_author_id and i.by_bot == last_by_bot and i.badge == last_badge and                        last_by_vertex == i.by_vertex:
                     author = ""
                 elif i.author_id == self.cardinal.account.id:
                     author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
@@ -642,8 +605,7 @@ class ChatSync:
                     author = f"<i><b>🆘 {i.author} {_('support')}: </b></i>"
 
                 if not i.text:
-                    msg_text = f"<a href=\"{message_text}\">" \
-                               f"{self.settings.get('image_name') and not (i.author_id == self.cardinal.account.id and i.by_bot) and i.image_name or _('photo')}</a>"
+                    msg_text = f"<a href=\"{message_text}\">"                               f"{self.settings.get('image_name') and not (i.author_id == self.cardinal.account.id and i.by_bot) and i.image_name or _('photo')}</a>"
                 elif i.author_id == 0:
                     msg_text = f"<b><i>{utils.escape(message_text)}</i></b>"
                 else:
@@ -662,13 +624,10 @@ class ChatSync:
             result.append(text.strip())
         return result
 
-
-# Глобальный объект ChatSync
 cs_obj = None
 
-
 def init(cardinal: Cardinal):
-    """Инициализация модуля синхронизации чатов."""
+                                                   
     global cs_obj
 
     cs = ChatSync(cardinal)
@@ -681,7 +640,6 @@ def init(cardinal: Cardinal):
     tg = cardinal.telegram
     bot = tg.bot
 
-    # Обработчики Telegram
     def open_settings_menu(call):
         try:
             chat_name = bot.get_chat(cs.settings["chat_id"])
@@ -878,8 +836,7 @@ def init(cardinal: Cardinal):
     def send_template(m):
         n, result = m.text.lstrip(SPECIAL_SYMBOL).split(f"){SPECIAL_SYMBOL} ", maxsplit=1)
         n = int(n) - 1
-        if len(cardinal.telegram.answer_templates) > n \
-                and cardinal.telegram.answer_templates[n].startswith(result.rstrip("…")):
+        if len(cardinal.telegram.answer_templates) > n                and cardinal.telegram.answer_templates[n].startswith(result.rstrip("…")):
             m.text = cardinal.telegram.answer_templates[n]
         elif not result.endswith("…"):
             m.text = result
@@ -1008,8 +965,7 @@ def init(cardinal: Cardinal):
                         message_thread_id=m.message_thread_id)
 
     def send_funpay_image(m):
-        if not cs.settings["chat_id"] or m.chat.id != cs.settings["chat_id"] or \
-                not m.reply_to_message or not m.reply_to_message.forum_topic_created:
+        if not cs.settings["chat_id"] or m.chat.id != cs.settings["chat_id"] or                not m.reply_to_message or not m.reply_to_message.forum_topic_created:
             return
 
         tg_chat_name = m.reply_to_message.forum_topic_created.name
@@ -1068,7 +1024,6 @@ def init(cardinal: Cardinal):
         m.caption = None
         send_funpay_image(m)
 
-    # Регистрация обработчиков
     tg.cbq_handler(open_switchers_menu, lambda c: c.data.startswith(CBT_SWITCHERS))
     tg.cbq_handler(switch, lambda c: c.data.startswith(CBT_SWITCH))
     tg.cbq_handler(open_settings_menu, lambda c: c.data == CBT_OPEN_SETTINGS)
@@ -1102,22 +1057,19 @@ def init(cardinal: Cardinal):
         ("templates", "Заготовки ответов", True)
     ])
 
-    # Регистрация обработчиков событий Cardinal
     cardinal.new_message_handlers.insert(0, cs.setup_event_attributes)
     cardinal.init_message_handlers.append(cs.sync_chat_on_start_handler)
     cardinal.new_order_handlers.insert(0, cs.new_order_handler)
 
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
-
 def message_hook(cardinal: Cardinal, e: NewMessageEvent):
-    """Обработчик входящих сообщений для синхронизации."""
+                                                          
     global cs_obj
     if cs_obj is None or not cs_obj.ready:
         return
     cs_obj.ingoing_message_handler(cardinal, e)
 
-
 def get_settings_button():
-    """Возвращает кнопку для доступа к настройкам."""
+                                                     
     return B("🔄 Синхронизация чатов", callback_data=CBT_OPEN_SETTINGS)

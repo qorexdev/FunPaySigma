@@ -7,8 +7,7 @@ from FunPayAPI.common.enums import SubCategoryTypes
 if TYPE_CHECKING:
     from configparser import ConfigParser
 
-from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader, \
-    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp
+from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader,    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp
 from types import ModuleType
 import Utils.exceptions
 from uuid import UUID
@@ -37,54 +36,32 @@ from threading import Thread
 import gc
 import sys
 
-# Настройки оптимизации памяти
-MAX_OLD_USERS_CACHE = 1000  # Максимум записей в кэше старых пользователей
-MAX_EXCHANGE_RATES_CACHE = 50  # Максимум записей в кэше курсов валют
-MAX_PENDING_ORDERS = 100  # Максимум ожидающих заказов
-GC_COLLECT_INTERVAL = 60  # Интервал сборки мусора (секунды)
+MAX_OLD_USERS_CACHE = 1000                                                
+MAX_EXCHANGE_RATES_CACHE = 50                                        
+MAX_PENDING_ORDERS = 100                              
+GC_COLLECT_INTERVAL = 60                                    
 
-# Агрессивная настройка garbage collector для снижения потребления памяти
-gc.set_threshold(700, 10, 5)  # Более агрессивная сборка мусора
+gc.set_threshold(700, 10, 5)                                   
 
-# Встроенные модули (бывшие плагины)
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
-# ОПТИМИЗАЦИЯ RAM: graphs импортируется лениво (только при использовании) для экономии ~100-150 MB
-
+                                                                                                  
 logger = logging.getLogger("FPS")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def get_cardinal() -> None | Cardinal:
-    """
-    Возвращает существующий экземпляр кардинала.
-    """
+           
     if hasattr(Cardinal, "instance"):
         return getattr(Cardinal, "instance")
 
-
 class PluginData:
-    """
-    Класс, описывающий плагин.
-    Использует __slots__ для оптимизации памяти.
-    """
+           
     __slots__ = ('name', 'version', 'description', 'credits', 'uuid', 'path', 
                  'plugin', 'settings_page', 'commands', 'delete_handler', 'enabled')
 
     def __init__(self, name: str, version: str, desc: str, credentials: str, uuid: str,
                  path: str, plugin: ModuleType, settings_page: bool, delete_handler: Callable | None, enabled: bool):
-        """
-        :param name: название плагина.
-        :param version: версия плагина.
-        :param desc: описание плагина.
-        :param credentials: авторы плагина.
-        :param uuid: UUID плагина.
-        :param path: путь до плагина.
-        :param plugin: экземпляр плагина как модуля.
-        :param settings_page: есть ли страница настроек у плагина.
-        :param delete_handler: хэндлер, привязанный к удалению плагина.
-        :param enabled: включен ли плагин.
-        """
+                   
         self.name = name
         self.version = version
         self.description = desc
@@ -97,7 +74,6 @@ class PluginData:
         self.commands = {}
         self.delete_handler = delete_handler
         self.enabled = enabled
-
 
 class Cardinal(object):
     def __new__(cls, *args, **kwargs):
@@ -112,18 +88,17 @@ class Cardinal(object):
                  version: str):
         self.VERSION = version
         self.instance_id = random.randint(0, 999999999)
-        self.delivery_tests = {}  # Одноразовые ключи для тестов автовыдачи. {"ключ": "название лота"}
+        self.delivery_tests = {}                                                                      
 
-        # Конфиги
         self.MAIN_CFG = main_config
         self.AD_CFG = auto_delivery_config
         self.AR_CFG = auto_response_config
         self.RAW_AR_CFG = raw_auto_response_config
-        # Прокси
+                
         self.proxy = {}
-        self.proxy_dict = cardinal_tools.load_proxy_dict()  # прокси {0: "login:password@ip:port", 1: "ip:port"...}
+        self.proxy_dict = cardinal_tools.load_proxy_dict()                                                         
         if self.MAIN_CFG["Proxy"].getboolean("enable"):
-            # Проверка, что ip и port не пустые
+                                               
             if self.MAIN_CFG["Proxy"]["ip"] and self.MAIN_CFG["Proxy"]["port"]:
                 logger.info(_("crd_proxy_detected"))
 
@@ -131,14 +106,13 @@ class Cardinal(object):
                 login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
                 proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
                 
-                # Определяем тип прокси (HTTP или SOCKS5)
                 proxy_type = self.MAIN_CFG["Proxy"].get("type", "HTTP")
                 if proxy_type == "SOCKS5":
                     self.proxy = {
                         "http": f"socks5://{proxy_str}",
                         "https": f"socks5://{proxy_str}"
                     }
-                else:  # HTTP
+                else:        
                     self.proxy = {
                         "http": f"http://{proxy_str}",
                         "https": f"http://{proxy_str}"
@@ -155,7 +129,6 @@ class Cardinal(object):
                 elif self.MAIN_CFG["Proxy"].getboolean("enable"):
                     logger.info(_("crd_proxy_success_init", proxy_str))
 
-        # Ротация User-Agent для анонимности
         user_agent = cardinal_tools.get_random_user_agent() if not self.MAIN_CFG["FunPay"]["user_agent"] else self.MAIN_CFG["FunPay"]["user_agent"]
         self.account = FunPayAPI.Account(self.MAIN_CFG["FunPay"]["golden_key"],
                                           user_agent,
@@ -168,42 +141,37 @@ class Cardinal(object):
         self.start_time = int(time.time())
 
         self.balance: FunPayAPI.types.Balance | None = None
-        self.raise_time = {}  # Временные метки поднятия категорий {id игры: след. время поднятия}
-        self.raised_time = {}  # Время последнего поднятия категории {id игры: время последнего поднятия}
-        self.__exchange_rates = {}  # Курс валют {(валюта1, валюта2): (курс, время обновления)}
-        self.profile: FunPayAPI.types.UserProfile | None = None  # FunPay профиль для всего кардинала (+ хэндлеров)
-        self.tg_profile: FunPayAPI.types.UserProfile | None = None  # FunPay профиль (для Telegram-ПУ)
-        self.last_tg_profile_update = datetime.datetime.now()  # Последнее время обновления профиля для TG-ПУ
-        self.all_lots: list = []  # ВСЕ лоты аккаунта включая деактивированные (MyLotShortcut)
-        self.last_telegram_lots_update = datetime.datetime.now()  # Последнее время обновления лотов для редактора
-        self.curr_profile: FunPayAPI.types.UserProfile | None = None  # Текущий профиль (для восст. / деакт. лотов.)
-        # Тег последнего event'а, после которого обновлялся self.current_profile
+        self.raise_time = {}                                                                      
+        self.raised_time = {}                                                                            
+        self.__exchange_rates = {}                                                             
+        self.profile: FunPayAPI.types.UserProfile | None = None                                                    
+        self.tg_profile: FunPayAPI.types.UserProfile | None = None                                    
+        self.last_tg_profile_update = datetime.datetime.now()                                                
+        self.all_lots: list = []                                                              
+        self.last_telegram_lots_update = datetime.datetime.now()                                                  
+        self.curr_profile: FunPayAPI.types.UserProfile | None = None                                                
+                                                                                
         self.curr_profile_last_tag: str | None = None
-        # Тег последнего event'а, после которого в self.profile добавлялись отсутствующие ранее лоты
+                                                                                                    
         self.profile_last_tag: str | None = None
-        # Тег последнего event'а, после которого обновлялось состояние лотов.
+                                                                             
         self.last_state_change_tag: str | None = None
-        # Тег последнего event'а, перед которым пороговое значение для определения новых чатов.
+                                                                                               
         self.last_greeting_chat_id_threshold_change_tag: str | None = None
-        self.greeting_threshold_chat_ids = set()  # ID чатов для последующего обновления  self.greeting_chat_id_threshold
-        self.blacklist = cardinal_tools.load_blacklist()  # ЧС.
+        self.greeting_threshold_chat_ids = set()                                                                         
+        self.blacklist = cardinal_tools.load_blacklist()       
         self.old_users = cardinal_tools.load_old_users(
-            float(self.MAIN_CFG["Greetings"]["greetingsCooldown"]))  # Уже написавшие пользователи.
+            float(self.MAIN_CFG["Greetings"]["greetingsCooldown"]))                                
         self.greeting_chat_id_threshold = max(self.old_users.keys(), default=0)
-        # пороговое значение для определения новых чатов (для приветствия)
-
-        # Оптимизация: Ограничиваем размер кэша старых пользователей
+                                                                          
         self._cleanup_old_users_cache()
 
-        # Счётчик для периодической сборки мусора
         self._gc_counter = 0
         self._last_gc_time = time.time()
 
-        # Заказы, ожидающие подтверждения для напоминаний
         self.pending_orders_file = "storage/pending_orders.json"
         self.pending_orders = self.load_pending_orders()
 
-        # Хэндлеры
         self.pre_init_handlers = []
         self.post_init_handlers = []
         self.pre_start_handlers = []
@@ -249,37 +217,29 @@ class Cardinal(object):
 
         self.plugins: dict[str, PluginData] = {}
         self.disabled_plugins = cardinal_tools.load_disabled_plugins()
-        self.builtin_tg_commands = {}  # Команды от встроенных модулей {module_name: [(cmd, desc, is_admin)]}
+        self.builtin_tg_commands = {}                                                                        
 
-    # ===== МЕТОДЫ ОПТИМИЗАЦИИ ПАМЯТИ =====
-    
     def _cleanup_old_users_cache(self) -> None:
-        """
-        Очищает кэш старых пользователей, оставляя только последние MAX_OLD_USERS_CACHE записей.
-        """
+                   
         if len(self.old_users) > MAX_OLD_USERS_CACHE:
-            # Сортируем по времени и оставляем только новые
+                                                           
             sorted_users = sorted(self.old_users.items(), key=lambda x: x[1], reverse=True)
             self.old_users = dict(sorted_users[:MAX_OLD_USERS_CACHE])
             cardinal_tools.cache_old_users(self.old_users)
             logger.debug(f"Очищен кэш old_users: оставлено {len(self.old_users)} записей")
 
     def _cleanup_exchange_rates_cache(self) -> None:
-        """
-        Очищает кэш курсов валют, оставляя только последние MAX_EXCHANGE_RATES_CACHE записей.
-        """
+                   
         if len(self.__exchange_rates) > MAX_EXCHANGE_RATES_CACHE:
-            # Сортируем по времени обновления и оставляем только новые
+                                                                      
             sorted_rates = sorted(self.__exchange_rates.items(), key=lambda x: x[1][1], reverse=True)
             self.__exchange_rates = dict(sorted_rates[:MAX_EXCHANGE_RATES_CACHE])
             logger.debug(f"Очищен кэш exchange_rates: оставлено {len(self.__exchange_rates)} записей")
 
     def _cleanup_pending_orders(self) -> None:
-        """
-        Очищает устаревшие pending_orders, оставляя только MAX_PENDING_ORDERS записей.
-        """
+                   
         if len(self.pending_orders) > MAX_PENDING_ORDERS:
-            # Сортируем по времени создания и удаляем старые
+                                                            
             sorted_orders = sorted(self.pending_orders.items(), 
                                    key=lambda x: x[1].get('created_time', 0), reverse=True)
             self.pending_orders = dict(sorted_orders[:MAX_PENDING_ORDERS])
@@ -287,26 +247,18 @@ class Cardinal(object):
             logger.debug(f"Очищены pending_orders: оставлено {len(self.pending_orders)} записей")
 
     def collect_garbage(self, force: bool = False) -> int:
-        """
-        Выполняет сборку мусора.
-        
-        :param force: принудительная полная сборка
-        :return: количество освобождённых объектов
-        """
+                   
         current_time = time.time()
         
-        # Не выполнять сборку чаще чем раз в GC_COLLECT_INTERVAL секунд (если не force)
         if not force and current_time - self._last_gc_time < GC_COLLECT_INTERVAL:
             return 0
         
         self._last_gc_time = current_time
         
-        # Очистка кэшей перед сборкой мусора
         self._cleanup_old_users_cache()
         self._cleanup_exchange_rates_cache()
         self._cleanup_pending_orders()
         
-        # Полная сборка мусора всех поколений
         collected = gc.collect(2)
         
         if collected > 100:
@@ -315,34 +267,27 @@ class Cardinal(object):
         return collected
 
     def periodic_cleanup(self) -> None:
-        """
-        Периодическая очистка памяти. Вызывается в основных циклах.
-        """
+                   
         self._gc_counter += 1
         
-        # Каждые 100 итераций выполняем очистку
         if self._gc_counter >= 100:
             self._gc_counter = 0
             self.collect_garbage()
 
     def load_pending_orders(self) -> dict:
-        """
-        Загружает данные о заказах, ожидающих напоминаний, из JSON файла.
-        """
+                   
         try:
             if os.path.exists(self.pending_orders_file):
                 with open(self.pending_orders_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    # Преобразуем ключи обратно в строки (JSON требует строковых ключей)
+                                                                                        
                     return {str(k): v for k, v in data.items()}
         except Exception as e:
             logger.warning(f"Не удалось загрузить данные о заказах из {self.pending_orders_file}: {e}")
         return {}
 
     def save_pending_orders(self) -> None:
-        """
-        Сохраняет данные о заказах, ожидающих напоминаний, в JSON файл.
-        """
+                   
         try:
             os.makedirs(os.path.dirname(self.pending_orders_file), exist_ok=True)
             with open(self.pending_orders_file, 'w', encoding='utf-8') as f:
@@ -351,9 +296,7 @@ class Cardinal(object):
             logger.error(f"Не удалось сохранить данные о заказах в {self.pending_orders_file}: {e}")
 
     def __init_account(self) -> None:
-        """
-        Инициализирует класс аккаунта (self.account)
-        """
+                   
         while True:
             try:
                 self.account.get()
@@ -376,19 +319,9 @@ class Cardinal(object):
 
     def __update_profile(self, infinite_polling: bool = True, attempts: int = 0, update_telegram_profile: bool = True,
                          update_main_profile: bool = True) -> bool:
-        """
-        Загружает данные о лотах категориях аккаунта
-
-        :param infinite_polling: бесконечно посылать запросы, пока не будет получен ответ (игнорировать макс. кол-во
-        попыток)
-        :param attempts: максимальное кол-во попыток.
-        :param update_telegram_profile: обновить ли информацию о профиле для TG ПУ?
-        :param update_main_profile: обновить ли информацию о профиле для всего кардинала (+ хэндлеров)?
-
-        :return: True, если информация обновлена, False, если превышено макс. кол-во попыток.
-        """
+                   
         logger.info(_("crd_getting_profile_data"))
-        # Получаем категории аккаунта.
+                                      
         while attempts or infinite_polling:
             try:
                 profile = self.account.get_user(self.account.id)
@@ -415,8 +348,7 @@ class Cardinal(object):
             logger.info(_("crd_profile_updated", len(profile.get_lots()), len(profile.get_sorted_lots(2))))
         if update_telegram_profile:
             self.tg_profile = profile
-            # Получаем ВСЕ лоты включая деактивированные
-            # Передаём профиль для оптимизации - загружаем только подкатегории с лотами
+                                                        
             try:
                 logger.info("Начинаем загрузку всех лотов (включая деактивированные)...")
                 self.all_lots = self.account.get_all_my_lots(profile=profile)
@@ -429,9 +361,7 @@ class Cardinal(object):
         return True
 
     def __init_telegram(self) -> None:
-        """
-        Инициализирует Telegram бота.
-        """
+                   
         try:
             self.telegram = tg_bot.bot.TGBot(self)
             self.telegram.init()
@@ -454,28 +384,19 @@ class Cardinal(object):
         balance = self.account.get_balance(random.choice(lots).id)
         return balance
 
-    # Прочее
     def raise_lots(self) -> int:
-        """
-        Пытается поднять лоты.
-
-        :return: предположительное время, когда нужно снова запустить данную функцию.
-        """
-        # Время следующего вызова функции (по умолчанию - бесконечность).
+                   
         next_call = float("inf")
 
         for subcat in sorted(list(self.profile.get_sorted_lots(2).keys()), key=lambda x: x.category.position):
             if subcat.type is SubCategoryTypes.CURRENCY:
                 continue
-            # Если id категории текущей подкатегории уже находится в self.game_ids, но время поднятия подкатегорий
-            # данной категории еще не настало - пропускам эту подкатегорию.
+                                                                                                                  
             if (saved_time := self.raise_time.get(subcat.category.id)) and saved_time > int(time.time()):
-                # Если записанное в self.game_ids время больше текущего времени
-                # обновляем время next_call'а на записанное время.
+                                                                               
                 next_call = saved_time if saved_time < next_call else next_call
                 continue
 
-            # В любом другом случае пытаемся поднять лоты всех категорий, относящихся к игре
             raise_ok = False
             error_text = ""
             time_delta = ""
@@ -485,7 +406,7 @@ class Cardinal(object):
                 logger.info(_("crd_lots_raised", subcat.category.name))
                 raise_ok = True
                 last_time = self.raised_time.get(subcat.category.id)
-                self.raised_time[subcat.category.id] = new_time = int(time.time())  # locale
+                self.raised_time[subcat.category.id] = new_time = int(time.time())          
                 time_delta = "" if not last_time else f" Последнее поднятие: {cardinal_tools.time_to_str(new_time - last_time)} назад."
                 time.sleep(1)
                 self.account.raise_lots(subcat.category.id)
@@ -546,23 +467,17 @@ class Cardinal(object):
         for i in range(2, -1, -1):
             try:
                 obj._order = self.account.get_order(order_id)
-                logger.info(f"Получил информацию о заказе {obj._order}")  # locale
+                logger.info(f"Получил информацию о заказе {obj._order}")          
                 return obj._order
             except:
-                logger.warning(f"Произошла ошибка при получении заказа #{order_id}. Осталось {i} попыток.")  # locale
+                logger.warning(f"Произошла ошибка при получении заказа #{order_id}. Осталось {i} попыток.")          
                 logger.debug("TRACEBACK", exc_info=True)
                 time.sleep(1)
         obj._order_attempt_error = True
 
     @staticmethod
     def split_text(text: str) -> list[str]:
-        """
-        Разбивает текст на суб-тексты по 20 строк.
-
-        :param text: исходный текст.
-
-        :return: список из суб-текстов.
-        """
+                   
         output = []
         lines = text.split("\n")
         while lines:
@@ -573,14 +488,7 @@ class Cardinal(object):
         return output
 
     def parse_message_entities(self, msg_text: str) -> list[str | int | float]:
-        """
-        Разбивает сообщения по 20 строк, отделяет изображения от текста.
-        (обозначение изображения: $photo=1234567890)
-
-        :param msg_text: текст сообщения.
-
-        :return: набор текстов сообщений / изображений.
-        """
+                   
         msg_text = "\n".join(i.strip() for i in msg_text.split("\n"))
         while "\n\n" in msg_text:
             msg_text = msg_text.replace("\n\n", "\n[a][/a]\n")
@@ -603,9 +511,7 @@ class Cardinal(object):
         return entities
 
     def send_order_reminder(self, order: types.OrderShortcut) -> None:
-        """
-        Отправляет напоминание о подтверждении заказа.
-        """
+                   
         if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
             return
 
@@ -613,17 +519,14 @@ class Cardinal(object):
         if not template:
             return
 
-        # Форматируем шаблон
         formatted_text = cardinal_tools.format_order_text(template, order)
 
-        # Получаем чат с покупателем
         try:
             chat = self.account.get_chat_by_name(order.buyer_username, True)
         except:
             logger.warning(f"Не удалось получить чат с покупателем {order.buyer_username} для заказа {order.id}")
             return
 
-        # Отправляем сообщение
         result = self.send_message(chat.id, formatted_text, order.buyer_username)
         if result:
             logger.info(f"Отправлено напоминание о подтверждении заказа {order.id} покупателю {order.buyer_username}")
@@ -631,15 +534,13 @@ class Cardinal(object):
             logger.warning(f"Не удалось отправить напоминание о подтверждении заказа {order.id}")
 
     def check_order_reminders(self) -> None:
-        """
-        Проверяет заказы и отправляет напоминания при необходимости.
-        """
+                   
         if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
             return
 
         current_time = int(time.time())
-        timeout = int(self.MAIN_CFG["OrderReminders"]["timeout"]) * 60  # в секундах
-        interval = int(self.MAIN_CFG["OrderReminders"]["interval"]) * 60  # в секундах
+        timeout = int(self.MAIN_CFG["OrderReminders"]["timeout"]) * 60              
+        interval = int(self.MAIN_CFG["OrderReminders"]["interval"]) * 60              
         max_reminders = int(self.MAIN_CFG["OrderReminders"]["repeatCount"])
 
         orders_to_remove = []
@@ -649,49 +550,36 @@ class Cardinal(object):
             reminder_count = order_data["reminder_count"]
             last_reminder = order_data.get("last_reminder", 0)
 
-            # Если заказ старше таймаута
             if current_time - created_time >= timeout:
-                # Если еще не отправляли максимум напоминаний
+                                                             
                 if reminder_count < max_reminders:
-                    # Если прошло достаточно времени с последнего напоминания
+                                                                             
                     if current_time - last_reminder >= interval:
-                        # Получаем информацию о заказе
+                                                      
                         try:
                             order = self.account.get_order_shortcut(order_id)
-                            if order.status == types.OrderStatuses.PAID:  # Заказ еще не подтвержден
+                            if order.status == types.OrderStatuses.PAID:                            
                                 self.send_order_reminder(order)
                                 order_data["reminder_count"] += 1
                                 order_data["last_reminder"] = current_time
                                 self.save_pending_orders()
                             else:
-                                # Заказ уже подтвержден или отменен
+                                                                   
                                 orders_to_remove.append(order_id)
                         except:
                             logger.warning(f"Не удалось получить информацию о заказе {order_id} для напоминания")
                             orders_to_remove.append(order_id)
                 else:
-                    # Достигнут лимит напоминаний, удаляем заказ
+                                                                
                     orders_to_remove.append(order_id)
 
-        # Удаляем обработанные заказы
         for order_id in orders_to_remove:
             del self.pending_orders[order_id]
 
     def send_message(self, chat_id: int | str, message_text: str, chat_name: str | None = None,
                      interlocutor_id: int | None = None, attempts: int = 3,
                      watermark: bool = True) -> list[FunPayAPI.types.Message] | None:
-        """
-        Отправляет сообщение в чат FunPay.
-
-        :param chat_id: ID чата.
-        :param message_text: текст сообщения.
-        :param chat_name: название чата (необязательно).
-        :param interlocutor_id: ID собеседника (необязательно).
-        :param attempts: кол-во попыток на отправку сообщения.
-        :param watermark: добавлять ли водяной знак в начало сообщения?
-
-        :return: объект сообщения / последнего сообщения, если оно доставлено, иначе - None
-        """
+                   
         if self.MAIN_CFG["Other"].get("watermark") and watermark and not message_text.strip().startswith("$photo="):
             message_text = f"{self.MAIN_CFG['Other']['watermark']}\n" + message_text
 
@@ -735,22 +623,7 @@ class Cardinal(object):
         return result
 
     def get_exchange_rate(self, base_currency: types.Currency, target_currency: types.Currency, min_interval: int = 60):
-        """
-        Получает курс обмена между двумя указанными валютами.
-        Если с последней проверки прошло меньше `min_interval` секунд, используется сохранённое значение.
-
-        :param base_currency: Исходная валюта, из которой производится обмен.
-        :type base_currency: :obj:`types.Currency`
-
-        :param target_currency: Целевая валюта, в которую производится обмен.
-        :type target_currency: :obj:`types.Currency`
-
-        :param min_interval: Минимальное время в секундах между проверками курса обмена.
-        :type min_interval: :obj:`int`
-
-        :return: Коэффициент обмена, где 1 единица `base_currency` = X единиц `target_currency`.
-        :rtype: :obj:`float`
-        """
+                   
         assert base_currency != types.Currency.UNKNOWN and target_currency != types.Currency.UNKNOWN
         if base_currency == target_currency:
             return 1
@@ -784,13 +657,7 @@ class Cardinal(object):
         raise Exception("Не удалось получить курс обмена: превышено количество попыток.")
 
     def update_session(self, attempts: int = 3) -> bool:
-        """
-        Обновляет данные аккаунта (баланс, токены и т.д.)
-
-        :param attempts: кол-во попыток.
-
-        :return: True, если удалось обновить данные, False - если нет.
-        """
+                   
         while attempts:
             try:
                 self.account.get(update_phpsessid=True)
@@ -811,11 +678,8 @@ class Cardinal(object):
             logger.error(_("crd_session_no_more_attempts_err"))
             return False
 
-    # Бесконечные циклы
     def process_events(self):
-        """
-        Запускает хэндлеры, привязанные к тому или иному событию.
-        """
+                   
         instance_id = self.run_id
         events_handlers = {
             FunPayAPI.events.EventTypes.INITIAL_CHAT: self.init_message_handlers,
@@ -833,13 +697,11 @@ class Cardinal(object):
             if instance_id != self.run_id:
                 break
             self.run_handlers(events_handlers[event.type], (self, event))
-            # Периодическая очистка памяти
+                                          
             self.periodic_cleanup()
 
     def lots_raise_loop(self):
-        """
-        Запускает бесконечный цикл поднятия категорий (если autoRaise в _main.cfg == 1)
-        """
+                   
         if not self.profile.get_lots():
             logger.info(_("crd_raise_loop_not_started"))
             return
@@ -861,22 +723,18 @@ class Cardinal(object):
                 logger.debug("TRACEBACK", exc_info=True)
 
     def update_session_loop(self):
-        """
-        Запускает бесконечный цикл обновления данных о пользователе.
-        """
+                   
         logger.info(_("crd_session_loop_started"))
         sleep_time = 3600
         while True:
             time.sleep(sleep_time)
             result = self.update_session()
             sleep_time = 60 if not result else 3600
-            # Полная сборка мусора каждый час
+                                             
             self.collect_garbage(force=True)
 
     def order_reminders_loop(self):
-        """
-        Запускает бесконечный цикл проверки напоминаний о подтверждении заказов.
-        """
+                   
         logger.info(_("crd_order_reminders_loop_started"))
         while True:
             try:
@@ -885,14 +743,10 @@ class Cardinal(object):
             except Exception as e:
                 logger.error(f"Ошибка в цикле напоминаний о заказах: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
-            time.sleep(60)  # Проверяем каждую минуту
+            time.sleep(60)                           
 
-    # Управление процессом
     def init(self):
-        """
-        Инициализирует кардинал: регистрирует хэндлеры, инициализирует и запускает Telegram бота,
-        получает данные аккаунта и профиля.
-        """
+                   
         self.add_handlers_from_plugin(handlers)
         self.add_handlers_from_plugin(announcements)
         self.load_plugins()
@@ -908,13 +762,13 @@ class Cardinal(object):
         self.run_handlers(self.pre_init_handlers, (self,))
 
         if self.MAIN_CFG["Telegram"].getboolean("enabled") and self.telegram:
-            # Инициализация встроенных модулей ПЕРЕД запуском telegram
+                                                                      
             self.init_builtin_features()
             
             self.telegram.setup_commands()
             try:
                 self.telegram.edit_bot()
-            except AttributeError:  # todo убрать когда-то
+            except AttributeError:                        
                 logger.warning("Произошла ошибка при изменении бота Telegram. Обновляю библиотеку...")
                 logger.debug("TRACEBACK", exc_info=True)
                 try:
@@ -937,15 +791,12 @@ class Cardinal(object):
         return self
 
     def check_updates_loop(self):
-        """
-        Запускает цикл проверки обновлений.
-        """
+                   
         logger.info("Запущен цикл проверки обновлений.")
         from Utils import updater
         while True:
-            time.sleep(180)  # Проверка каждые 3 минуты
+            time.sleep(180)                            
             
-            # Полная очистка памяти (garbage collection)
             try:
                 self.collect_garbage(force=True)
             except:
@@ -953,30 +804,27 @@ class Cardinal(object):
 
             try:
                 curr_tag = f"v{self.VERSION}"
-                # logger.debug(f"Проверка обновлений для версии {curr_tag}...")
+                                                                               
                 releases = updater.get_new_releases(curr_tag)
                 
-                # Если найдены новые релизы
                 if isinstance(releases, list) and releases:
                     logger.info(f"Обнаружено новое обновление: {releases[0].name}")
                     if self.telegram:
                          self.telegram.send_update_confirmation(releases[0])
-                         # Если отправили уведомление, ждем сутки перед следующим возможным напоминанием
+                                                                                                        
                          time.sleep(86400)
                 elif isinstance(releases, int):
                     pass
-                    # logger.debug(f"Проверка обновлений: код ответа {releases} (2=последняя версия, 3=ошибка)")
+                                                                                                                
                 else:
                     pass
-                    # logger.debug(f"Обновлений не найдено. Текущая версия {curr_tag} актуальна.")
+                                                                                                  
             except Exception as e:
                 logger.error(f"Ошибка при проверке обновлений: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
 
     def run(self):
-        """
-        Запускает кардинал после инициализации. Используется для первого старта.
-        """
+                   
         self.run_id += 1
         self.start_time = int(time.time())
         self.run_handlers(self.pre_start_handlers, (self,))
@@ -989,27 +837,20 @@ class Cardinal(object):
         self.process_events()
 
     def start(self):
-        """
-        Запускает кардинал после остановки. Не используется.
-        """
+                   
         self.run_id += 1
         self.run_handlers(self.pre_start_handlers, (self,))
         self.run_handlers(self.post_start_handlers, (self,))
         self.process_events()
 
     def stop(self):
-        """
-        Останавливает кардинал. Не используется.
-        """
+                   
         self.run_id += 1
         self.run_handlers(self.pre_stop_handlers, (self,))
         self.run_handlers(self.post_stop_handlers, (self,))
 
     def update_lots_and_categories(self):
-        """
-        Парсит лоты (для ПУ TG). Получает ВСЕ лоты включая деактивированные.
-        Лоты загружаются автоматически в __update_profile при update_telegram_profile=True.
-        """
+                   
         result = self.__update_profile(infinite_polling=False, attempts=3, update_main_profile=False)
         return result
 
@@ -1027,29 +868,17 @@ class Cardinal(object):
 
     @staticmethod
     def save_config(config: configparser.ConfigParser, file_path: str) -> None:
-        """
-        Сохраняет конфиг в указанный файл.
-
-        :param config: объект конфига.
-        :param file_path: путь до файла, в который нужно сохранить конфиг.
-        """
+                   
         from Utils.config_loader import save_config as save_config_func
         save_config_func(config, file_path)
 
     def add_builtin_telegram_commands(self, module_name: str, commands: list) -> None:
-        """
-        Добавляет команды Telegram от встроенных модулей.
-        
-        :param module_name: идентификатор модуля.
-        :param commands: список команд [(cmd, desc, is_admin), ...].
-        """
+                   
         self.builtin_tg_commands[module_name] = commands
         logger.info(f"Добавлены команды от {module_name}: {[c[0] for c in commands]}")
 
     def init_builtin_features(self) -> None:
-        """
-        Инициализирует встроенные модули (бывшие плагины).
-        """
+                   
         logger.info("Инициализация встроенных модулей...")
         try:
             adv_profile_stat.init(self)
@@ -1066,7 +895,7 @@ class Cardinal(object):
         except Exception as e:
             logger.error(f"Ошибка инициализации sras_info: {e}")
             logger.debug("TRACEBACK", exc_info=True)
-        # ОПТИМИЗАЦИЯ RAM: ленивый импорт graphs (matplotlib, pandas, numpy) для экономии ~100-150 MB
+                                                                                                     
         try:
             from builtin_features import graphs
             graphs.init(self)
@@ -1080,13 +909,9 @@ class Cardinal(object):
             logger.debug("TRACEBACK", exc_info=True)
         logger.info("Встроенные модули инициализированы.")
 
-    # Загрузка плагинов
     @staticmethod
     def is_uuid_valid(uuid: str) -> bool:
-        """
-        Проверяет, является ли UUID плагина валидным.
-        :param uuid: UUID4.
-        """
+                   
         try:
             uuid_obj = UUID(uuid, version=4)
         except ValueError:
@@ -1095,11 +920,7 @@ class Cardinal(object):
 
     @staticmethod
     def is_plugin(file: str) -> bool:
-        """
-        Есть ли "noplug" в начале файла плагина?
-
-        :param file: файл плагина.
-        """
+                   
         with open(f"plugins/{file}", "r", encoding="utf-8") as f:
             line = f.readline()
         if line.startswith("#"):
@@ -1111,12 +932,7 @@ class Cardinal(object):
 
     @staticmethod
     def load_plugin(from_file: str) -> tuple:
-        """
-        Создает модуль из переданного файла-плагина и получает необходимые поля для PluginData.
-        :param from_file: путь до файла-плагина.
-
-        :return: плагин, поля плагина.
-        """
+                   
         spec = importlib.util.spec_from_file_location(f"plugins.{from_file[:-3]}", f"plugins/{from_file}")
         plugin = importlib.util.module_from_spec(spec)
         sys.modules[f"plugins.{from_file[:-3]}"] = plugin
@@ -1134,9 +950,7 @@ class Cardinal(object):
         return plugin, result
 
     def load_plugins(self):
-        """
-        Импортирует все плагины из папки plugins.
-        """
+                   
         if not os.path.exists("plugins"):
             logger.warning(_("crd_no_plugins_folder"))
             return
@@ -1171,12 +985,7 @@ class Cardinal(object):
             self.plugins[data["UUID"]] = plugin_data
 
     def add_handlers_from_plugin(self, plugin, uuid: str | None = None):
-        """
-        Добавляет хэндлеры из плагина + присваивает каждому хэндлеру UUID плагина.
-
-        :param plugin: модуль (плагин).
-        :param uuid: UUID плагина (None для встроенных хэндлеров).
-        """
+                   
         for name in self.handler_bind_var_names:
             try:
                 functions = getattr(plugin, name)
@@ -1188,20 +997,13 @@ class Cardinal(object):
         logger.debug(_("crd_handlers_registered", plugin.__name__))
 
     def add_handlers(self):
-        """
-        Регистрирует хэндлеры из всех плагинов.
-        """
+                   
         for i in self.plugins:
             plugin = self.plugins[i].plugin
             self.add_handlers_from_plugin(plugin, i)
 
     def run_handlers(self, handlers_list: list[Callable], args) -> None:
-        """
-        Выполняет функции из списка handlers.
-
-        :param handlers_list: Список хэндлеров.
-        :param args: аргументы для хэндлеров.
-        """
+                   
         for func in handlers_list:
             try:
                 plugin_uuid = getattr(func, "plugin_uuid", None)
@@ -1218,16 +1020,7 @@ class Cardinal(object):
                 continue
 
     def add_telegram_commands(self, uuid: str, commands: list[tuple[str, str, bool]]):
-        """
-        Добавляет команды в список команд плагина.
-        [
-            ("команда1", "описание команды", Добавлять ли в меню команд (True / False)),
-            ("команда2", "описание команды", Добавлять ли в меню команд (True / False))
-        ]
-
-        :param uuid: UUID плагина.
-        :param commands: список команд (без "/")
-        """
+                   
         if uuid not in self.plugins:
             return
 
@@ -1237,10 +1030,7 @@ class Cardinal(object):
                 self.telegram.add_command_to_menu(i[0], i[1])
 
     def toggle_plugin(self, uuid):
-        """
-        Активирует / деактивирует плагин.
-        :param uuid: UUID плагина.
-        """
+                   
         self.plugins[uuid].enabled = not self.plugins[uuid].enabled
         if self.plugins[uuid].enabled and uuid in self.disabled_plugins:
             self.disabled_plugins.remove(uuid)
@@ -1248,7 +1038,6 @@ class Cardinal(object):
             self.disabled_plugins.append(uuid)
         cardinal_tools.cache_disabled_plugins(self.disabled_plugins)
 
-    # Настройки
     @property
     def autoraise_enabled(self) -> bool:
         return self.MAIN_CFG["FunPay"].getboolean("autoRaise")
@@ -1334,16 +1123,12 @@ class Cardinal(object):
         return self.MAIN_CFG["Telegram"].getboolean("blockLogin")
 
     def toggle_proxy(self, enabled: bool) -> None:
-        """
-        Включает/выключает прокси "на лету".
-        
-        :param enabled: включить (True) или выключить (False) прокси
-        """
+                   
         self.MAIN_CFG["Proxy"]["enable"] = "1" if enabled else "0"
         self.save_config(self.MAIN_CFG, "configs/_main.cfg")
         
         if enabled:
-            # Если включаем прокси, устанавливаем его для аккаунта
+                                                                  
             ip, port = self.MAIN_CFG["Proxy"]["ip"], self.MAIN_CFG["Proxy"]["port"]
             login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
             proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
@@ -1354,7 +1139,7 @@ class Cardinal(object):
                     "http": f"socks5://{proxy_str}",
                     "https": f"socks5://{proxy_str}"
                 }
-            else:  # HTTP
+            else:        
                 self.proxy = {
                     "http": f"http://{proxy_str}",
                     "https": f"http://{proxy_str}"
@@ -1362,6 +1147,6 @@ class Cardinal(object):
             
             self.account.proxy = self.proxy
         else:
-            # Если выключаем прокси, убираем его у аккаунта
+                                                           
             self.proxy = {}
             self.account.proxy = None

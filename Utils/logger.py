@@ -1,12 +1,8 @@
-"""
-В данном модуле написаны форматтеры для логгера.
-"""
 from colorama import Fore, Back, Style
 import logging.handlers
 import logging
 import re
 import hashlib
-
 
 LOG_COLORS = {
         logging.DEBUG: Fore.BLACK + Style.BRIGHT,
@@ -16,45 +12,25 @@ LOG_COLORS = {
         logging.CRITICAL: Back.RED
 }
 
-CLI_LOG_FORMAT = f"{Fore.BLACK + Style.BRIGHT}[%(asctime)s]{Style.RESET_ALL}"\
-                 f"{Fore.CYAN}[%(filename)s:%(lineno)d]>{Style.RESET_ALL} $RESET%(levelname).1s: %(message)s{Style.RESET_ALL}"
+CLI_LOG_FORMAT = f"{Fore.BLACK + Style.BRIGHT}[%(asctime)s]{Style.RESET_ALL}"                 f"{Fore.CYAN}[%(filename)s:%(lineno)d]>{Style.RESET_ALL} $RESET%(levelname).1s: %(message)s{Style.RESET_ALL}"
 CLI_TIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 
 FILE_LOG_FORMAT = "[%(asctime)s][%(filename)s][%(lineno)d]> %(levelname).1s: %(message)s"
 FILE_TIME_FORMAT = "%d.%m.%y %H:%M:%S"
 CLEAR_RE = re.compile(r"(\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]))|(\n)|(\r)")
 
-
 def anonymize_text(text: str) -> str:
-    """
-    Анонимизирует текст, заменяя usernames на хэши.
-    """
-    # Регулярное выражение для поиска @username
+           
     username_re = re.compile(r'@([a-zA-Z0-9_]+)')
     def replace_username(match):
         username = match.group(1)
-        # Хэшируем username
+                           
         hashed = hashlib.sha256(username.encode()).hexdigest()[:8]
         return f'@{hashed}'
     return username_re.sub(replace_username, text)
 
-
 def add_colors(text: str) -> str:
-    """
-    Заменяет ключевые слова на коды цветов.
-
-    $YELLOW - желтый текст.
-
-    $CYAN - светло-голубой текст.
-
-    $MAGENTA - фиолетовый текст.
-
-    $BLUE - синий текст.
-
-    :param text: текст.
-
-    :return: цветной текст.
-    """
+           
     colors = {
         "$YELLOW": Fore.YELLOW,
         "$CYAN": Fore.CYAN,
@@ -77,11 +53,8 @@ def add_colors(text: str) -> str:
             text = text.replace(c, colors[c])
     return text
 
-
 class CLILoggerFormatter(logging.Formatter):
-    """
-    Форматтер для вывода логов в консоль.
-    """
+           
     def __init__(self):
         super(CLILoggerFormatter, self).__init__()
 
@@ -94,11 +67,8 @@ class CLILoggerFormatter(logging.Formatter):
         formatter = logging.Formatter(log_format, CLI_TIME_FORMAT)
         return formatter.format(record)
 
-
 class FileLoggerFormatter(logging.Formatter):
-    """
-    Форматтер для сохранения логов в файл.
-    """
+           
     def __init__(self):
         super(FileLoggerFormatter, self).__init__()
 
@@ -110,7 +80,6 @@ class FileLoggerFormatter(logging.Formatter):
         formatter = logging.Formatter(FILE_LOG_FORMAT, FILE_TIME_FORMAT)
         return formatter.format(record)
 
-
 LOGGER_CONFIG = {
     "version": 1,
     "handlers": {
@@ -119,8 +88,8 @@ LOGGER_CONFIG = {
             "level": "DEBUG",
             "formatter": "file_formatter",
             "filename": "logs/log.log",
-            "maxBytes": 5 * 1024 * 1024,  # 5 мегабайт (оптимизация RAM)
-            "backupCount": 5,  # Уменьшено для экономии ресурсов
+            "maxBytes": 5 * 1024 * 1024,                                
+            "backupCount": 5,                                   
             "encoding": "utf-8"
         },
 

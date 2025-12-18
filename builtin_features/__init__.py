@@ -1,8 +1,3 @@
-"""
-Встроенные функции FunPay Sigma.
-Эти модули интегрированы напрямую в код и не требуют установки как плагины.
-"""
-
 from . import adv_profile_stat
 from . import review_chat_reply
 from . import sras_info

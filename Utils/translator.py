@@ -1,20 +1,13 @@
-"""
-Модуль для автоматического перевода текста RU → EN.
-Использует бесплатную библиотеку googletrans без API ключей.
-"""
-
 import logging
 import asyncio
 from functools import lru_cache
 
 logger = logging.getLogger("TGBot")
 
-# Ленивый импорт для оптимизации памяти
 _translator = None
 
-
 def _get_translator():
-    """Ленивая инициализация переводчика."""
+                                            
     global _translator
     if _translator is None:
         try:
@@ -28,9 +21,8 @@ def _get_translator():
             return None
     return _translator
 
-
 def _run_async(coro):
-    """Запускает асинхронную функцию синхронно."""
+                                                  
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -38,7 +30,7 @@ def _run_async(coro):
         asyncio.set_event_loop(loop)
     
     if loop.is_running():
-        # Если уже в async контексте, создаём новый цикл
+                                                        
         import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor() as pool:
             future = pool.submit(asyncio.run, coro)
@@ -46,9 +38,8 @@ def _run_async(coro):
     else:
         return loop.run_until_complete(coro)
 
-
 async def _translate_async(text: str) -> str | None:
-    """Асинхронный перевод текста."""
+                                     
     translator = _get_translator()
     if not translator:
         return None
@@ -62,14 +53,8 @@ async def _translate_async(text: str) -> str | None:
         logger.error(f"Ошибка асинхронного перевода: {e}")
         return None
 
-
 def translate_to_english(text: str) -> str | None:
-    """
-    Переводит текст с русского на английский.
-    
-    :param text: текст на русском языке
-    :return: переведённый текст на английском или None при ошибке
-    """
+           
     if not text or not text.strip():
         return text
     
@@ -79,11 +64,11 @@ def translate_to_english(text: str) -> str | None:
         return None
     
     try:
-        # Пробуем синхронный вызов (для старых версий googletrans)
+                                                                  
         try:
             result = translator.translate(text, src='ru', dest='en')
             if hasattr(result, '__await__'):
-                # Это корутина - нужно запустить асинхронно
+                                                           
                 result = _run_async(_translate_async(text))
                 if result:
                     logger.debug(f"Перевод (async): '{text[:30]}...' → '{result[:30]}...'")
@@ -94,7 +79,7 @@ def translate_to_english(text: str) -> str | None:
                 return result.text
             return None
         except TypeError as e:
-            # Если метод асинхронный и вызван неправильно
+                                                         
             if 'await' in str(e) or 'coroutine' in str(e):
                 result = _run_async(_translate_async(text))
                 if result:
@@ -105,14 +90,8 @@ def translate_to_english(text: str) -> str | None:
         logger.error(f"Ошибка перевода: {e}")
         return None
 
-
 def translate_batch_to_english(texts: dict[str, str]) -> dict[str, str]:
-    """
-    Переводит несколько текстов за один запрос (оптимизация).
-    
-    :param texts: словарь {ключ: русский_текст}
-    :return: словарь {ключ: английский_текст}
-    """
+           
     if not texts:
         return {}
     
@@ -122,13 +101,12 @@ def translate_batch_to_english(texts: dict[str, str]) -> dict[str, str]:
         if translated:
             result[key] = translated
         else:
-            result[key] = text  # Оставляем оригинал при ошибке
+            result[key] = text                                 
     
     return result
 
-
 def is_translation_available() -> bool:
-    """Проверяет, доступен ли сервис перевода."""
+                                                 
     try:
         result = translate_to_english("тест")
         return result is not None and result.lower() == "test"

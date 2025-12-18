@@ -1,7 +1,3 @@
-"""
-Отслеживание ограничений рейтинга FunPay.
-Команда /sras_info и уведомления об изменениях.
-"""
 from __future__ import annotations
 
 import json
@@ -31,22 +27,19 @@ SETTINGS = {
     "chats": []
 }
 
-# Глобальные переменные для отслеживания состояния
 sras_info = {}
 last_sras_time = 0
 no_limitations_text = "В данный момент на вашем аккаунте нет никаких ограничений. Если бы мы были Макдональдсом, вы бы могли стать «Лучшим продавцом месяца». Так держать!"
 
-
 def save_config():
-    """Сохраняет настройки."""
+                              
     os.makedirs("storage/builtin", exist_ok=True)
     with open("storage/builtin/sras_info.json", "w", encoding="utf-8") as f:
         global SETTINGS
         f.write(json.dumps(SETTINGS, indent=4, ensure_ascii=False))
 
-
 def get_sras_info(cardinal: Cardinal) -> dict[str, int]:
-    """Получает информацию об ограничениях рейтинга."""
+                                                       
     global no_limitations_text
     r = cardinal.account.method("get", "https://funpay.com/sras/info", {}, {}, raise_not_200=True)
     soup = bs(r.text, "lxml")
@@ -65,9 +58,8 @@ def get_sras_info(cardinal: Cardinal) -> dict[str, int]:
     logger.debug(f"{LOGGER_PREFIX} Ограничения: {result}")
     return result
 
-
 def get_sras_changes(d1: dict, d2: dict) -> dict:
-    """Получает изменения в ограничениях рейтинга."""
+                                                     
     global sras_info, last_sras_time
     result = {}
     for key in set(list(d1.keys()) + list(d2.keys())):
@@ -80,21 +72,18 @@ def get_sras_changes(d1: dict, d2: dict) -> dict:
     last_sras_time = time.time()
     return result
 
-
 def init(cardinal: Cardinal):
-    """Инициализация модуля отслеживания ограничений рейтинга."""
+                                                                 
     global sras_info, SETTINGS
     
     tg = cardinal.telegram
     bot = tg.bot
 
-    # Загрузка настроек
     if os.path.exists("storage/builtin/sras_info.json"):
         with open("storage/builtin/sras_info.json", "r", encoding="utf-8") as f:
             settings = json.loads(f.read())
             SETTINGS.update(settings)
 
-    # Получение начальной информации
     try:
         sras_info = get_sras_info(cardinal)
     except:
@@ -133,7 +122,7 @@ FunPay может ограничить видимость ваших лотов 
         open_settings(call)
 
     def send_sras_changes(sras_changes, chat_ids):
-        """Отправляет уведомления об изменениях рейтинга."""
+                                                            
         good = {}
         bad = {}
         str4tg = ""
@@ -173,7 +162,7 @@ FunPay может ограничить видимость ваших лотов 
             time.sleep(1)
 
     def sras_info_handler(m: telebot.types.Message):
-        """Обработчик команды /sras_info."""
+                                            
         sras_info_ = get_sras_info(cardinal)
         if not sras_info_:
             text4tg = f"<b>{no_limitations_text}</b>"
@@ -190,21 +179,18 @@ FunPay может ограничить видимость ваших лотов 
                     logger.debug("TRACEBACK")
         bot.send_message(m.chat.id, text4tg, disable_web_page_preview=True)
 
-    # Регистрация обработчиков
     tg.msg_handler(sras_info_handler, commands=["sras_info"])
     tg.cbq_handler(switch, lambda c: f"{CBT_TEXT_SWITCH}" in c.data)
     tg.cbq_handler(open_settings, lambda c: c.data == CBT_OPEN_SETTINGS)
     
-    # Добавление команды в список
     cardinal.add_builtin_telegram_commands("builtin_sras_info", [
         ("sras_info", "Текущие ограничения рейтинга", True)
     ])
     
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
-
 def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """Обработчик сообщений для проверки изменений рейтинга."""
+                                                               
     global last_sras_time, sras_info
     
     if not cardinal.old_mode_enabled:
@@ -224,7 +210,7 @@ def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChanged
             sras_changes = get_sras_changes(sras_info, get_sras_info(cardinal))
             if not sras_changes:
                 return
-            # Отправляем уведомления
+                                    
             good = {}
             bad = {}
             str4tg = ""
@@ -262,7 +248,6 @@ def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChanged
 
         Thread(target=run_func, daemon=True).start()
 
-
 def get_settings_button():
-    """Возвращает кнопку для доступа к настройкам в главном меню."""
+                                                                    
     return B("📊 Ограничения рейтинга", callback_data=CBT_OPEN_SETTINGS)

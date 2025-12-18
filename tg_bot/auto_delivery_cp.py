@@ -1,8 +1,3 @@
-"""
-В данном модуле описаны функции для ПУ конфига автовыдачи.
-Модуль реализован в виде плагина.
-"""
-
 from __future__ import annotations
 
 import datetime
@@ -29,25 +24,13 @@ logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def init_auto_delivery_cp(crd: Cardinal, *args):
     tg = crd.telegram
     bot = tg.bot
     filename_re = re.compile(r"[А-Яа-яЁёA-Za-z0-9_\- ]+")
 
     def check_ad_lot_exists(index: int, message_obj: Message, reply_mode: bool = True) -> bool:
-        """
-        Проверяет, существует ли лот с автовыдачей с переданным индексом.
-        Если лота не существует - отправляет сообщение с кнопкой обновления списка лотов с автовыдачей.
-
-        :param index: числовой индекс лота.
-        :param message_obj: экземпляр Telegram-сообщения.
-        :param reply_mode: режим ответа на переданное сообщение.
-            Если True - отвечает на переданное сообщение,
-            если False - редактирует переданное сообщение.
-
-        :return: True, если лот существует, False, если нет.
-        """
+                   
         if index > len(crd.AD_CFG.sections()) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.AD_LOTS_LIST}:0"))
             if reply_mode:
@@ -60,19 +43,7 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
 
     def check_products_file_exists(index: int, files_list: list[str],
                                    message_obj: Message, reply_mode: bool = True) -> bool:
-        """
-        Проверяет, существует ли файл с товарами с переданным индексом.
-        Если файда не существует - отправляет сообщение с кнопкой обновления списка файлов с товарами.
-
-        :param index: числовой индекс файла с товарами.
-        :param files_list: список файлов.
-        :param message_obj: экземпляр Telegram-сообщения.
-        :param reply_mode: режим ответа на переданное сообщение.
-            True - отвечает на переданное сообщение,
-            False - редактирует переданное сообщение.
-
-        :return: True, если файл существует, False, если нет.
-        """
+                   
         if index > len(files_list) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.PRODUCTS_FILES_LIST}:0"))
             if reply_mode:
@@ -83,45 +54,35 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
             return False
         return True
 
-    # Основное меню настроек автовыдачи.
     def open_ad_lots_list(c: CallbackQuery):
-        """
-        Открывает список лотов с автовыдачей.
-        """
+                   
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_ad_list"), c.message.chat.id, c.message.id,
                               reply_markup=kb.lots_list(crd, offset))
         bot.answer_callback_query(c.id)
 
     def open_fp_lots_list(c: CallbackQuery):
-        """
-        Открывает список лотов FunPay.
-        """
+                   
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_ad_fp_lot_list", crd.last_telegram_lots_update.strftime("%d.%m.%Y %H:%M:%S")),
                               c.message.chat.id, c.message.id, reply_markup=kb.funpay_lots_list(crd, offset))
         bot.answer_callback_query(c.id)
 
     def act_add_lot_manually(c: CallbackQuery):
-        """
-        Активирует режим привязки авто-выдачи лоту (ручной режим).
-        """
+                   
         offset = int(c.data.split(":")[1])
         result = bot.send_message(c.message.chat.id, _("copy_lot_name"), reply_markup=CLEAR_STATE_BTN())
         tg.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.ADD_AD_TO_LOT_MANUALLY, data={"offset": offset})
         bot.answer_callback_query(c.id)
 
     def add_lot_manually(m: Message):
-        """
-        Добавляет новый лот для автовыдачи.
-        """
+                   
         fp_lots_offset = tg.get_state(m.chat.id, m.from_user.id)["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
         lot = m.text.strip()
 
         if lot in crd.AD_CFG.sections():
-            error_keyboard = K() \
-                .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
+            error_keyboard = K()                .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
                      B(_("ad_add_another_ad"), callback_data=f"{CBT.ADD_AD_TO_LOT_MANUALLY}:{fp_lots_offset}"))
             bot.reply_to(m, _("ad_lot_already_exists", utils.escape(lot)), reply_markup=error_keyboard)
             return
@@ -130,40 +91,33 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
         crd.AD_CFG.set(lot, "response", """Спасибо за покупку, $username!
 
 Вот твой товар:
-$product""")  # todo
+$product""")        
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
         logger.info(_("log_ad_linked", m.from_user.username, m.from_user.id, lot))
 
         lot_index = len(crd.AD_CFG.sections()) - 1
         ad_lot_offset = utils.get_offset(lot_index, MENU_CFG.AD_BTNS_AMOUNT)
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
                  B(_("ad_add_more_ad"), callback_data=f"{CBT.ADD_AD_TO_LOT_MANUALLY}:{fp_lots_offset}"),
                  B(_("gl_configure"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{ad_lot_offset}"))
 
         bot.send_message(m.chat.id, _("ad_lot_linked", lot), reply_markup=keyboard)
 
     def open_gf_list(c: CallbackQuery):
-        """
-        Открывает список товарных файлов.
-        """
+                   
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_gf"), c.message.chat.id, c.message.id,
                               reply_markup=kb.products_files_list(offset))
         bot.answer_callback_query(c.id)
 
     def act_create_gf(c: CallbackQuery):
-        """
-        Активирует режим создания нового товарного файла.
-        """
+                   
         result = bot.send_message(c.message.chat.id, _("act_create_gf"), reply_markup=CLEAR_STATE_BTN())
         tg.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.CREATE_PRODUCTS_FILE)
         bot.answer_callback_query(c.id)
 
     def create_gf(m: Message):
-        """
-        Создает новый товарный файл.
-        """
+                   
         tg.clear_state(m.chat.id, m.from_user.id, True)
         file_name = m.text.strip()
 
@@ -178,8 +132,7 @@ $product""")  # todo
         if os.path.exists(f"storage/products/{file_name}"):
             file_index = os.listdir("storage/products").index(file_name)
             offset = file_index - 4 if file_index - 4 > 0 else 0
-            keyboard = K() \
-                .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ad"),
+            keyboard = K()                .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ad"),
                      B(_("gf_create_another"), callback_data=CBT.CREATE_PRODUCTS_FILE),
                      B(_("gl_configure"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))
             bot.reply_to(m, _("gf_already_exists_err", file_name), reply_markup=keyboard)
@@ -194,18 +147,14 @@ $product""")  # todo
 
         file_index = os.listdir("storage/products").index(file_name)
         offset = file_index - 4 if file_index - 4 > 0 else 0
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ad"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ad"),
                  B(_("gf_create_more"), callback_data=CBT.CREATE_PRODUCTS_FILE),
                  B(_("gl_configure"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))
         logger.info(_("log_gf_created", m.from_user.username, m.from_user.id, file_name))
         bot.send_message(m.chat.id, _("gf_created", file_name), reply_markup=keyboard)
 
-    # Меню настройки лотов.
     def open_edit_lot_cp(c: CallbackQuery):
-        """
-        Открывает панель редактирования авто-выдачи лота.
-        """
+                   
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         if not check_ad_lot_exists(lot_index, c.message, reply_mode=False):
@@ -220,9 +169,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def act_edit_delivery_text(c: CallbackQuery):
-        """
-        Активирует режим изменения текста выдачи.
-        """
+                   
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
@@ -235,9 +182,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def edit_delivery_text(m: Message):
-        """
-        Изменяет текст выдачи.
-        """
+                   
         user_state = tg.get_state(m.chat.id, m.from_user.id)
         lot_index, offset = user_state["data"]["lot_index"], user_state["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -260,9 +205,7 @@ $product""")  # todo
         bot.reply_to(m, _("ad_text_changed", utils.escape(lot), utils.escape(new_response)), reply_markup=keyboard)
 
     def act_link_gf(c: CallbackQuery):
-        """
-        Активирует режим привязки файла с товарами к лоту.
-        """
+                   
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         result = bot.send_message(c.message.chat.id, _("ad_link_gf"), reply_markup=CLEAR_STATE_BTN())
@@ -271,9 +214,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def link_gf(m: Message):
-        """
-        Привязывает файл с товарами к лоту.
-        """
+                   
         user_state = tg.get_state(m.chat.id, m.from_user.id)
         lot_index, offset = user_state["data"]["lot_index"], user_state["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -290,8 +231,7 @@ $product""")  # todo
             bot.reply_to(m, _("ad_product_var_err2"), reply_markup=keyboard)
             return
 
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{offset}"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{offset}"),
                  B(_("ea_link_another_gf"), callback_data=f"{CBT.BIND_PRODUCTS_FILE}:{lot_index}:{offset}"))
 
         if file_name == "-":
@@ -302,8 +242,7 @@ $product""")  # todo
             return
 
         if not filename_re.fullmatch(file_name):
-            error_keyboard = K() \
-                .row(B(_("gl_back"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{offset}"),
+            error_keyboard = K()                .row(B(_("gl_back"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{offset}"),
                      B(_("ea_link_another_gf"), callback_data=f"{CBT.BIND_PRODUCTS_FILE}:{lot_index}:{offset}"))
             bot.reply_to(m, _("gf_name_invalid"), reply_markup=error_keyboard)
             return
@@ -331,9 +270,7 @@ $product""")  # todo
             bot.reply_to(m, _("ad_gf_created_and_linked", file_name, utils.escape(lot)), reply_markup=keyboard)
 
     def switch_lot_setting(c: CallbackQuery):
-        """
-        Переключает переключаемые параметры лота.
-        """
+                   
         split = c.data.split(":")
         param, lot_number, offset = split[1], int(split[2]), int(split[3])
         if not check_ad_lot_exists(lot_number, c.message, reply_mode=False):
@@ -351,9 +288,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def create_lot_delivery_test(c: CallbackQuery):
-        """
-        Создает комбинацию [ключ: название лота] для теста автовыдачи.
-        """
+                   
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
 
@@ -374,9 +309,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def del_lot(c: CallbackQuery):
-        """
-        Удаляет лот из конфига.
-        """
+                   
         split = c.data.split(":")
         lot_number, offset = int(split[1]), int(split[2])
 
@@ -393,7 +326,6 @@ $product""")  # todo
                               reply_markup=kb.lots_list(crd, offset))
         bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
 
-    # Меню добавления лота с FunPay
     def update_funpay_lots_list(c: CallbackQuery):
         offset = int(c.data.split(":")[1])
         new_msg = bot.send_message(c.message.chat.id, _("ad_updating_lots_list"))
@@ -421,8 +353,7 @@ $product""")  # todo
             ad_lot_index = crd.AD_CFG.sections().index(lot.title)
             ad_lots_offset = ad_lot_index - 4 if ad_lot_index - 4 > 0 else 0
 
-            keyboard = K() \
-                .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
+            keyboard = K()                .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
                      B(_("gl_configure"), callback_data=f"{CBT.EDIT_AD_LOT}:{ad_lot_index}:{ad_lots_offset}"))
 
             bot.send_message(c.message.chat.id, _("ad_already_ad_err", utils.escape(lot.title)), reply_markup=keyboard)
@@ -430,13 +361,12 @@ $product""")  # todo
             return
 
         crd.AD_CFG.add_section(lot.title)
-        crd.AD_CFG.set(lot.title, "response", "Спасибо за покупку, $username!\n\nВот твой товар:\n\n$product")  # todo
+        crd.AD_CFG.set(lot.title, "response", "Спасибо за покупку, $username!\n\nВот твой товар:\n\n$product")        
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
 
         ad_lot_index = len(crd.AD_CFG.sections()) - 1
         ad_lots_offset = utils.get_offset(ad_lot_index, MENU_CFG.AD_BTNS_AMOUNT)
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
                  B(_("gl_configure"), callback_data=f"{CBT.EDIT_AD_LOT}:{ad_lot_index}:{ad_lots_offset}"))
 
         logger.info(_("log_ad_linked", c.from_user.username, c.from_user.id, lot.title))
@@ -444,11 +374,8 @@ $product""")  # todo
         bot.send_message(c.message.chat.id, _("ad_lot_linked", utils.escape(lot.title)), reply_markup=keyboard)
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
-    # Меню управления файлов с товарами.
     def open_gf_settings(c: CallbackQuery):
-        """
-        Открывает панель управления файлом с товарами.
-        """
+                   
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -472,9 +399,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def act_add_products_to_file(c: CallbackQuery):
-        """
-        Активирует режим добавления товаров в файл с товарами.
-        """
+                   
         split = c.data.split(":")
         file_index, el_index, offset, prev_page = int(split[1]), int(split[2]), int(split[3]), int(split[4])
         result = bot.send_message(c.message.chat.id, _("gf_send_new_goods"), reply_markup=CLEAR_STATE_BTN())
@@ -484,9 +409,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def add_products_to_file(m: Message):
-        """
-        Добавляет товары в файл с товарами.
-        """
+                   
         state = tg.get_state(m.chat.id, m.from_user.id)["data"]
         file_index, el_index, offset, prev_page = (state["file_index"], state["element_index"],
                                                    state["offset"], state["previous_page"])
@@ -535,9 +458,7 @@ $product""")  # todo
         bot.reply_to(m, _("gf_new_goods", len(products), file_name), reply_markup=keyboard)
 
     def send_products_file(c: CallbackQuery):
-        """
-        Отправляет файл с товарами.
-        """
+                   
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -558,9 +479,7 @@ $product""")  # todo
             bot.answer_callback_query(c.id)
 
     def ask_del_products_file(c: CallbackQuery):
-        """
-        Открывает суб-панель подтверждения удаления файла с товарами.
-        """
+                   
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -572,10 +491,7 @@ $product""")  # todo
         bot.answer_callback_query(c.id)
 
     def del_products_file(c: CallbackQuery):
-        """
-        Удаляет файл с товарами.
-        """
-
+                   
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -603,15 +519,13 @@ $product""")  # todo
 
             bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
         except:
-            keyboard = K() \
-                .add(B(_("gl_back"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))
+            keyboard = K()                .add(B(_("gl_back"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))
             bot.edit_message_text(_("gf_deleting_err", file_name),
                                   c.message.chat.id, c.message.id, reply_markup=keyboard)
             bot.answer_callback_query(c.id)
             logger.debug("TRACEBACK", exc_info=True)
             return
 
-    # Основное меню настроек автовыдачи.
     tg.cbq_handler(open_ad_lots_list, lambda c: c.data.startswith(f"{CBT.AD_LOTS_LIST}:"))
     tg.cbq_handler(open_fp_lots_list, lambda c: c.data.startswith(f"{CBT.FP_LOTS_LIST}:"))
     tg.cbq_handler(act_add_lot_manually, lambda c: c.data.startswith(f"{CBT.ADD_AD_TO_LOT_MANUALLY}:"))
@@ -624,7 +538,6 @@ $product""")  # todo
     tg.msg_handler(create_gf, func=lambda m: tg.check_state(m.chat.id, m.from_user.id,
                                                             CBT.CREATE_PRODUCTS_FILE))
 
-    # Меню настройки лотов.
     tg.cbq_handler(open_edit_lot_cp, lambda c: c.data.startswith(f"{CBT.EDIT_AD_LOT}:"))
 
     tg.cbq_handler(act_edit_delivery_text, lambda c: c.data.startswith(f"{CBT.EDIT_LOT_DELIVERY_TEXT}:"))
@@ -638,11 +551,9 @@ $product""")  # todo
     tg.cbq_handler(create_lot_delivery_test, lambda c: c.data.startswith("test_auto_delivery:"))
     tg.cbq_handler(del_lot, lambda c: c.data.startswith(f"{CBT.DEL_AD_LOT}:"))
 
-    # Меню добавления лота с FunPay
     tg.cbq_handler(add_ad_to_lot, lambda c: c.data.startswith(f"{CBT.ADD_AD_TO_LOT}:"))
     tg.cbq_handler(update_funpay_lots_list, lambda c: c.data.startswith("update_funpay_lots:"))
 
-    # Меню управления файлов с товарами.
     tg.cbq_handler(open_gf_settings, lambda c: c.data.startswith(f"{CBT.EDIT_PRODUCTS_FILE}:"))
 
     tg.cbq_handler(act_add_products_to_file, lambda c: c.data.startswith(f"{CBT.ADD_PRODUCTS_TO_FILE}:"))
@@ -652,6 +563,5 @@ $product""")  # todo
     tg.cbq_handler(send_products_file, lambda c: c.data.startswith("download_products_file:"))
     tg.cbq_handler(ask_del_products_file, lambda c: c.data.startswith("del_products_file:"))
     tg.cbq_handler(del_products_file, lambda c: c.data.startswith("confirm_del_products_file:"))
-
 
 BIND_TO_PRE_INIT = [init_auto_delivery_cp]

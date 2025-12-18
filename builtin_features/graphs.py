@@ -1,10 +1,3 @@
-"""
-Построение графиков статистики продаж.
-Команда /graphs для генерации графиков.
-
-ОПТИМИЗАЦИЯ RAM: matplotlib, pandas, numpy, mplcyberpunk импортируются ЛЕНИВО
-(только при первом вызове /graphs), что экономит ~100-150 MB RAM при старте бота.
-"""
 from __future__ import annotations
 import json
 import os
@@ -13,8 +6,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from threading import Thread
 
-# ОПТИМИЗАЦИЯ: Тяжёлые библиотеки НЕ импортируются при загрузке модуля!
-# Они будут загружены только при первом использовании /graphs
 plt = None
 pd = None
 mplcyberpunk = None
@@ -22,7 +13,7 @@ np = None
 _libs_loaded = False
 
 def _lazy_load_libs():
-    """Ленивая загрузка тяжёлых библиотек (matplotlib, pandas, numpy, mplcyberpunk)."""
+                                                                                       
     global plt, pd, mplcyberpunk, np, _libs_loaded
     if _libs_loaded:
         return
@@ -95,17 +86,15 @@ SETTINGS = {
 
 in_progress = False
 
-
 def save_config():
-    """Сохраняет настройки."""
+                              
     os.makedirs("storage/builtin", exist_ok=True)
     with open("storage/builtin/graphs_settings.json", "w", encoding="utf-8") as f:
         global SETTINGS
         f.write(json.dumps(SETTINGS, indent=4, ensure_ascii=False))
 
-
 def check_dependencies():
-    """Проверяет наличие зависимостей."""
+                                         
     missing = []
     if plt is None:
         missing.append("matplotlib")
@@ -117,9 +106,8 @@ def check_dependencies():
         missing.append("numpy")
     return missing
 
-
 def init(cardinal: Cardinal):
-    """Инициализация модуля графиков."""
+                                        
     global SETTINGS
     
     if not cardinal.telegram:
@@ -128,7 +116,6 @@ def init(cardinal: Cardinal):
     bot = tg.bot
     acc = cardinal.account
 
-    # Загрузка настроек
     if os.path.exists("storage/builtin/graphs_settings.json"):
         with open("storage/builtin/graphs_settings.json", "r", encoding="utf-8") as f:
             settings = json.loads(f.read())
@@ -196,8 +183,7 @@ def init(cardinal: Cardinal):
                          reply_markup=tg_bot.static_keyboards.CLEAR_STATE_BTN())
             return
         tg.clear_state(message.chat.id, message.from_user.id, True)
-        keyboard = K() \
-            .row(B("◀️ Назад", callback_data=f"{CBT_OPEN_SETTINGS}"))
+        keyboard = K()            .row(B("◀️ Назад", callback_data=f"{CBT_OPEN_SETTINGS}"))
         SETTINGS[key] = count
         save_config()
         bot.reply_to(message, f"✅ Успех: {count}", reply_markup=keyboard)
@@ -522,10 +508,8 @@ def init(cardinal: Cardinal):
     def get_graphs(m: telebot.types.Message):
         global in_progress
         
-        # ОПТИМИЗАЦИЯ RAM: Загружаем тяжёлые библиотеки только при первом вызове /graphs
         _lazy_load_libs()
         
-        # Проверка зависимостей
         missing = check_dependencies()
         if missing:
             bot.reply_to(m, f"❌ Для работы графиков необходимо установить: {', '.join(missing)}\n\n"
@@ -552,9 +536,7 @@ def init(cardinal: Cardinal):
                     global SETTINGS
                     min4line = SETTINGS["min4line"]
                     head = SETTINGS["head"]
-                    caption = f"Статистика для <u><b>{acc.username} ({acc.id})</b></u> за последние <u><b>{int(days_count)}</b></u> дн.\n" \
-                              f"Рисовать линейный график, если количество столбцов не менее <u><b>{min4line}</b></u>.\n" \
-                              f"Для столбчатых диаграмм отображать первые <u><b>{head}</b></u> значений."
+                    caption = f"Статистика для <u><b>{acc.username} ({acc.id})</b></u> за последние <u><b>{int(days_count)}</b></u> дн.\n"                              f"Рисовать линейный график, если количество столбцов не менее <u><b>{min4line}</b></u>.\n"                              f"Для столбчатых диаграмм отображать первые <u><b>{head}</b></u> значений."
                     photos = []
                     if SETTINGS[a := "graph1"]:
                         photos.append(InputMediaPhoto(draw_k_sales_time(orders, min4line), caption=f"{caption}\n\n{a}",
@@ -592,18 +574,16 @@ def init(cardinal: Cardinal):
                         if buf:
                             photos.append(InputMediaPhoto(buf, has_spoiler=True, caption=f"{caption}\n\n{a}", parse_mode="HTML"))
 
-                    # Проверка на пустой список
                     if not photos:
                         logger.warning(f"{LOGGER_PREFIX} Нет графиков для отправки. Проверьте настройки.")
                         bot.send_message(new_mes.chat.id, f"⚠️ Нет графиков для отправки за {int(days_count)} дн. Проверьте настройки графиков.")
                         continue
                     
-                    # Telegram требует минимум 2 фото для send_media_group
                     if len(photos) == 1:
                         photo = photos[0]
                         bot.send_photo(new_mes.chat.id, photo.media, caption=photo.caption, parse_mode="HTML")
                     else:
-                        # Разбиваем на группы по 10 (максимум для Telegram)
+                                                                           
                         for i in range(0, len(photos), 10):
                             chunk = photos[i:i+10]
                             if len(chunk) == 1:
@@ -633,7 +613,6 @@ def init(cardinal: Cardinal):
         else:
             bot.edit_message_text(f"😎 Производство графиков завершено. Обработано периодов: {periods_processed}", new_mes.chat.id, new_mes.id)
 
-    # Регистрация обработчиков
     tg.msg_handler(get_graphs, commands=["graphs"])
     cardinal.add_builtin_telegram_commands("builtin_graphs", [
         ("graphs", "Строит графики", True)
@@ -646,7 +625,6 @@ def init(cardinal: Cardinal):
     
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
-
 def get_settings_button():
-    """Возвращает кнопку для доступа к настройкам в главном меню."""
+                                                                    
     return B("📈 Графики", callback_data=CBT_OPEN_SETTINGS)
