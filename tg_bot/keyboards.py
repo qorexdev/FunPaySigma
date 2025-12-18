@@ -397,6 +397,13 @@ def new_order(order_id: str, username: str, node_id: int,
                f"{CBT.TMPLT_LIST_ANS_MODE}:0:{node_id}:{username}:2:{order_id}:{1 if no_refund else 0}"))
     return kb
 
+def new_review(order_id: str, username: str, node_id: int) -> K:
+    kb = K()
+    kb.row(B(_("ord_answer"), None, f"{CBT.SEND_FP_MESSAGE}:{node_id}:{username}"),
+           B(_("ord_templates"), None, f"{CBT.TMPLT_LIST_ANS_MODE}:0:{node_id}:{username}:2:{order_id}:0"))
+    kb.add(B(_("mm_review_reply"), url=f"https://funpay.com/orders/{order_id}/"))
+    return kb
+
 def reply(node_id: int, username: str, again: bool = False, extend: bool = False) -> K:
            
     bts = [B(_("msg_reply2") if again else _("msg_reply"), None, f"{CBT.SEND_FP_MESSAGE}:{node_id}:{username}"),
