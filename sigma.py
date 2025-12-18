@@ -38,7 +38,8 @@ import sys
 
 MAX_OLD_USERS_CACHE = 1000                                                
 MAX_EXCHANGE_RATES_CACHE = 50                                        
-MAX_PENDING_ORDERS = 100                              
+MAX_PENDING_ORDERS = 100
+MAX_CONFIRMED_ORDERS = 200
 GC_COLLECT_INTERVAL = 60                                    
 
 gc.set_threshold(700, 10, 5)                                   
@@ -171,6 +172,9 @@ class Cardinal(object):
 
         self.pending_orders_file = "storage/pending_orders.json"
         self.pending_orders = self.load_pending_orders()
+
+        self.confirmed_orders_file = "storage/confirmed_orders.json"
+        self.confirmed_orders = self.load_confirmed_orders()
 
         self.pre_init_handlers = []
         self.post_init_handlers = []
@@ -325,6 +329,46 @@ class Cardinal(object):
             logger.warning(f"Ошибка синхронизации неподтверждённых заказов: {e}")
             logger.debug("TRACEBACK", exc_info=True)
             return 0
+
+    def load_confirmed_orders(self) -> dict:
+        try:
+            if os.path.exists(self.confirmed_orders_file):
+                with open(self.confirmed_orders_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return {str(k): v for k, v in data.items()}
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить данные о подтверждённых заказах из {self.confirmed_orders_file}: {e}")
+        return {}
+
+    def save_confirmed_orders(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.confirmed_orders_file), exist_ok=True)
+            with open(self.confirmed_orders_file, 'w', encoding='utf-8') as f:
+                json.dump(self.confirmed_orders, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить данные о подтверждённых заказах в {self.confirmed_orders_file}: {e}")
+
+    def _cleanup_confirmed_orders(self) -> None:
+        if len(self.confirmed_orders) > MAX_CONFIRMED_ORDERS:
+            sorted_orders = sorted(self.confirmed_orders.items(), 
+                                   key=lambda x: x[1].get('confirmed_time', 0), reverse=True)
+            self.confirmed_orders = dict(sorted_orders[:MAX_CONFIRMED_ORDERS])
+            self.save_confirmed_orders()
+            logger.debug(f"Очищены confirmed_orders: оставлено {len(self.confirmed_orders)} записей")
+
+    def add_confirmed_order(self, order_id: str, buyer_username: str, buyer_id: int) -> None:
+        if order_id not in self.confirmed_orders:
+            self.confirmed_orders[order_id] = {
+                "confirmed_time": int(time.time()),
+                "buyer_username": buyer_username,
+                "buyer_id": buyer_id,
+                "reminder_count": 0,
+                "last_reminder": 0,
+                "has_review": False
+            }
+            self.save_confirmed_orders()
+            self._cleanup_confirmed_orders()
+
 
     def __init_account(self) -> None:
                    
@@ -607,6 +651,110 @@ class Cardinal(object):
         for order_id in orders_to_remove:
             del self.pending_orders[order_id]
 
+    def send_review_reminder(self, order_id: str, buyer_username: str) -> bool:
+        if not self.MAIN_CFG["ReviewReminders"].getboolean("enabled"):
+            return False
+
+        template = self.MAIN_CFG["ReviewReminders"]["template"]
+        if not template:
+            return False
+
+        order_link = f"https://funpay.com/orders/{order_id}/"
+        formatted_text = template.replace("$order_link", order_link).replace("$order_id", order_id).replace("$username", buyer_username)
+
+        try:
+            chat = self.account.get_chat_by_name(buyer_username, True)
+        except:
+            logger.warning(f"Не удалось получить чат с покупателем {buyer_username} для напоминания об отзыве")
+            return False
+
+        result = self.send_message(chat.id, formatted_text, buyer_username)
+        if result:
+            logger.info(f"Отправлено напоминание об отзыве для заказа {order_id} покупателю {buyer_username}")
+            return True
+        else:
+            logger.warning(f"Не удалось отправить напоминание об отзыве для заказа {order_id}")
+            return False
+
+    def buyer_has_any_review(self, buyer_username: str) -> bool:
+        try:
+            _, orders, _, _ = self.account.get_sales(buyer=buyer_username, include_paid=False, include_refunded=False)
+            for order_shortcut in orders:
+                if order_shortcut.status == types.OrderStatuses.CLOSED:
+                    try:
+                        order = self.account.get_order(order_shortcut.id)
+                        if order.review is not None and order.review.text:
+                            return True
+                    except:
+                        continue
+            return False
+        except Exception as e:
+            logger.debug(f"Ошибка проверки отзывов покупателя {buyer_username}: {e}")
+            return False
+
+    def check_review_reminders(self) -> None:
+        if not self.MAIN_CFG["ReviewReminders"].getboolean("enabled"):
+            return
+
+        current_time = int(time.time())
+        timeout = int(self.MAIN_CFG["ReviewReminders"]["timeout"]) * 60
+        interval = int(self.MAIN_CFG["ReviewReminders"]["interval"]) * 60
+        max_reminders = int(self.MAIN_CFG["ReviewReminders"]["repeatCount"])
+
+        orders_to_remove = []
+        buyers_checked = {}
+
+        sorted_orders = sorted(
+            self.confirmed_orders.items(),
+            key=lambda x: x[1].get('confirmed_time', 0),
+            reverse=True
+        )
+
+        for order_id, order_data in sorted_orders:
+            buyer_username = order_data.get("buyer_username")
+            if not buyer_username:
+                orders_to_remove.append(order_id)
+                continue
+
+            if order_data.get("has_review"):
+                orders_to_remove.append(order_id)
+                continue
+
+            if buyer_username in buyers_checked:
+                if buyers_checked[buyer_username]:
+                    orders_to_remove.append(order_id)
+                continue
+
+            confirmed_time = order_data["confirmed_time"]
+            reminder_count = order_data["reminder_count"]
+            last_reminder = order_data.get("last_reminder", 0)
+
+            if current_time - confirmed_time >= timeout:
+                if reminder_count < max_reminders:
+                    if current_time - last_reminder >= interval or last_reminder == 0:
+                        has_review = self.buyer_has_any_review(buyer_username)
+                        buyers_checked[buyer_username] = has_review
+
+                        if has_review:
+                            order_data["has_review"] = True
+                            self.save_confirmed_orders()
+                            orders_to_remove.append(order_id)
+                        else:
+                            if self.send_review_reminder(order_id, buyer_username):
+                                order_data["reminder_count"] += 1
+                                order_data["last_reminder"] = current_time
+                                self.save_confirmed_orders()
+                else:
+                    orders_to_remove.append(order_id)
+
+        for order_id in orders_to_remove:
+            if order_id in self.confirmed_orders:
+                del self.confirmed_orders[order_id]
+        
+        if orders_to_remove:
+            self.save_confirmed_orders()
+
+
     def send_message(self, chat_id: int | str, message_text: str, chat_name: str | None = None,
                      interlocutor_id: int | None = None, attempts: int = 3,
                      watermark: bool = True) -> list[FunPayAPI.types.Message] | None:
@@ -643,6 +791,11 @@ class Cardinal(object):
                         time.sleep(entity)
                     break
                 except Exception as ex:
+                    err_str = str(ex).lower()
+                    if "слишком часто" in err_str or "too often" in err_str:
+                        logger.warning(_("crd_msg_send_err", chat_id))
+                        logger.warning("Rate limit FunPay — ссылки слишком часто")
+                        return []
                     logger.warning(_("crd_msg_send_err", chat_id))
                     logger.debug("TRACEBACK", exc_info=True)
                     logger.info(_("crd_msg_attempts_left", current_attempts))
@@ -774,7 +927,19 @@ class Cardinal(object):
             except Exception as e:
                 logger.error(f"Ошибка в цикле напоминаний о заказах: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
-            time.sleep(60)                           
+            time.sleep(60)
+
+    def review_reminders_loop(self):
+        logger.info(_("crd_review_reminders_loop_started"))
+        while True:
+            try:
+                self.check_review_reminders()
+                self.periodic_cleanup()
+            except Exception as e:
+                logger.error(f"Ошибка в цикле напоминаний об отзывах: {e}")
+                logger.debug("TRACEBACK", exc_info=True)
+            time.sleep(120)
+                           
 
     def init(self):
                    
@@ -865,6 +1030,7 @@ class Cardinal(object):
         Thread(target=self.lots_raise_loop, daemon=True).start()
         Thread(target=self.update_session_loop, daemon=True).start()
         Thread(target=self.order_reminders_loop, daemon=True).start()
+        Thread(target=self.review_reminders_loop, daemon=True).start()
         Thread(target=self.check_updates_loop, daemon=True).start()
         self.process_events()
 

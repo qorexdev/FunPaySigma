@@ -284,6 +284,16 @@ def load_main_config(config_path: str):
             config.set("OrderReminders", "interval", "30")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
+        if "ReviewReminders" not in config.sections():
+            config.add_section("ReviewReminders")
+            config.set("ReviewReminders", "enabled", "0")
+            config.set("ReviewReminders", "timeout", "60")
+            config.set("ReviewReminders", "template", "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз")
+            config.set("ReviewReminders", "repeatCount", "1")
+            config.set("ReviewReminders", "interval", "4320")
+            save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
+
+
             try:
                 if values[section_name][param_name] == "any":
                     check_param(param_name, config[section_name])

@@ -22,8 +22,8 @@ def SETTINGS_SECTIONS_2() -> K:
     return K()        .row(B(_("mm_notifications"), callback_data=f"{CBT.CATEGORY}:tg"),
              B(_("mm_new_msg_view"), callback_data=f"{CBT.CATEGORY}:mv"))        .row(B(_("mm_greetings"), callback_data=f"{CBT.CATEGORY}:gr"),
              B(_("mm_order_confirm"), callback_data=f"{CBT.CATEGORY}:oc"))        .row(B(_("mm_order_reminders"), callback_data=f"{CBT.CATEGORY}:or"),
-             B(_("mm_review_reply"), callback_data=f"{CBT.CATEGORY}:rr"))        .row(B(_("mm_blacklist"), callback_data=f"{CBT.CATEGORY}:bl"),
-             B(_("mm_configs"), callback_data=CBT.CONFIG_LOADER))        .row(B(_("gl_back"), callback_data=CBT.MAIN), B(_("gl_next"), callback_data=CBT.MAIN3))
+             B(_("mm_review_reminders"), callback_data=f"{CBT.CATEGORY}:revr"))        .row(B(_("mm_review_reply"), callback_data=f"{CBT.CATEGORY}:rr"),
+             B(_("mm_blacklist"), callback_data=f"{CBT.CATEGORY}:bl"))        .row(B(_("mm_configs"), callback_data=CBT.CONFIG_LOADER))        .row(B(_("gl_back"), callback_data=CBT.MAIN), B(_("gl_next"), callback_data=CBT.MAIN3))
 
 def SETTINGS_SECTIONS_3() -> K:
                                                    
