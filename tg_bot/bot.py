@@ -756,10 +756,18 @@ class TGBot:
         self.bot.reply_to(m, _("order_reminders_interval_changed", interval), reply_markup=keyboard)
 
     def send_all_reminders(self, c: CallbackQuery):
-        self.cardinal.sync_pending_orders()
-        pending_orders = self.cardinal.pending_orders.copy()
+        from Utils import cardinal_tools
+        from FunPayAPI import types
         
-        if not pending_orders:
+        try:
+            _, orders, _, _ = self.cardinal.account.get_sales(state="paid", include_closed=False, include_refunded=False)
+            paid_orders = [o for o in orders if o.status == types.OrderStatuses.PAID]
+        except Exception as e:
+            logger.warning(f"Ошибка получения заказов: {e}")
+            self.bot.answer_callback_query(c.id, _("gl_error"), show_alert=True)
+            return
+        
+        if not paid_orders:
             self.bot.answer_callback_query(c.id, _("or_send_all_no_orders"), show_alert=True)
             return
         
@@ -767,25 +775,17 @@ class TGBot:
         
         template = self.cardinal.MAIN_CFG["OrderReminders"]["template"]
         if not template:
-            template = "Привет! Напоминаю о заказе $order_id. Пожалуйста, подтверди его: $order_link"
+            template = "Привет! Напоминаю о заказе #$order_id. Подтверди, пожалуйста: $order_link"
         
         progress_msg = self.bot.send_message(c.message.chat.id, _("or_send_all_started"))
         
         sent_count = 0
         error_count = 0
-        total = len(pending_orders)
+        total = len(paid_orders)
         
-        from Utils import cardinal_tools
-        from FunPayAPI import types
-        
-        for order_id, order_data in pending_orders.items():
+        for order in paid_orders:
             try:
-                order = self.cardinal.account.get_order_shortcut(order_id)
-                if order.status != types.OrderStatuses.PAID:
-                    continue
-                
                 formatted_text = cardinal_tools.format_order_text(template, order)
-                
                 chat = self.cardinal.account.get_chat_by_name(order.buyer_username, True)
                 result = self.cardinal.send_message(chat.id, formatted_text, order.buyer_username)
                 
@@ -795,7 +795,7 @@ class TGBot:
                     error_count += 1
                     
             except Exception as e:
-                logger.warning(f"Ошибка при отправке напоминания для заказа {order_id}: {e}")
+                logger.warning(f"Ошибка при отправке напоминания для заказа {order.id}: {e}")
                 error_count += 1
             
             if (sent_count + error_count) % 3 == 0:
