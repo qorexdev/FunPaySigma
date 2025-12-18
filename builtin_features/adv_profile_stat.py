@@ -1,7 +1,3 @@
-"""
-Расширенная статистика профиля.
-Добавляет детальную статистику продаж, возвратов и доступных для вывода средств.
-"""
 from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
@@ -24,9 +20,8 @@ logger = getLogger("FPS.adv_profile_stat")
 ADV_PROFILE_CB = "adv_profile_1"
 ORDER_CONFIRMED = {}
 
-
 def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
-    """Генерирует расширенную статистику профиля."""
+                                                    
     global logger
     account = cardinal.account
     bot = cardinal.telegram.bot
@@ -198,15 +193,13 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
 
 <i>Обновлено:</i>  <code>{time.strftime('%H:%M:%S', time.localtime(account.last_update))}</code>"""
 
-
 def init(cardinal: Cardinal):
-    """Инициализация модуля расширенной статистики профиля."""
+                                                              
     if not cardinal.telegram:
         return
     tg = cardinal.telegram
     bot = tg.bot
 
-    # Загрузка сохраненных данных
     storage_path = "storage/builtin/advProfileStat.json"
     if exists(storage_path):
         with open(storage_path, "r", encoding="utf-8") as f:
@@ -217,7 +210,7 @@ def init(cardinal: Cardinal):
                 pass
 
     def profile_handler(call: telebot.types.CallbackQuery):
-        """Обработчик кнопки расширенной статистики."""
+                                                       
         new_msg = bot.reply_to(call.message, "Обновляю статистику аккаунта (это может занять некоторое время)...")
 
         try:
@@ -233,23 +226,20 @@ def init(cardinal: Cardinal):
         bot.delete_message(new_msg.chat.id, new_msg.id)
 
     def refresh_kb():
-        """Возвращает клавиатуру с кнопками обновления и расширенной статистики."""
+                                                                                   
         return telebot.types.InlineKeyboardMarkup().row(
             telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=tg_bot.CBT.UPDATE_PROFILE),
             telebot.types.InlineKeyboardButton("▶️ Еще", callback_data=ADV_PROFILE_CB))
 
-    # Заменяем стандартную клавиатуру обновления
     import tg_bot.static_keyboards
     tg_bot.static_keyboards.REFRESH_BTN = refresh_kb
     
-    # Регистрируем обработчик
     tg.cbq_handler(profile_handler, lambda c: c.data == ADV_PROFILE_CB)
     
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
-
 def message_hook(cardinal: Cardinal, event: NewMessageEvent):
-    """Обработчик новых сообщений для отслеживания подтвержденных заказов."""
+                                                                             
     if event.message.type not in [MessageTypes.ORDER_CONFIRMED, MessageTypes.ORDER_CONFIRMED_BY_ADMIN,
                                   MessageTypes.ORDER_REOPENED, MessageTypes.REFUND, MessageTypes.REFUND_BY_ADMIN]:
         return
@@ -271,7 +261,6 @@ def message_hook(cardinal: Cardinal, event: NewMessageEvent):
             return
         ORDER_CONFIRMED[order_id] = {"time": int(time.time()), "price": order.sum, "currency": str(order.currency)}
         
-        # Сохраняем данные
         os.makedirs("storage/builtin", exist_ok=True)
         with open("storage/builtin/advProfileStat.json", "w", encoding="UTF-8") as f:
             f.write(json.dumps(ORDER_CONFIRMED, indent=4, ensure_ascii=False))

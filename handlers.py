@@ -1,7 +1,3 @@
-"""
-В данном модуле написаны хэндлеры для разных эвентов.
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -57,30 +53,19 @@ ORDER_HTML_TEMPLATE = """<a href="https://funpay.com/orders/DELITEST/" class="tc
    <div class="tc-price text-nowrap tc-seller-sum" bis_skin_checked="1">999999.0 <span class="unit">₽</span></div>
 </a>"""
 
-
-# INIT MESSAGE
 def save_init_chats_handler(c: Cardinal, e: InitialChatEvent):
-    """
-    Кэширует существующие чаты (чтобы не отправлять приветственные сообщения).
-    """
+           
     if c.MAIN_CFG["Greetings"].getboolean("sendGreetings") and e.chat.id not in c.old_users:
         c.old_users[e.chat.id] = int(time.time())
         cardinal_tools.cache_old_users(c.old_users)
 
-
 def update_threshold_on_initial_chat(c: Cardinal, e: InitialChatEvent):
-    """
-    Обновляет пороговое значение для определения новых чатов.
-    """
+           
     if e.chat.id > c.greeting_chat_id_threshold:
         c.greeting_chat_id_threshold = e.chat.id
 
-
-# NEW MESSAGE / LAST CHAT MESSAGE CHANGED
 def old_log_msg_handler(c: Cardinal, e: LastChatMessageChangedEvent):
-    """
-    Логирует полученное сообщение.
-    """
+           
     if not c.old_mode_enabled:
         return
     text, chat_name, chat_id = str(e.chat), e.chat.name, e.chat.id
@@ -92,7 +77,6 @@ def old_log_msg_handler(c: Cardinal, e: LastChatMessageChangedEvent):
             logger.info(f"$MAGENTA└───> $YELLOW{username}: $CYAN{line}")
         else:
             logger.info(f"      $CYAN{line}")
-
 
 def log_msg_handler(c: Cardinal, e: NewMessageEvent):
     global MSG_LOG_LAST_STACK_ID
@@ -113,13 +97,8 @@ def log_msg_handler(c: Cardinal, e: NewMessageEvent):
                 logger.info(f"      $CYAN{line}")
     MSG_LOG_LAST_STACK_ID = e.stack.id()
 
-
 def update_threshold_on_last_message_change(c: Cardinal, e: LastChatMessageChangedEvent | NewMessageEvent):
-    """
-    Обновляет пороговое значение для определения новых чатов.
-    """
-    # Должно выполняться после greetings_handler для корректной обработки
-    # c.greeting_threshold_chat_ids (чтобы не спамило приветствиями)
+           
     if not c.old_mode_enabled:
         if isinstance(e, LastChatMessageChangedEvent):
             return
@@ -132,11 +111,8 @@ def update_threshold_on_last_message_change(c: Cardinal, e: LastChatMessageChang
         c.last_greeting_chat_id_threshold_change_tag = e.runner_tag
     c.greeting_threshold_chat_ids.add(chat_id)
 
-
 def greetings_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """
-    Отправляет приветственное сообщение.
-    """
+           
     if not c.MAIN_CFG["Greetings"].getboolean("sendGreetings"):
         return
     if not c.old_mode_enabled:
@@ -159,11 +135,8 @@ def greetings_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEv
     text = cardinal_tools.format_msg_text(c.MAIN_CFG["Greetings"]["greetingsText"], obj)
     Thread(target=c.send_message, args=(chat_id, text, chat_name), daemon=True).start()
 
-
 def add_old_user_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """
-    Добавляет пользователя в список написавших.
-    """
+           
     if not c.MAIN_CFG["Greetings"].getboolean("sendGreetings") or c.MAIN_CFG["Greetings"].getboolean("onlyNewChats"):
         return
 
@@ -180,11 +153,8 @@ def add_old_user_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChange
     c.old_users[chat_id] = int(time.time())
     cardinal_tools.cache_old_users(c.old_users)
 
-
 def send_response_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """
-    Проверяет, является ли сообщение командой, и если да, отправляет ответ на данную команду.
-    """
+           
     if not c.autoresponse_enabled:
         return
     if not c.old_mode_enabled:
@@ -204,7 +174,6 @@ def send_response_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChang
     response_text = cardinal_tools.format_msg_text(c.AR_CFG[command]["response"], obj)
     Thread(target=c.send_message, args=(chat_id, response_text, chat_name), daemon=True).start()
 
-
 def old_send_new_msg_notification_handler(c: Cardinal, e: LastChatMessageChangedEvent):
     if any([not c.old_mode_enabled, not c.telegram, not e.chat.unread,
             c.bl_msg_notification_enabled and e.chat.name in c.blacklist,
@@ -223,11 +192,8 @@ def old_send_new_msg_notification_handler(c: Cardinal, e: LastChatMessageChanged
     Thread(target=c.telegram.send_notification, args=(text, kb, utils.NotificationTypes.new_message),
            daemon=True).start()
 
-
 def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
-    """
-    Отправляет уведомление о новом сообщении в телеграм.
-    """
+           
     global LAST_STACK_ID
     if not c.telegram or e.stack.id() == LAST_STACK_ID:
         return
@@ -258,8 +224,7 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
     if not events:
         return
 
-    if [m, f, b, nm].count(True) == 1 and \
-            any([m and not c.only_my_msg_enabled, f and not c.only_fp_msg_enabled, b and not c.only_bot_msg_enabled]):
+    if [m, f, b, nm].count(True) == 1 and            any([m and not c.only_my_msg_enabled, f and not c.only_fp_msg_enabled, b and not c.only_bot_msg_enabled]):
         return
 
     text = ""
@@ -273,8 +238,7 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
             return
         elif message_text.startswith("!автовыдача") and len(events) < 2:
             return
-        if i.message.author_id == last_message_author_id and i.message.by_bot == last_by_bot and \
-                i.message.badge == last_badge and i.message.by_vertex == last_by_vertex:
+        if i.message.author_id == last_message_author_id and i.message.by_bot == last_by_bot and                i.message.badge == last_badge and i.message.by_vertex == last_by_vertex:
             author = ""
         elif i.message.author_id == c.account.id:
             author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.message.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
@@ -296,9 +260,7 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
                 author = f"<i><b>🐺 {i.message.author}: </b></i>"
         else:
             author = f"<i><b>🆘 {i.message.author} {_('support')}: </b></i>"
-        msg_text = f"<code>{utils.escape(i.message.text)}</code>" if i.message.text else \
-            f"<a href=\"{i.message.image_link}\">" \
-            f"{c.show_image_name and not (i.message.author_id == c.account.id and i.message.by_bot) and i.message.image_name or _('photo')}</a>"
+        msg_text = f"<code>{utils.escape(i.message.text)}</code>" if i.message.text else            f"<a href=\"{i.message.image_link}\">"            f"{c.show_image_name and not (i.message.author_id == c.account.id and i.message.by_bot) and i.message.image_name or _('photo')}</a>"
         text += f"{author}{msg_text}\n\n"
         last_message_author_id = i.message.author_id
         last_by_bot = i.message.by_bot
@@ -307,7 +269,6 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
     kb = keyboards.reply(chat_id, chat_name, extend=True)
     Thread(target=c.telegram.send_notification, args=(text, kb, utils.NotificationTypes.new_message),
            daemon=True).start()
-
 
 def send_review_notification(c: Cardinal, order: Order, chat_id: int, reply_text: str | None):
     if not c.telegram:
@@ -319,7 +280,6 @@ def send_review_notification(c: Cardinal, order: Order, chat_id: int, reply_text
                  keyboards.new_order(order.id, order.buyer_username, chat_id),
                  utils.NotificationTypes.review),
            daemon=True).start()
-
 
 def process_review_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
     if not c.old_mode_enabled:
@@ -341,23 +301,23 @@ def process_review_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChan
         try:
             order = c.get_order_from_object(obj)
             if order is None:
-                raise Exception("Не удалось получить объект заказа.")  # locale
+                raise Exception("Не удалось получить объект заказа.")          
         except:
-            logger.error(f"Не удалось получить информацию о заказе для сообщения: \"{message_text}\".")  # locale
+            logger.error(f"Не удалось получить информацию о заказе для сообщения: \"{message_text}\".")          
             logger.debug("TRACEBACK", exc_info=True)
             return
 
         if not order.review or not order.review.stars:
             return
 
-        logger.info(f"Изменен отзыв на заказ #{order.id}.")  # locale
+        logger.info(f"Изменен отзыв на заказ #{order.id}.")          
 
         toggle = f"star{order.review.stars}Reply"
         text = f"star{order.review.stars}ReplyText"
         reply_text = None
         if c.MAIN_CFG["ReviewReply"].getboolean(toggle) and c.MAIN_CFG["ReviewReply"].get(text):
             try:
-                # Укорачиваем текст до 999 символов (оставляем 1 на спецсимвол), до 10 строк
+                                                                                            
                 def format_text4review(text_: str):
                     max_l = 999
                     text_ = text_[:max_l + 1]
@@ -370,8 +330,7 @@ def process_review_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChan
                         text_ = text_[:max(indexes, key=lambda x: (x < ln - 1, x))] + "🐦"
                     text_ = text_.strip()
                     while text_.count("\n") > 9 and text.count("\n\n") > 1:
-                        # заменяем с конца все двойные переносы строк на одинарные, но оставляем как можно больше
-                        # переносов строк и не менее одного двойного переноса
+                                                                                                                 
                         text_ = text_[::-1].replace("\n\n", "\n",
                                                     min([text_.count("\n\n") - 1, text_.count("\n") - 9]))[::-1]
                     if text_.count("\n") > 9:
@@ -382,17 +341,14 @@ def process_review_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChan
                 reply_text = format_text4review(reply_text)
                 c.account.send_review(order.id, reply_text)
             except:
-                logger.error(f"Произошла ошибка при ответе на отзыв {order.id}.")  # locale
+                logger.error(f"Произошла ошибка при ответе на отзыв {order.id}.")          
                 logger.debug("TRACEBACK", exc_info=True)
         send_review_notification(c, order, chat_id, reply_text)
 
     Thread(target=send_reply, daemon=True).start()
 
-
 def send_command_notification_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """
-    Отправляет уведомление о введенной команде в телеграм.
-    """
+           
     if not c.telegram:
         return
     if not c.old_mode_enabled:
@@ -411,18 +367,15 @@ def send_command_notification_handler(c: Cardinal, e: NewMessageEvent | LastChat
         return
 
     if not c.AR_CFG[command].get("notificationText"):
-        text = f"🧑‍💻 Пользователь <b><i>{username}</i></b> ввел команду <code>{utils.escape(command)}</code>."  # locale
+        text = f"🧑‍💻 Пользователь <b><i>{username}</i></b> ввел команду <code>{utils.escape(command)}</code>."          
     else:
         text = cardinal_tools.format_msg_text(c.AR_CFG[command]["notificationText"], obj)
 
     Thread(target=c.telegram.send_notification, args=(text, keyboards.reply(chat_id, chat_name),
                                                       utils.NotificationTypes.command), daemon=True).start()
 
-
 def test_auto_delivery_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """
-    Выполняет тест автовыдачи.
-    """
+           
     if not c.old_mode_enabled:
         if isinstance(e, LastChatMessageChangedEvent):
             return
@@ -435,12 +388,12 @@ def test_auto_delivery_handler(c: Cardinal, e: NewMessageEvent | LastChatMessage
 
     split = message_text.split()
     if len(split) < 2:
-        logger.warning("Одноразовый ключ автовыдачи не обнаружен.")  # locale
+        logger.warning("Одноразовый ключ автовыдачи не обнаружен.")          
         return
 
     key = split[1].strip()
     if key not in c.delivery_tests:
-        logger.warning("Невалидный одноразовый ключ автовыдачи.")  # locale
+        logger.warning("Невалидный одноразовый ключ автовыдачи.")          
         return
 
     lot_name = c.delivery_tests[key]
@@ -457,35 +410,22 @@ def test_auto_delivery_handler(c: Cardinal, e: NewMessageEvent | LastChatMessage
     fake_event = NewOrderEvent(e.runner_tag, fake_order)
     c.run_handlers(c.new_order_handlers, (c, fake_event,))
 
-
 def send_categories_raised_notification_handler(c: Cardinal, cat: types.Category, error_text: str = "") -> None:
-    """
-    Отправляет уведомление о поднятии лотов в Telegram.
-    """
+           
     if not c.telegram:
         return
 
-    text = f"""⤴️<b><i>Поднял все лоты категории</i></b> <code>{cat.name}</code>\n<tg-spoiler>{error_text}</tg-spoiler>"""  # locale
+    text = f"""⤴️<b><i>Поднял все лоты категории</i></b> <code>{cat.name}</code>\n<tg-spoiler>{error_text}</tg-spoiler>"""          
     Thread(target=c.telegram.send_notification,
            args=(text,),
            kwargs={"notification_type": utils.NotificationTypes.lots_raise}, daemon=True).start()
 
-
-# Изменен список ордеров (REGISTER_TO_ORDERS_LIST_CHANGED)
 def get_lot_config_by_name(c: Cardinal, name: str) -> configparser.SectionProxy | None:
-    """
-    Ищет секцию лота в конфиге автовыдачи.
-
-    :param c: объект кардинала.
-    :param name: название лота.
-
-    :return: секцию конфига или None.
-    """
+           
     for i in c.AD_CFG.sections():
         if i in name:
             return c.AD_CFG[i]
     return None
-
 
 def check_products_amount(config_obj: configparser.SectionProxy) -> int:
     file_name = config_obj.get("productsFileName")
@@ -493,9 +433,8 @@ def check_products_amount(config_obj: configparser.SectionProxy) -> int:
         return 1
     return cardinal_tools.count_products(f"storage/products/{file_name}")
 
-
 def update_current_lots_handler(c: Cardinal, e: OrdersListChangedEvent):
-    logger.info("Получаю информацию о лотах...")  # locale
+    logger.info("Получаю информацию о лотах...")          
     attempts = 3
     while attempts:
         try:
@@ -503,17 +442,16 @@ def update_current_lots_handler(c: Cardinal, e: OrdersListChangedEvent):
             c.curr_profile_last_tag = e.runner_tag
             break
         except:
-            logger.error("Произошла ошибка при получении информации о лотах.")  # locale
+            logger.error("Произошла ошибка при получении информации о лотах.")          
             logger.debug("TRACEBACK", exc_info=True)
             attempts -= 1
             time.sleep(2)
     else:
-        logger.error("Не удалось получить информацию о лотах: превышено кол-во попыток.")  # locale
+        logger.error("Не удалось получить информацию о лотах: превышено кол-во попыток.")          
         return
 
-
 def update_profile_lots_handler(c: Cardinal, e: OrdersListChangedEvent):
-    """Обновляет лоты в c.profile"""
+                                    
     if c.curr_profile_last_tag != e.runner_tag or c.profile_last_tag == e.runner_tag:
         return
     c.profile_last_tag = e.runner_tag
@@ -522,14 +460,9 @@ def update_profile_lots_handler(c: Cardinal, e: OrdersListChangedEvent):
     for lot_id, lot in lots.items():
         c.profile.update_lot(lot)
 
-
-# Новый ордер (REGISTER_TO_NEW_ORDER)
 def log_new_order_handler(c: Cardinal, e: NewOrderEvent, *args):
-    """
-    Логирует новый заказ.
-    """
+           
     logger.info(f"Новый заказ! ID: $YELLOW#{e.order.id}$RESET")
-
 
 def setup_event_attributes_handler(c: Cardinal, e: NewOrderEvent, *args):
     config_section_name = None
@@ -537,7 +470,7 @@ def setup_event_attributes_handler(c: Cardinal, e: NewOrderEvent, *args):
     lot_shortcut = None
     lot_id = None
     lot_description = e.order.description
-    # пробуем найти лот, чтобы не выдавать по строке, которую вписал покупатель при оформлении заказа
+                                                                                                     
     for lot in sorted(list(c.profile.get_sorted_lots(2).get(e.order.subcategory, {}).values()),
                       key=lambda l: len(f"{l.server}, {l.side}, {l.description}"), reverse=True):
 
@@ -572,15 +505,12 @@ def setup_event_attributes_handler(c: Cardinal, e: NewOrderEvent, *args):
         setattr(e, i, attributes[i])
 
     if config_section_obj is None:
-        logger.info("Лот не найден в конфиге авто-выдачи!")  # todo
+        logger.info("Лот не найден в конфиге авто-выдачи!")        
     else:
-        logger.info("Лот найден в конфиге авто-выдачи!")  # todo
-
+        logger.info("Лот найден в конфиге авто-выдачи!")        
 
 def send_new_order_notification_handler(c: Cardinal, e: NewOrderEvent, *args):
-    """
-    Отправляет уведомления о новом заказе в телеграм.
-    """
+           
     if not c.telegram:
         return
     if e.order.buyer_username in c.blacklist and c.MAIN_CFG["BlockList"].getboolean("blockNewOrderNotification"):
@@ -604,7 +534,6 @@ def send_new_order_notification_handler(c: Cardinal, e: NewOrderEvent, *args):
     Thread(target=c.telegram.send_notification, args=(text, keyboard, utils.NotificationTypes.new_order),
            daemon=True).start()
 
-
 def deliver_goods(c: Cardinal, e: NewOrderEvent, *args):
     chat_id = c.account.get_chat_by_name(e.order.buyer_username).id
     cfg_obj = getattr(e, "config_section_obj")
@@ -619,55 +548,48 @@ def deliver_goods(c: Cardinal, e: NewOrderEvent, *args):
             delivery_text = delivery_text.replace("$product", "\n".join(products).replace("\\n", "\n"))
     except Exception as exc:
         logger.error(
-            f"Произошла ошибка при получении товаров для заказа $YELLOW{e.order.id}: {str(exc)}$RESET")  # locale
+            f"Произошла ошибка при получении товаров для заказа $YELLOW{e.order.id}: {str(exc)}$RESET")          
         logger.debug("TRACEBACK", exc)
         setattr(e, "error", 1)
         setattr(e, "error_text",
-                f"Произошла ошибка при получении товаров для заказа {e.order.id}: {str(exc)}")  # locale
+                f"Произошла ошибка при получении товаров для заказа {e.order.id}: {str(exc)}")          
         return
 
     result = c.send_message(chat_id, delivery_text, e.order.buyer_username)
     if not result:
-        logger.error(f"Не удалось отправить товар для ордера $YELLOW{e.order.id}$RESET.")  # locale
+        logger.error(f"Не удалось отправить товар для ордера $YELLOW{e.order.id}$RESET.")          
         setattr(e, "error", 1)
-        setattr(e, "error_text", f"Не удалось отправить сообщение с товаром для заказа {e.order.id}.")  # locale
+        setattr(e, "error_text", f"Не удалось отправить сообщение с товаром для заказа {e.order.id}.")          
         if file_name and products:
             cardinal_tools.add_products(f"storage/products/{file_name}", products, at_zero_position=True)
     else:
-        logger.info(f"Товар для заказа {e.order.id} выдан.")  # locale
+        logger.info(f"Товар для заказа {e.order.id} выдан.")          
         setattr(e, "delivered", True)
         setattr(e, "delivery_text", delivery_text)
         setattr(e, "goods_delivered", amount)
         setattr(e, "goods_left", goods_left)
 
-
 def deliver_product_handler(c: Cardinal, e: NewOrderEvent, *args) -> None:
-    """
-    Обертка для deliver_product(), обрабатывающая ошибки.
-    """
+           
     if not c.MAIN_CFG["FunPay"].getboolean("autoDelivery"):
         return
     if e.order.buyer_username in c.blacklist and c.bl_delivery_enabled:
         logger.info(f"Пользователь {e.order.buyer_username} находится в ЧС и включена блокировка автовыдачи. "
-                    f"$YELLOW(ID: {e.order.id})$RESET")  # locale
+                    f"$YELLOW(ID: {e.order.id})$RESET")          
         return
 
     if (config_section_obj := getattr(e, "config_section_obj")) is None:
         return
     if config_section_obj.getboolean("disable"):
-        logger.info(f"Для лота \"{e.order.description}\" отключена автовыдача.")  # locale
+        logger.info(f"Для лота \"{e.order.description}\" отключена автовыдача.")          
         return
 
     c.run_handlers(c.pre_delivery_handlers, (c, e))
     deliver_goods(c, e, *args)
     c.run_handlers(c.post_delivery_handlers, (c, e))
 
-
-# REGISTER_TO_POST_DELIVERY
 def send_delivery_notification_handler(c: Cardinal, e: NewOrderEvent):
-    """
-    Отправляет уведомление в телеграм об отправке товара.
-    """
+           
     if c.telegram is None:
         return
 
@@ -678,22 +600,13 @@ def send_delivery_notification_handler(c: Cardinal, e: NewOrderEvent):
         text = f"""✅ Успешно выдал товар для ордера <code>{e.order.id}</code>.\n
 🛒 <b><i>Товар:</i></b>
 <code>{utils.escape(getattr(e, "delivery_text"))}</code>\n
-📋 <b><i>Осталось товаров: </i></b>{amount}"""  # locale
+📋 <b><i>Осталось товаров: </i></b>{amount}"""          
 
     Thread(target=c.telegram.send_notification, args=(text,),
            kwargs={"notification_type": utils.NotificationTypes.delivery}, daemon=True).start()
 
-
 def update_lot_state(cardinal: Cardinal, lot: types.LotShortcut, task: int) -> bool:
-    """
-    Обновляет состояние лота
-
-    :param cardinal: объект Кардинала.
-    :param lot: объект лота.
-    :param task: -1 - деактивировать лот. 1 - активировать лот.
-
-    :return: результат выполнения.
-    """
+           
     attempts = 3
     while attempts:
         try:
@@ -701,25 +614,24 @@ def update_lot_state(cardinal: Cardinal, lot: types.LotShortcut, task: int) -> b
             if task == 1:
                 lot_fields.active = True
                 cardinal.account.save_lot(lot_fields)
-                logger.info(f"Восстановил лот $YELLOW{lot.description}$RESET.")  # locale
+                logger.info(f"Восстановил лот $YELLOW{lot.description}$RESET.")          
             elif task == -1:
                 lot_fields.active = False
                 cardinal.account.save_lot(lot_fields)
-                logger.info(f"Деактивировал лот $YELLOW{lot.description}$RESET.")  # locale
+                logger.info(f"Деактивировал лот $YELLOW{lot.description}$RESET.")          
             return True
         except Exception as e:
             if isinstance(e, exceptions.RequestFailedError) and e.status_code == 404:
-                logger.error(f"Произошла ошибка при изменении состояния лота $YELLOW{lot.description}$RESET:"  # locale
+                logger.error(f"Произошла ошибка при изменении состояния лота $YELLOW{lot.description}$RESET:"          
                              "лот не найден.")
                 return False
-            logger.error(f"Произошла ошибка при изменении состояния лота $YELLOW{lot.description}$RESET.")  # locale
+            logger.error(f"Произошла ошибка при изменении состояния лота $YELLOW{lot.description}$RESET.")          
             logger.debug("TRACEBACK", exc_info=True)
             attempts -= 1
             time.sleep(2)
     logger.error(
-        f"Не удалось изменить состояние лота $YELLOW{lot.description}$RESET: превышено кол-во попыток.")  # locale
+        f"Не удалось изменить состояние лота $YELLOW{lot.description}$RESET: превышено кол-во попыток.")          
     return False
-
 
 def update_lots_states(cardinal: Cardinal, event: NewOrderEvent):
     if not any([cardinal.autorestore_enabled, cardinal.autodisable_enabled]):
@@ -734,38 +646,32 @@ def update_lots_states(cardinal: Cardinal, event: NewOrderEvent):
     for lot in cardinal.profile.get_sorted_lots(3)[SubCategoryTypes.COMMON].values():
         if not lot.description:
             continue
-        # -1 - деактивировать
-        # 0 - ничего не делать
-        # 1 - восстановить
+                             
         current_task = 0
         config_obj = get_lot_config_by_name(cardinal, lot.description)
 
-        # Если лот уже деактивирован
         if lot.id not in lots:
-            # и не найден в конфиге автовыдачи (глобальное автовосстановление включено)
+                                                                                       
             if config_obj is None:
                 if cardinal.autorestore_enabled:
                     current_task = 1
 
-            # и найден в конфиге автовыдачи
             else:
-                # и глобальное автовосстановление вкл. + не выключено в самом лоте в конфиге автовыдачи
+                                                                                                       
                 if cardinal.autorestore_enabled and config_obj.get("disableAutoRestore") in ["0", None]:
-                    # если глобальная автодеактивация выключена - восстанавливаем.
+                                                                                  
                     if not cardinal.autodisable_enabled:
                         current_task = 1
-                    # если глобальная автодеактивация включена - восстанавливаем только если есть товары.
+                                                                                                         
                     else:
                         if check_products_amount(config_obj):
                             current_task = 1
 
-        # Если же лот активен
         else:
-            # и найден в конфиге автовыдачи
+                                           
             if config_obj:
                 products_count = check_products_amount(config_obj)
-                # и все условия выполнены: нет товаров + включено глобальная автодеактивация + она не выключена в
-                # самом лоте в конфига автовыдачи - отключаем.
+                                                                                                                 
                 if all((not products_count, cardinal.MAIN_CFG["FunPay"].getboolean("autoDisable"),
                         config_obj.get("disableAutoDisable") in ["0", None])):
                     current_task = -1
@@ -780,14 +686,14 @@ def update_lots_states(cardinal: Cardinal, event: NewOrderEvent):
             time.sleep(0.5)
 
     if deactivated:
-        lots = "\n".join(deactivated)  # locale
+        lots = "\n".join(deactivated)          
         text = f"""🔴 <b>Деактивировал лоты:</b>
         
 <code>{lots}</code>"""
         Thread(target=cardinal.telegram.send_notification, args=(text,),
                kwargs={"notification_type": utils.NotificationTypes.lots_deactivate}, daemon=True).start()
     if restored:
-        lots = "\n".join(restored)  # locale
+        lots = "\n".join(restored)          
         text = f"""🟢 <b>Активировал лоты:</b>
 
 <code>{lots}</code>"""
@@ -795,15 +701,11 @@ def update_lots_states(cardinal: Cardinal, event: NewOrderEvent):
                kwargs={"notification_type": utils.NotificationTypes.lots_restore}, daemon=True).start()
     cardinal.last_state_change_tag = event.runner_tag
 
-
 def update_lots_state_handler(cardinal: Cardinal, event: NewOrderEvent, *args):
     Thread(target=update_lots_states, args=(cardinal, event), daemon=True).start()
 
-
 def add_order_to_reminders_handler(c: Cardinal, e: NewOrderEvent, *args):
-    """
-    Добавляет новый заказ в список для напоминаний о подтверждении.
-    """
+           
     if not c.MAIN_CFG["OrderReminders"].getboolean("enabled"):
         return
 
@@ -817,33 +719,26 @@ def add_order_to_reminders_handler(c: Cardinal, e: NewOrderEvent, *args):
         c.save_pending_orders()
         logger.info(f"Заказ {order_id} добавлен в список для напоминаний о подтверждении")
 
-
-# BIND_TO_ORDER_STATUS_CHANGED
 def send_thank_u_message_handler(c: Cardinal, e: OrderStatusChangedEvent):
-    """
-    Отправляет ответное сообщение на подтверждение заказа.
-    """
+           
     if not c.MAIN_CFG["OrderConfirm"].getboolean("sendReply") or e.order.status is not types.OrderStatuses.CLOSED:
         return
 
     text = cardinal_tools.format_order_text(c.MAIN_CFG["OrderConfirm"]["replyText"], e.order)
     chat = c.account.get_chat_by_name(e.order.buyer_username, True)
-    logger.info(f"Пользователь $YELLOW{e.order.buyer_username}$RESET подтвердил выполнение заказа "  # locale
-                f"$YELLOW{e.order.id}.$RESET")  # locale
-    logger.info(f"Отправляю ответное сообщение ...")  # locale
+    logger.info(f"Пользователь $YELLOW{e.order.buyer_username}$RESET подтвердил выполнение заказа "          
+                f"$YELLOW{e.order.id}.$RESET")          
+    logger.info(f"Отправляю ответное сообщение ...")          
     Thread(target=c.send_message, args=(chat.id, text, e.order.buyer_username),
            kwargs={'watermark': c.MAIN_CFG["OrderConfirm"].getboolean("watermark")}, daemon=True).start()
 
-
 def send_order_confirmed_notification_handler(cardinal: Cardinal, event: OrderStatusChangedEvent):
-    """
-    Отправляет уведомление о подтверждении заказа в Telegram.
-    """
+           
     if not event.order.status == types.OrderStatuses.CLOSED:
         return
 
     chat = cardinal.account.get_chat_by_name(event.order.buyer_username, True)
-    Thread(target=cardinal.telegram.send_notification,  # locale
+    Thread(target=cardinal.telegram.send_notification,          
            args=(
                f"""🪙 Пользователь <a href="https://funpay.com/chat/?node={chat.id}">{event.order.buyer_username}</a> """
                f"""подтвердил выполнение заказа <code>{event.order.id}</code>. (<code>{event.order.price} {event.order.currency}</code>)""",
@@ -851,21 +746,15 @@ def send_order_confirmed_notification_handler(cardinal: Cardinal, event: OrderSt
                utils.NotificationTypes.order_confirmed),
            daemon=True).start()
 
-
 def remove_order_from_reminders_handler(c: Cardinal, e: OrderStatusChangedEvent):
-    """
-    Удаляет заказ из списка напоминаний при подтверждении или отмене.
-    """
+           
     order_id = e.order.id
     if order_id in c.pending_orders:
         del c.pending_orders[order_id]
         logger.info(f"Заказ {order_id} удален из списка напоминаний (статус: {e.order.status.name})")
 
-
 def send_bot_started_notification_handler(c: Cardinal, *args):
-    """
-    Отправляет уведомление о запуске бота в телеграм.
-    """
+           
     if c.telegram is None:
         return
     text = _("fps_init", c.VERSION, c.account.username, c.account.id,
@@ -875,7 +764,6 @@ def send_bot_started_notification_handler(c: Cardinal, *args):
             c.telegram.bot.edit_message_text(text, i[0], i[1], disable_web_page_preview=True)
         except:
             continue
-
 
 BIND_TO_INIT_MESSAGE = [save_init_chats_handler, update_threshold_on_initial_chat]
 
@@ -914,46 +802,36 @@ BIND_TO_POST_DELIVERY = [send_delivery_notification_handler]
 
 BIND_TO_POST_START = [send_bot_started_notification_handler]
 
-
-# =============================================================================
-# Обработчики встроенных модулей (бывшие плагины)
-# =============================================================================
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
 
-
 def builtin_adv_profile_stat_handler(c: Cardinal, e: NewMessageEvent):
-    """Обработчик для adv_profile_stat - отслеживание подтвержденных заказов."""
+                                                                                
     try:
         adv_profile_stat.message_hook(c, e)
     except Exception as ex:
         logger.debug(f"Ошибка в adv_profile_stat.message_hook: {ex}", exc_info=True)
 
-
 def builtin_review_chat_reply_handler(c: Cardinal, e):
-    """Обработчик для review_chat_reply - автоответы на отзывы."""
+                                                                  
     try:
         review_chat_reply.message_hook(c, e)
     except Exception as ex:
         logger.debug(f"Ошибка в review_chat_reply.message_hook: {ex}", exc_info=True)
 
-
 def builtin_sras_info_handler(c: Cardinal, e):
-    """Обработчик для sras_info - отслеживание изменений рейтинга."""
+                                                                     
     try:
         sras_info.message_hook(c, e)
     except Exception as ex:
         logger.debug(f"Ошибка в sras_info.message_hook: {ex}", exc_info=True)
 
-
 def builtin_chat_sync_handler(c: Cardinal, e: NewMessageEvent):
-    """Обработчик для chat_sync - синхронизация с Telegram форумом."""
+                                                                      
     try:
         chat_sync.message_hook(c, e)
     except Exception as ex:
         logger.debug(f"Ошибка в chat_sync.message_hook: {ex}", exc_info=True)
 
-
-# Добавляем обработчики встроенных модулей в списки
 BIND_TO_NEW_MESSAGE.extend([
     builtin_adv_profile_stat_handler,
     builtin_review_chat_reply_handler,

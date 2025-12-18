@@ -1,7 +1,3 @@
-"""
-В данном модуле описаны функции для ПУ шаблонами ответа.
-Модуль реализован в виде плагина.
-"""
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -22,21 +18,12 @@ logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def init_templates_cp(cardinal: Cardinal, *args):
     tg = cardinal.telegram
     bot = tg.bot
 
     def check_template_exists(template_index: int, message_obj: Message) -> bool:
-        """
-        Проверяет, существует ли шаблон с переданным индексом.
-        Если шаблон не существует - отправляет сообщение с кнопкой обновления списка шаблонов.
-
-        :param template_index: индекс шаблона.
-        :param message_obj: экземпляр Telegram-сообщения.
-
-        :return: True, если команда существует, False, если нет.
-        """
+                   
         if template_index > len(cardinal.telegram.answer_templates) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.TMPLT_LIST}:0"))
             bot.edit_message_text(_("tmplt_not_found_err", template_index), message_obj.chat.id, message_obj.id,
@@ -45,18 +32,14 @@ def init_templates_cp(cardinal: Cardinal, *args):
         return True
 
     def open_templates_list(c: CallbackQuery):
-        """
-        Открывает список существующих шаблонов ответов.
-        """
+                   
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_tmplt"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.templates_list(cardinal, offset))
         bot.answer_callback_query(c.id)
 
     def open_templates_list_in_ans_mode(c: CallbackQuery):
-        """
-        Открывает список существующих шаблонов ответов (answer_mode).
-        """
+                   
         split = c.data.split(":")
         offset, node_id, username, prev_page, extra = int(split[1]), int(split[2]), split[3], int(split[4]), split[5:]
         bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
@@ -78,9 +61,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
         bot.answer_callback_query(c.id)
 
     def act_add_template(c: CallbackQuery):
-        """
-        Активирует режим добавления нового шаблона ответа.
-        """
+                   
         offset = int(c.data.split(":")[1])
         variables = ["v_username", "v_photo", "v_sleep"]
         text = f"{_('V_new_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
@@ -150,8 +131,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
             bot.answer_callback_query(c.id, _("msg_sent_short") if result else _("msg_sending_error_short"))
             return
         else:
-            msg_text = _("tmplt_msg_sent", node_id, username, utils.escape(text)) if result else \
-                _("msg_sending_error", node_id, username)
+            msg_text = _("tmplt_msg_sent", node_id, username, utils.escape(text)) if result else                _("msg_sending_error", node_id, username)
             bot.send_message(c.message.chat.id, msg_text,
                              reply_markup=keyboards.reply(node_id, username, again=True, extend=True),
                              message_thread_id=c.message.message_thread_id)
@@ -164,6 +144,5 @@ def init_templates_cp(cardinal: Cardinal, *args):
     tg.msg_handler(add_template, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, CBT.ADD_TMPLT))
     tg.cbq_handler(del_template, lambda c: c.data.startswith(f"{CBT.DEL_TMPLT}:"))
     tg.cbq_handler(send_template, lambda c: c.data.startswith(f"{CBT.SEND_TMPLT}:"))
-
 
 BIND_TO_PRE_INIT = [init_templates_cp]

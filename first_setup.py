@@ -1,7 +1,3 @@
-"""
-В данном модуле написана подпрограмма первичной настройки FunPay Sigma'а.
-"""
-
 import os
 from configparser import ConfigParser
 import time
@@ -9,7 +5,6 @@ import telebot
 from colorama import Fore, Style
 from Utils.cardinal_tools import validate_proxy, hash_password, obfuscate_data
 
-# locale#locale#locale
 default_config = {
     "FunPay": {
         "golden_key": "",
@@ -91,7 +86,6 @@ default_config = {
     }
 }
 
-
 def create_configs():
     if not os.path.exists("configs/auto_response.cfg"):
         with open("configs/auto_response.cfg", "w", encoding="utf-8"):
@@ -101,27 +95,18 @@ def create_configs():
         with open("configs/auto_delivery.cfg", "w", encoding="utf-8"):
             ...
 
-
 def create_config_obj(settings) -> ConfigParser:
-    """
-    Создает объект конфига с нужными настройками.
-
-    :param settings: dict настроек.
-
-    :return: объект конфига.
-    """
+           
     config = ConfigParser(delimiters=(":",), interpolation=None)
     config.optionxform = str
     config.read_dict(settings)
     return config
-
 
 def contains_russian(text: str) -> bool:
     for char in text:
         if 'А' <= char <= 'я' or char in 'Ёё':
             return True
     return False
-
 
 def first_setup():
     config = create_config_obj(default_config)

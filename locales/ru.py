@@ -1,8 +1,3 @@
-# ═══════════════════════════════════════════════════════════════
-#                     FUNPAY SIGMA - ЛОКАЛИЗАЦИЯ RU
-# ═══════════════════════════════════════════════════════════════
-
-# ─────────────────── 🔘 ГЛОБАЛЬНЫЕ ЭЛЕМЕНТЫ ───────────────────
 gl_next = "➡️ Далее"
 gl_back = "🔙 Назад"
 gl_yes = "✅ Да"
@@ -19,7 +14,6 @@ gl_configure = "⚙️ Настроить"
 gl_pcs = "шт."
 gl_last_update = "🕒 Последнее обновление"
 
-# ─────────────────── 📋 ГЛАВНОЕ МЕНЮ ───────────────────
 mm_language = "🌐 Язык / Language"
 mm_global = "⚡ Основное"
 mm_notifications = "🔔 Уведомления"
@@ -38,7 +32,6 @@ mm_authorized_users = "👥 Доступ"
 mm_proxy = "🛡️ Прокси"
 mm_lots_editor = "🛍️ Редактор лотов"
 
-# ─────────────────── ⚡ ГЛОБАЛЬНЫЕ ПЕРЕКЛЮЧАТЕЛИ ───────────────────
 gs_autoraise = "{} Автоподнятие"
 gs_autoresponse = "{} Автоответчик"
 gs_autodelivery = "{} Автовыдача"
@@ -48,7 +41,6 @@ gs_autodisable = "{} Деактивация"
 gs_old_msg_mode = "{} Старый режим сообщений"
 gs_keep_sent_messages_unread = "{} Не читать свои сообщения"
 
-# ─────────────────── 🔔 НАСТРОЙКИ УВЕДОМЛЕНИЙ ───────────────────
 ns_new_msg = "{} Сообщения"
 ns_cmd = "{} Команды"
 ns_new_order = "{} Новые заказы"
@@ -61,7 +53,6 @@ ns_new_review = "{} Отзывы"
 ns_bot_start = "{} Запуск бота"
 ns_other = "{} Прочее"
 
-# ─────────────────── 🤖 АВТООТВЕТЧИК ───────────────────
 ar_edit_commands = "✏️ Изменить команды"
 ar_add_command = "➕ Создать команду"
 ar_to_ar = "🔙 К автоответчику"
@@ -72,7 +63,6 @@ ar_notification = "{} Уведомления в TG"
 ar_add_more = "➕ Добавить ещё"
 ar_add_another = "➕ Другую команду"
 
-# ─────────────────── 📦 АВТО-ВЫДАЧА ───────────────────
 ad_edit_autodelivery = "📦 Настроить выдачу"
 ad_add_autodelivery = "➕ Добавить выдачу"
 ad_add_another_ad = "➕ Другой лот"
@@ -83,7 +73,6 @@ ad_create_goods_file = "➕ Создать файл"
 ad_to_ad = "🔙 К автовыдаче"
 ad_to_mm = "🏠 В меню"
 
-# ─── Редактирование авто-выдачи
 ea_edit_delivery_text = "✏️ Текст выдачи"
 ea_link_goods_file = "🔗 Привязать файл"
 ea_delivery = "{} Выдача"
@@ -94,7 +83,6 @@ ea_test = "🧪 Тест выдачи"
 ea_more_test = "🧪 Ещё тест"
 ea_link_another_gf = "🔗 Другой файл"
 
-# ─── Товарные файлы
 fl_manual = "✍️ Ввести вручную"
 gf_add_goods = "➕ Добавить товары"
 gf_download = "⬇️ Скачать"
@@ -103,38 +91,32 @@ gf_create_more = "➕ Ещё файл"
 gf_add_more = "➕ Добавить ещё"
 gf_try_add_again = "🔄 Повторить"
 
-# ─────────────────── 🚫 ЧЁРНЫЙ СПИСОК ───────────────────
 bl_autodelivery = "{} Блок. выдачи"
 bl_autoresponse = "{} Блок. ответов"
 bl_new_msg_notifications = "{} Блок. увед. о ЛС"
 bl_new_order_notifications = "{} Блок. увед. о заказах"
 bl_command_notifications = "{} Блок. увед. о командах"
 
-# ─────────────────── 📝 ШАБЛОНЫ ОТВЕТОВ ───────────────────
 tmplt_add = "➕ Создать шаблон"
 tmplt_add_more = "➕ Добавить ещё"
 tmplt_add_another = "➕ Ещё шаблон"
 
-# ─────────────────── 👋 ПРИВЕТСТВИЕ ───────────────────
 gr_greetings = "{} Приветствовать"
 gr_ignore_sys_msgs = "{} Игнорить системные"
 gr_only_new_chats = "{} Только новые чаты"
 gr_edit_message = "✏️ Текст приветствия"
 gr_edit_cooldown = "⏱️ Кулдаун: {} дн."
 
-# ─────────────────── ✅ ПОДТВЕРЖДЕНИЕ ЗАКАЗА ───────────────────
 oc_watermark = "{} Водяной знак"
 oc_send_reply = "{} Отправлять ответ"
 oc_edit_message = "✏️ Текст ответа"
 
-# ─────────────────── ⏰ НАПОМИНАНИЯ ───────────────────
 or_enabled = "{} Напоминания"
 or_timeout = "⏱️ Тайм-аут: {} мин."
 or_template = "✏️ Шаблон"
 or_repeat_count = "🔄 Повторов: {}"
 or_interval = "⏰ Интервал: {} мин."
 
-# ─────────────────── 💬 ВИД СООБЩЕНИЙ ───────────────────
 mv_incl_my_msg = "{} Мои сообщения"
 mv_incl_fp_msg = "{} Сообщения FunPay"
 mv_incl_bot_msg = "{} Сообщения бота"
@@ -143,14 +125,12 @@ mv_only_fp_msg = "{} Только от FunPay"
 mv_only_bot_msg = "{} Только от бота"
 mv_show_image_name = "{} Имена файлов"
 
-# ─────────────────── 🧩 ПЛАГИНЫ ───────────────────
 pl_add = "➕ Загрузить плагин"
 pl_activate = "▶️ Включить"
 pl_deactivate = "⏸️ Выключить"
 pl_commands = "⌨️ Команды"
 pl_settings = "⚙️ Настройки"
 
-# ─────────────────── 📁 КОНФИГУРАЦИЯ ───────────────────
 cfg_download_main = "⬇️ Скачать main"
 cfg_download_ar = "⬇️ Скачать auto_response"
 cfg_download_ad = "⬇️ Скачать auto_delivery"
@@ -158,51 +138,37 @@ cfg_upload_main = "⬆️ Загрузить main"
 cfg_upload_ar = "⬆️ Загрузить auto_response"
 cfg_upload_ad = "⬆️ Загрузить auto_delivery"
 
-# ─────────────────── 👤 ПОЛЬЗОВАТЕЛИ ───────────────────
 tg_block_login = "{} Блок. входа по паролю"
 
-# ─────────────────── 🌍 ПРОКСИ ───────────────────
 prx_proxy_add = "➕ Добавить прокси"
 prx_proxy_enabled = "{} Использовать прокси"
 prx_proxy_check = "{} Проверка прокси"
 prx_proxy_type = "🌐 Тип: {}"
 
-# ─── Ссылки
 lnk_github = "🐙 GitHub"
 lnk_updates = "📢 Обновления"
 lnk_chat = "💬 Чат поддержки"
 
-# ─── Объявления
 an_an = "{} Объявления"
 an_ad = "{} Реклама"
 
-# Новый заказ
 ord_refund = "💸 Вернуть"
 ord_open = "🌐 Открыть заказ"
 ord_answer = "📨 Ответить"
 ord_templates = "📝 Шаблоны"
 
-# Новое сообщение
 msg_reply = "📨 Ответить"
 msg_reply2 = "📨 Ещё сообщение"
 msg_templates = "📝 Шаблоны"
 msg_more = "➕ Ещё"
 
-# Текста сообщений
-access_denied = "👋 Привет, <b>{}</b>!\n\n❌ <b>Доступ запрещен.</b>\n\n" \
-                "🔑 Отправь мне <code>секретный пароль</code>, который ты задал при установке, " \
-                "чтобы авторизоваться."
+access_denied = "👋 Привет, <b>{}</b>!\n\n❌ <b>Доступ запрещен.</b>\n\n"                "🔑 Отправь мне <code>секретный пароль</code>, который ты задал при установке, "                "чтобы авторизоваться."
 
-access_granted = "🔓 <b>Доступ разрешен!</b>\n\n" \
-                 "⚠️ Я пока не отправляю уведомления в этот чат.\n" \
-                 "🔔 Ты можешь включить их через меню настроек.\n\n" \
-                 "⚙️ Меню: /menu"
+access_granted = "🔓 <b>Доступ разрешен!</b>\n\n"                 "⚠️ Я пока не отправляю уведомления в этот чат.\n"                 "🔔 Ты можешь включить их через меню настроек.\n\n"                 "⚙️ Меню: /menu"
 
-access_granted_notification = "<b>🚨 В А Ж Н О 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 <a href=\"tg://user?id={1}\">{0}</a> " \
-                                                                 "<b>(ID: {1}) авторизовался в ПУ!</b>"
+access_granted_notification = "<b>🚨 В А Ж Н О 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 <a href=\"tg://user?id={1}\">{0}</a> "                                                                 "<b>(ID: {1}) авторизовался в ПУ!</b>"
 
-param_disabled = "❌ <b>Параметр отключен глобально.</b>\n\n" \
-                 "⚙️ Включи его в разделе <i>Глобальные переключатели</i>."
+param_disabled = "❌ <b>Параметр отключен глобально.</b>\n\n"                 "⚙️ Включи его в разделе <i>Глобальные переключатели</i>."
 
 old_mode_help = """<b>🆕 Новый режим получения сообщений</b>
 ✅ Полная история чата, все данные о сообщениях.
@@ -281,18 +247,7 @@ proxy_format = "❌ <b>Неверный формат!</b>\nИспользуй <c
 proxy_adding_error = "❌ Ошибка при добавлении прокси."
 proxy_undeletable = "❌ Нельзя удалить активный прокси."
 
-act_edit_watermark = "<b>Введи новый текст водяного знака.</b> Examples:\n{}\n" \
-                     "<code>𝓕𝓾𝓷𝓟𝓪𝔂 𝓒𝓪𝓻𝓭𝓲𝓷𝓪𝓵</code>\n" \
-                     "<code>𝔽𝕦𝓷ℙ𝕒𝕪 ℂ𝕒𝕣𝕕𝕚𝕟𝕒𝕝</code>\n<code>ＦｕｎＰａｙ Ｃａｒｄｉｎａｌ</code>\n" \
-                     "<code>ꜰᴜɴᴘᴀʏ ᴄᴀʀᴅɪɴᴀʟ</code>\n<code>🄵🅄🄽🄿🄰🅈 🄲🄰🅁🄳🄸🄽🄰🄻</code>\n" \
-                     "<code>ⒻⓤⓝⓅⓐⓨ Ⓒⓐⓡⓓⓘⓝⓐⓛ</code>\n<code>𝐅𝐮𝐧𝐏𝐚𝐲 𝐂𝐚𝐫𝐝𝐢𝐧𝐚𝐥</code>\n" \
-                     "<code>𝗙𝘂𝗻𝗣𝗮𝘆 𝗖𝗮𝗿𝗱𝗶𝗻𝗮𝗹</code>\n<code>𝘍𝘶𝘯𝘗𝘢𝘺 𝘊𝘢𝘳𝘥𝘪𝘯𝘢𝘭</code>\n" \
-                     "<code>𝙁𝙪𝙣𝙋𝙖𝙮 𝘾𝙖𝙧𝙙𝙞𝐧𝙖𝙡</code>\n<code>𝙵𝚞𝚗𝙿𝚊𝚢 𝙲𝚊𝚛𝚍𝚒𝚗𝚊𝚕</code>\n" \
-                     "<code>ᖴᑌᑎᑭᗩY ᑕᗩᖇᗪIᑎᗩᒪ</code>\n" \
-                     "<code>FunPay Sigma</code>\n<code>[FunPay / Sigma]</code>\n" \
-                     "<code>🤖</code>\n<code>🐦</code>\n\n" \
-                     "💡 Нажми на пример, чтобы скопировать.\n" \
-                     "🗑️ Чтобы удалить, отправь <code>-</code>."
+act_edit_watermark = "<b>Введи новый текст водяного знака.</b> Examples:\n{}\n"                     "<code>𝓕𝓾𝓷𝓟𝓪𝔂 𝓒𝓪𝓻𝓭𝓲𝓷𝓪𝓵</code>\n"                     "<code>𝔽𝕦𝓷ℙ𝕒𝕪 ℂ𝕒𝕣𝕕𝕚𝕟𝕒𝕝</code>\n<code>ＦｕｎＰａｙ Ｃａｒｄｉｎａｌ</code>\n"                     "<code>ꜰᴜɴᴘᴀʏ ᴄᴀʀᴅɪɴᴀʟ</code>\n<code>🄵🅄🄽🄿🄰🅈 🄲🄰🅁🄳🄸🄽🄰🄻</code>\n"                     "<code>ⒻⓤⓝⓅⓐⓨ Ⓒⓐⓡⓓⓘⓝⓐⓛ</code>\n<code>𝐅𝐮𝐧𝐏𝐚𝐲 𝐂𝐚𝐫𝐝𝐢𝐧𝐚𝐥</code>\n"                     "<code>𝗙𝘂𝗻𝗣𝗮𝘆 𝗖𝗮𝗿𝗱𝗶𝗻𝗮𝗹</code>\n<code>𝘍𝘶𝘯𝘗𝘢𝘺 𝘊𝘢𝘳𝘥𝘪𝘯𝘢𝘭</code>\n"                     "<code>𝙁𝙪𝙣𝙋𝙖𝙮 𝘾𝙖𝙧𝙙𝙞𝐧𝙖𝙡</code>\n<code>𝙵𝚞𝚗𝙿𝚊𝚢 𝙲𝚊𝚛𝚍𝚒𝚗𝚊𝚕</code>\n"                     "<code>ᖴᑌᑎᑭᗩY ᑕᗩᖇᗪIᑎᗩᒪ</code>\n"                     "<code>FunPay Sigma</code>\n<code>[FunPay / Sigma]</code>\n"                     "<code>🤖</code>\n<code>🐦</code>\n\n"                     "💡 Нажми на пример, чтобы скопировать.\n"                     "🗑️ Чтобы удалить, отправь <code>-</code>."
 watermark_changed = "✅ Водяной знак изменен."
 watermark_deleted = "✅ Водяной знак удален."
 watermark_error = "❌ Невалидный водяной знак."
@@ -470,7 +425,6 @@ adv_description = """🤖 <b>FunPay Sigma v{}</b>
 🔄 Вечная работа
 Telegram ПУ"""
 
-# ─────────────────── 📋 ОПИСАНИЯ МЕНЮ ───────────────────
 desc_main = "🏠 <b>Главное меню</b>\n\nВыбери нужный раздел:"
 desc_lang = "� Меню > �🌐 <b>Язык / Language</b>\n\nВыбери язык:"
 desc_gs = "🏠 Меню > ⚡ <b>Основные функции</b>\n\nТут живут главные переключатели:"
@@ -512,7 +466,6 @@ desc_pl = """🏠 Меню > 🧩 <b>Плагины</b>
 desc_au = "🏠 Меню > 👥 <b>Доступ</b>\n\nКто может управлять ботом?"
 desc_proxy = "🏠 Меню > 🛡️ <b>Прокси</b>\n\nНастройка соединений:"
 
-# - Описание команд
 cmd_menu = "Главное меню"
 cmd_language = "Сменить язык"
 cmd_profile = "Мой профиль"
@@ -538,7 +491,6 @@ cmd_upload_backup = "Загрузить бэкап"
 cmd_restart = "Перезагрузка"
 cmd_power_off = "Выключение"
 
-# - Описание переменных
 v_edit_greeting_text = "✍️ <b>Введи текст приветствия.</b>"
 v_edit_greeting_cooldown = "⏱️ <b>Введи кулдаун (дней).</b>"
 v_edit_order_confirm_text = "✍️ <b>Введи текст подтверждения.</b>"
@@ -574,7 +526,6 @@ v_chat_name = "<code>$chat_name</code> - имя чата"
 v_message_text = "<code>$message_text</code> - текст сообщения"
 v_username = "<code>$username</code> - никнейм"
 
-# Текста исключений
 exc_param_not_found = "❌ Параметр \"{}\" не найден."
 exc_param_cant_be_empty = "❌ Параметр \"{}\" пуст."
 exc_param_value_invalid = "❌ Неверное значение параметра \"{}\"."
@@ -588,7 +539,6 @@ exc_cmd_duplicate = "❌ Дубликат команды \"{}\"."
 exc_cfg_parse_err = "❌ Ошибка конфига {}, [{}]: {}"
 exc_plugin_field_not_found = "❌ Ошибка плагина \"{}\": нет поля \"{}\"."
 
-# Логи
 log_tg_initialized = "$MAGENTATelegram бот готов."
 log_tg_started = "$CYANБот $YELLOW@{}$CYAN запущен."
 log_tg_handler_error = "Ошибка хэндлера TG."
@@ -634,12 +584,10 @@ log_pl_deactivated = "$MAGENTA@{} (ID: {})$RESET: выкл плагин $YELLOW{
 log_pl_deleted = "$MAGENTA@{} (ID: {})$RESET: удалил плагин $YELLOW{}$RESET."
 log_pl_delete_handler_err = "Ошибка удаления плагина $YELLOW{}$RESET."
 
-# Логи хэндлеров
 log_new_msg = "$MAGENTA📩$RESET Новое сообщение от $YELLOW{} (CID: {}):"
 log_sending_greetings = "Новый юзер $YELLOW{} (CID: {})$RESET. Шлю приветствие."
 log_new_cmd = "Команда $YELLOW{}$RESET от $YELLOW{} (CID: {})$RESET."
-ntfc_new_order = "💰 <b>Новый заказ:</b> <code>{}</code>\n\n<b><i>🙍‍♂️ Покупатель:</i></b>  <code>{}</code>\n" \
-                 "<b><i>💵 Сумма:</i></b>  <code>{}</code>\n<b><i>📇 ID:</i></b> <code>#{}</code>\n\n<i>{}</i>"
+ntfc_new_order = "💰 <b>Новый заказ:</b> <code>{}</code>\n\n<b><i>🙍‍♂️ Покупатель:</i></b>  <code>{}</code>\n"                 "<b><i>💵 Сумма:</i></b>  <code>{}</code>\n<b><i>📇 ID:</i></b> <code>#{}</code>\n\n<i>{}</i>"
 ntfc_new_order_not_in_cfg = "ℹ️ Автовыдача не настроена."
 ntfc_new_order_ad_disabled = "ℹ️ Автовыдача выключена глобально."
 ntfc_new_order_ad_disabled_for_lot = "ℹ️ Автовыдача выключена для лота."
@@ -648,7 +596,6 @@ ntfc_new_order_will_be_delivered = "ℹ️ Выдаю товар..."
 ntfc_new_review = "🔮 <b>Отзыв {}</b> за заказ <code>{}</code>!\n\n💬 <code>{}</code>{}"
 ntfc_review_reply_text = "\n\n🗨️ <b>Ответ:</b> \n<code>{}</code>"
 
-# Логи кардинала
 crd_proxy_detected = "Найден прокси."
 crd_checking_proxy = "Проверяю прокси..."
 crd_proxy_err = "Ошибка подключения к прокси."
@@ -689,14 +636,8 @@ crd_handlers_registered = "Хэндлеры $YELLOW{}.py$RESET ОК."
 crd_handler_err = "Ошибка хэндлера."
 crd_tg_au_err = "Ошибка изменения инфо юзера: {}."
 
-# ═══════════════════════════════════════════════════════════════
-#                    📝 РЕДАКТОР ЛОТОВ FUNPAY
-# ═══════════════════════════════════════════════════════════════
-
-# ─── Главное меню
 mm_lots_editor = "🛍️ Редактор лотов"
 
-# ─── Кнопки редактора
 le_edit_title_ru = "📝 Название (RU)"
 le_edit_title_en = "📝 Название (EN)"
 le_edit_title_en_auto = "🌐 EN (авто)"
@@ -720,7 +661,6 @@ le_delete = "🗑️ Удалить"
 le_confirm_delete = "⚠️ Подтвердить"
 le_cancel_delete = "🚫 Отмена"
 
-# ─── Описания меню
 desc_le_list = """🛍️ <b>Редактор лотов FunPay</b>
 
 Выбери лот для редактирования.
@@ -821,7 +761,6 @@ desc_le_delete_confirm = """⚠️ <b>УДАЛЕНИЕ ЛОТА</b>
 
 <b>❌ Нельзя отменить!</b>"""
 
-# ─── Ввод полей
 le_enter_title_ru = """✍️ <b>Новое название (RU):</b>
 
 <b>Текущее:</b>
@@ -879,7 +818,6 @@ le_select_option = """⚙️ <b>Выбери <code>{}</code>:</b>
 
 <b>📝 Текущее:</b> <code>{}</code>"""
 
-# ─── Сообщения
 le_field_updated = "✅ Поле <b>{}</b> обновлено!"
 le_saving = "⏳ Сохраняю..."
 le_saved = "✅ <b>Лот сохранён!</b>"
@@ -902,12 +840,9 @@ le_delete_error = "❌ <b>Ошибка удаления:</b>\n<code>{}</code>"
 le_field_copied = "📋 Скопировано"
 le_no_value = "—"
 
-# ─── Команды
 cmd_lots = "Редактор лотов"
 
-# Логи
 log_le_field_changed = "$MAGENTA@{} (ID: {})$RESET изменил $CYAN{}$RESET лота $YELLOW#{}$RESET."
 log_le_lot_saved = "$MAGENTA@{} (ID: {})$RESET сохранил лот $YELLOW#{}$RESET."
 log_le_lot_toggled = "$MAGENTA@{} (ID: {})$RESET переключил $CYAN{}$RESET лота $YELLOW#{}$RESET."
 log_le_lot_deleted = "$MAGENTA@{} (ID: {})$RESET удалил лот $YELLOW#{}$RESET."
-

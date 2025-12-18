@@ -18,68 +18,35 @@ logger = getLogger("FPS.announcements")
 localizer = Localizer()
 _ = localizer.translate
 
-
 def get_last_tag() -> str | None:
-    """
-    Загружает тег последнего объявления из кэша.
-
-    :return: тег последнего объявления или None, если его нет.
-    """
+           
     if not os.path.exists("storage/cache/announcement_tag.txt"):
         return None
     with open("storage/cache/announcement_tag.txt", "r", encoding="UTF-8") as f:
         data = f.read()
     return data
 
-
 REQUESTS_DELAY = 600
 LAST_TAG = get_last_tag()
 
-
 def save_last_tag():
-    """
-    Сохраняет тег последнего объявления в кэш.
-    """
+           
     global LAST_TAG
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
     with open("storage/cache/announcement_tag.txt", "w", encoding="UTF-8") as f:
         f.write(LAST_TAG)
 
-
 def get_announcement(ignore_last_tag: bool = False) -> dict | None:
-    """
-    Получает информацию об объявлении.
-    ОТКЛЮЧЕНО В ФОРКЕ: Внешние запросы отключены для приватности.
-
-    :return: None (объявления отключены).
-    """
+           
     return None
-
 
 def download_photo(url: str) -> bytes | None:
-    """
-    Загружает фото по URL.
-    ОТКЛЮЧЕНО В ФОРКЕ: Внешние запросы отключены для приватности.
-
-    :param url: URL фотографии.
-    :return: None (отключено).
-    """
+           
     return None
 
-
-# Разбор данных объявления
 def get_notification_type(data: dict) -> NotificationTypes:
-    """
-    Находит данные о типе объявления.
-    0 - реклама.
-    1 - объявление.
-    Другое - критическое объявление.
-
-    :param data: данные объявления.
-
-    :return: тип уведомления.
-    """
+           
     types = {
         0: NotificationTypes.ad,
         1: NotificationTypes.announcement,
@@ -87,53 +54,24 @@ def get_notification_type(data: dict) -> NotificationTypes:
     }
     return types[data.get("type")] if data.get("type") in types else NotificationTypes.critical
 
-
 def get_photo(data: dict) -> bytes | None:
-    """
-    Загружает фотографию по ссылке, если она есть в данных об объявлении.
-
-    :param data: данные объявления.
-
-    :return: фотографию в виде массива байтов или None, если ссылка на фото не найдена или загрузка не удалась.
-    """
+           
     if not (photo := data.get("ph")):
         return None
     return download_photo(u"{}".format(photo))
 
-
 def get_text(data: dict) -> str | None:
-    """
-    Находит данные о тексте объявления.
-
-    :param data: данные объявления.
-
-    :return: текст объявления или None, если он не найден.
-    """
+           
     if not (text := data.get("text")):
         return None
     return u"{}".format(text)
 
-
 def get_pin(data: dict) -> bool:
-    """
-    Получает информацию о том, нужно ли закреплять объявление.
-
-    :param data: данные объявления.
-
-    :return: True / False.
-    """
+           
     return bool(data.get("pin"))
 
-
 def get_keyboard(data: dict) -> K | None:
-    """
-    Получает информацию о клавиатуре и генерирует ее.
-    Пример клавиатуры:
-
-    :param data: данные объявления.
-
-    :return: объект клавиатуры или None, если данные о ней не найдены.
-    """
+           
     if not (kb_data := data.get("kb")):
         return None
 
@@ -148,7 +86,6 @@ def get_keyboard(data: dict) -> K | None:
     except:
         return None
     return kb
-
 
 def announcements_loop_iteration(crd: Cardinal, ignore_last_tag: bool = False):
     global LAST_TAG
@@ -178,24 +115,12 @@ def announcements_loop_iteration(crd: Cardinal, ignore_last_tag: bool = False):
                        'pin': pin},
                daemon=True).start()
 
-
 def announcements_loop(crd: Cardinal):
-    """
-    Бесконечный цикл получения объявлений.
-    ОТКЛЮЧЕНО В ФОРКЕ: Объявления от разработчика отключены.
-    """
-    # Форк: полностью отключаем цикл объявлений
+           
     return
 
-
 def main(crd: Cardinal):
-    """
-    ОТКЛЮЧЕНО В ФОРКЕ: Объявления и рассылки от разработчика полностью отключены.
-    Никакие сообщения не будут отправляться и закрепляться.
-    """
-    # Форк: не запускаем цикл объявлений
+           
     pass
 
-
-# ОТКЛЮЧЕНО В ФОРКЕ: модуль объявлений не привязывается к инициализации
 BIND_TO_POST_INIT = []

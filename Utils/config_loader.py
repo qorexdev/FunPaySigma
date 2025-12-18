@@ -1,6 +1,3 @@
-"""
-В данном модуле написаны функции для валидации конфигов.
-"""
 import configparser
 from configparser import ConfigParser, SectionProxy
 import codecs
@@ -17,22 +14,12 @@ import logging
 
 logger = logging.getLogger("FPS.ConfigLoader")
 
-
 def detect_config_type(config_path: str) -> str:
-    """
-    Определяет тип конфига: 'sigma' или 'cardinal'.
-    
-    Sigma конфиги имеют зашифрованные чувствительные данные (b64: префикс).
-    Cardinal конфиги хранят данные в открытом виде.
-    
-    :param config_path: путь до файла конфига.
-    :return: 'sigma' или 'cardinal'
-    """
+           
     config = ConfigParser(delimiters=(":"), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
     
-    # Проверяем наличие шифрования в golden_key или token
     if config.has_section("FunPay") and config.has_option("FunPay", "golden_key"):
         golden_key = config["FunPay"]["golden_key"].strip()
         if golden_key.startswith("b64:") or golden_key.startswith("enc:"):
@@ -43,30 +30,16 @@ def detect_config_type(config_path: str) -> str:
         if token.startswith("b64:") or token.startswith("enc:"):
             return "sigma"
     
-    # Если нет шифрования — это конфиг Cardinal
     return "cardinal"
 
-
 def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> ConfigParser:
-    """
-    Конвертирует конфиг формата Cardinal в формат Sigma.
-    
-    Основные изменения:
-    - Шифрование чувствительных данных (golden_key, token, proxy credentials)
-    - Добавление недостающей секции [OrderReminders]
-    - Добавление параметра type в [Proxy] если отсутствует
-    
-    :param config_path: путь до исходного конфига Cardinal.
-    :param output_path: путь для сохранения конвертированного конфига (опционально).
-    :return: конвертированный объект конфига.
-    """
+           
     config = ConfigParser(delimiters=(":"), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
     
     logger.info(f"$YELLOWОбнаружен конфиг формата Cardinal, выполняю конвертацию в формат Sigma...")
     
-    # Шифруем чувствительные данные
     sensitive_fields = {
         'FunPay': ['golden_key'],
         'Telegram': ['token'],
@@ -79,17 +52,15 @@ def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> Conf
                 if field in config[section_name]:
                     value = config[section_name][field].strip()
                     if value and not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
-                        # Шифруем данные
+                                        
                         encrypted = obfuscate_data(value)
                         config.set(section_name, field, f'b64:{encrypted}')
                         logger.debug(f"Зашифровано поле [{section_name}].{field}")
     
-    # Добавляем параметр type в [Proxy] если отсутствует
     if config.has_section("Proxy") and not config.has_option("Proxy", "type"):
         config.set("Proxy", "type", "HTTP")
         logger.debug("Добавлен параметр [Proxy].type = HTTP")
     
-    # Добавляем секцию [OrderReminders] если отсутствует
     if "OrderReminders" not in config.sections():
         config.add_section("OrderReminders")
         config.set("OrderReminders", "enabled", "0")
@@ -99,12 +70,10 @@ def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> Conf
         config.set("OrderReminders", "interval", "30")
         logger.debug("Добавлена секция [OrderReminders]")
     
-    # Добавляем параметр check в [Proxy] если отсутствует
     if config.has_section("Proxy") and not config.has_option("Proxy", "check"):
         config.set("Proxy", "check", "0")
         logger.debug("Добавлен параметр [Proxy].check = 0")
     
-    # Сохраняем если указан путь
     if output_path:
         with open(output_path, "w", encoding="utf-8") as f:
             config.write(f)
@@ -112,20 +81,9 @@ def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> Conf
     
     return config
 
-
 def check_param(param_name: str, section: SectionProxy, valid_values: list[str | None] | None = None,
                 raise_if_not_exists: bool = True) -> str | None:
-    """
-    Проверяет, существует ли в переданной секции указанный параметр и если да, валидно ли его значение.
-
-    :param param_name: название параметра.
-    :param section: объект секции.
-    :param valid_values: валидные значения. Если None, любая строка - валидное значение.
-    :param raise_if_not_exists: возбуждать ли исключение, если параметр не найден.
-
-    :return: Значение ключа, если ключ найден и его значение валидно. Если ключ не найден и
-    raise_ex_if_not_exists == False - возвращает None. В любом другом случае возбуждает исключения.
-    """
+           
     if param_name not in list(section.keys()):
         if raise_if_not_exists:
             raise ParamNotFoundError(param_name)
@@ -133,14 +91,12 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
 
     value = section[param_name].strip()
 
-    # Обработка переменных окружения
     if value.startswith('env:'):
         env_var = value[4:]
         value = os.getenv(env_var, '')
         if not value:
             raise EmptyValueError(f"Environment variable {env_var} not set")
 
-    # Обработка зашифрованных значений
     elif value.startswith('enc:'):
         encrypted = value[4:]
         try:
@@ -148,7 +104,6 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
         except Exception:
             raise ValueNotValidError(param_name, value, ["valid encrypted value"])
 
-    # Обработка облегченного шифрования
     elif value.startswith('b64:'):
         encoded = value[4:]
         try:
@@ -156,7 +111,6 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
         except Exception:
             raise ValueNotValidError(param_name, value, ["valid base64 value"])
 
-    # Если значение пустое ("", оно не может быть None)
     if not value:
         if valid_values and None in valid_values:
             return value
@@ -166,35 +120,19 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
         raise ValueNotValidError(param_name, value, valid_values)
     return value
 
-
 def create_config_obj(config_path: str) -> ConfigParser:
-    """
-    Создает объект конфига с нужными настройками.
-
-    :param config_path: путь до файла конфига.
-
-    :return: объект конфига.
-    """
+           
     config = ConfigParser(delimiters=(":",), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
     return config
 
-
 def load_main_config(config_path: str):
-    """
-    Парсит и проверяет на правильность основной конфиг.
-    Автоматически определяет тип конфига (Sigma/Cardinal) и конвертирует при необходимости.
-
-    :param config_path: путь до основного конфига.
-
-    :return: спарсеный основной конфиг.
-    """
-    # Определяем тип конфига
+           
     config_type = detect_config_type(config_path)
     
     if config_type == "cardinal":
-        # Конвертируем Cardinal конфиг в Sigma формат
+                                                     
         config = convert_cardinal_to_sigma(config_path, config_path)
     else:
         config = create_config_obj(config_path)
@@ -286,15 +224,12 @@ def load_main_config(config_path: str):
         if section_name not in config.sections():
             raise ConfigParseError(config_path, section_name, SectionNotFoundError())
 
-        # UPDATE
         if section_name == "Greetings" and "cacheInitChats" in config[section_name]:
             config.remove_option(section_name, "cacheInitChats")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-        # END OF UPDATE
-
+                       
         for param_name in values[section_name]:
 
-            # UPDATE
             if section_name == "FunPay" and param_name == "oldMsgGetMode" and param_name not in config[section_name]:
                 config.set("FunPay", "oldMsgGetMode", "0")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
@@ -316,29 +251,23 @@ def load_main_config(config_path: str):
                 section_name]:
                 config.set("OrderConfirm", "watermark", "1")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "FunPay" and param_name == "keepSentMessagesUnread" and \
-                    param_name not in config[section_name]:
+            elif section_name == "FunPay" and param_name == "keepSentMessagesUnread" and                    param_name not in config[section_name]:
                 config.set("FunPay", "keepSentMessagesUnread", "0")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "NewMessageView" and param_name == "showImageName" and \
-                    param_name not in config[section_name]:
+            elif section_name == "NewMessageView" and param_name == "showImageName" and                    param_name not in config[section_name]:
                 config.set("NewMessageView", "showImageName", "1")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "Telegram" and param_name == "blockLogin" and \
-                    param_name not in config[section_name]:
+            elif section_name == "Telegram" and param_name == "blockLogin" and                    param_name not in config[section_name]:
                 config.set("Telegram", "blockLogin", "0")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "Telegram" and param_name == "secretKeyHash" and \
-                    param_name not in config[section_name]:
+            elif section_name == "Telegram" and param_name == "secretKeyHash" and                    param_name not in config[section_name]:
                 config.set(section_name, "secretKeyHash", hash_password(config[section_name]["secretKey"]))
                 config.remove_option(section_name, "secretKey")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "FunPay" and param_name == "locale" and \
-                    param_name not in config[section_name]:
+            elif section_name == "FunPay" and param_name == "locale" and                    param_name not in config[section_name]:
                 config.set(section_name, "locale", "ru")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-            elif section_name == "Other" and param_name == "watermark" and \
-                    param_name in config[section_name] and "𝑪𝒂𝒓𝒅𝒊𝒏𝒂𝒍" in config[section_name][param_name]:
+            elif section_name == "Other" and param_name == "watermark" and                    param_name in config[section_name] and "𝑪𝒂𝒓𝒅𝒊𝒏𝒂𝒍" in config[section_name][param_name]:
                 config.set(section_name, param_name, "🐦")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
             elif section_name == "Greetings" and param_name == "onlyNewChats" and param_name not in config[
@@ -346,9 +275,6 @@ def load_main_config(config_path: str):
                 config.set("Greetings", "onlyNewChats", "0")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
-            # END OF UPDATE
-
-        # UPDATE: Add missing sections
         if "OrderReminders" not in config.sections():
             config.add_section("OrderReminders")
             config.set("OrderReminders", "enabled", "0")
@@ -357,8 +283,6 @@ def load_main_config(config_path: str):
             config.set("OrderReminders", "repeatCount", "3")
             config.set("OrderReminders", "interval", "30")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-
-        # END OF UPDATE
 
             try:
                 if values[section_name][param_name] == "any":
@@ -370,7 +294,6 @@ def load_main_config(config_path: str):
             except (ParamNotFoundError, EmptyValueError, ValueNotValidError) as e:
                 raise ConfigParseError(config_path, section_name, e)
 
-    # Дешифруем чувствительные данные
     if config.has_section("FunPay") and config.has_option("FunPay", "golden_key"):
         encrypted_key = config["FunPay"]["golden_key"]
         if encrypted_key.startswith("enc:"):
@@ -396,11 +319,8 @@ def load_main_config(config_path: str):
 
     return config
 
-
 def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool = True):
-    """
-    Сохраняет конфиг, опционально шифруя чувствительные поля.
-    """
+           
     if encrypt_sensitive:
         config_to_save = copy.deepcopy(config)
         sensitive_fields = {
@@ -415,7 +335,7 @@ def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool 
                     if field in config_to_save[section_name]:
                         value = config_to_save[section_name][field]
                         if not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
-                            # Шифруем (облегченное шифрование)
+                                                              
                             encrypted = obfuscate_data(value)
                             config_to_save.set(section_name, field, f'b64:{encrypted}')
     else:
@@ -424,15 +344,8 @@ def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool 
     with open(config_path, "w", encoding="utf-8") as f:
         config_to_save.write(f)
 
-
 def load_auto_response_config(config_path: str):
-    """
-    Парсит и проверяет на правильность конфиг команд.
-
-    :param config_path: путь до конфига команд.
-
-    :return: спарсеный конфиг команд.
-    """
+           
     try:
         config = create_config_obj(config_path)
     except configparser.DuplicateSectionError as e:
@@ -465,26 +378,12 @@ def load_auto_response_config(config_path: str):
                 config.set(new_command, param_name, parameters[param_name])
     return config
 
-
 def load_raw_auto_response_config(config_path: str):
-    """
-    Загружает исходный конфиг автоответчика.
-
-    :param config_path: путь до конфига команд.
-
-    :return: спарсеный конфиг команд.
-    """
+           
     return create_config_obj(config_path)
 
-
 def load_auto_delivery_config(config_path: str):
-    """
-    Парсит и проверяет на правильность конфиг автовыдачи.
-
-    :param config_path: путь до конфига автовыдачи.
-
-    :return: спарсеный конфиг товаров для автовыдачи.
-    """
+           
     try:
         config = create_config_obj(config_path)
     except configparser.DuplicateSectionError as e:
@@ -499,17 +398,15 @@ def load_auto_delivery_config(config_path: str):
             check_param("disableAutoDisable", config[lot_title], valid_values=["0", "1"], raise_if_not_exists=False)
             check_param("disableAutoDelivery", config[lot_title], valid_values=["0", "1"], raise_if_not_exists=False)
             if products_file_name is None:
-                # Если данного параметра нет, то в текущем лоте более нечего проверять -> переход на след. итерацию.
+                                                                                                                    
                 continue
         except (ParamNotFoundError, EmptyValueError, ValueNotValidError) as e:
             raise ConfigParseError(config_path, lot_title, e)
 
-        # Проверяем, существует ли файл.
         if not os.path.exists(f"storage/products/{products_file_name}"):
             raise ConfigParseError(config_path, lot_title,
                                    ProductsFileNotFoundError(f"storage/products/{products_file_name}"))
 
-        # Проверяем, есть ли хотя бы 1 переменная $product в тексте response.
         if "$product" not in lot_response:
             raise ConfigParseError(config_path, lot_title, NoProductVarError())
     return config

@@ -1,7 +1,3 @@
-"""
-Автоответы на отзывы.
-Автоматически отправляет сообщения в чат после получения отзывов.
-"""
 from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
@@ -67,21 +63,18 @@ SETTINGS = {
     },
 }
 
-
 def save_config():
-    """Сохраняет настройки."""
+                              
     os.makedirs("storage/builtin", exist_ok=True)
     with open("storage/builtin/review_chat_reply.json", "w", encoding="utf-8") as f:
         global SETTINGS
         f.write(json.dumps(SETTINGS, indent=4, ensure_ascii=False))
 
-
 def init(cardinal: Cardinal):
-    """Инициализация модуля автоответов на отзывы."""
+                                                     
     tg = cardinal.telegram
     bot = tg.bot
 
-    # Загрузка настроек
     if os.path.exists("storage/builtin/review_chat_reply.json"):
         with open("storage/builtin/review_chat_reply.json", "r", encoding="utf-8") as f:
             global SETTINGS
@@ -108,8 +101,7 @@ def init(cardinal: Cardinal):
             message.text = ""
         SETTINGS[stars]["text"] = message.text
         save_config()
-        keyboard = K() \
-            .row(B("◀️ Назад", callback_data=f"{CBT_OPEN_SETTINGS}"),
+        keyboard = K()            .row(B("◀️ Назад", callback_data=f"{CBT_OPEN_SETTINGS}"),
                  B("✏️ Изменить", callback_data=f"{CBT_TEXT_EDIT}:{stars}"))
         bot.reply_to(message, f"✅ Текст ответа отзыв с {SETTINGS[stars]['title']} изменен!", reply_markup=keyboard)
 
@@ -141,8 +133,7 @@ def init(cardinal: Cardinal):
         elif "watermark" in call.data:
             SETTINGS["watermark"] = not SETTINGS["watermark"]
         else:
-            SETTINGS[call.data.replace(f"{CBT_TEXT_SWITCH}:", "")]["enable"] = not \
-                SETTINGS[call.data.replace(f"{CBT_TEXT_SWITCH}:", "")]["enable"]
+            SETTINGS[call.data.replace(f"{CBT_TEXT_SWITCH}:", "")]["enable"] = not                SETTINGS[call.data.replace(f"{CBT_TEXT_SWITCH}:", "")]["enable"]
         save_config()
         open_settings(call)
 
@@ -179,7 +170,6 @@ def init(cardinal: Cardinal):
                               call.message.id, reply_markup=keyboard)
         bot.answer_callback_query(call.id)
 
-    # Регистрация обработчиков
     tg.msg_handler(edited, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, CBT_TEXT_EDITED))
     tg.cbq_handler(edit, lambda c: f"{CBT_TEXT_EDIT}" in c.data)
     tg.cbq_handler(show, lambda c: f"{CBT_TEXT_SHOW}" in c.data)
@@ -190,9 +180,8 @@ def init(cardinal: Cardinal):
     logger.debug(f"{LOGGER_PREFIX} Зарегистрировано callback обработчиков: {len(tg.bot.callback_query_handlers)}")
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
-
 def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
-    """Обработчик сообщений для автоответа на отзывы."""
+                                                        
     if not cardinal.old_mode_enabled:
         if isinstance(e, LastChatMessageChangedEvent):
             return
@@ -226,7 +215,6 @@ def message_hook(cardinal: Cardinal, e: NewMessageEvent | LastChatMessageChanged
         txt = format_order_text(txt, order)
         cardinal.send_message(chat_id, txt, chat_name, watermark=SETTINGS["watermark"])
 
-
 def get_settings_button():
-    """Возвращает кнопку для доступа к настройкам в главном меню."""
+                                                                    
     return B("💬 Ответы на отзывы", callback_data=CBT_OPEN_SETTINGS)

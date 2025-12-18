@@ -1,7 +1,3 @@
-"""
-В данном модуле написан Telegram бот.
-"""
-
 from __future__ import annotations
 
 import re
@@ -24,8 +20,7 @@ import telebot
 from telebot.apihelper import ApiTelegramException
 import logging
 
-from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, Message, CallbackQuery, BotCommand, \
-    InputFile
+from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, Message, CallbackQuery, BotCommand,    InputFile
 from tg_bot import utils, static_keyboards as skb, keyboards as kb, CBT
 from Utils import cardinal_tools, updater
 from locales.localizer import Localizer
@@ -35,40 +30,22 @@ localizer = Localizer()
 _ = localizer.translate
 telebot.apihelper.ENABLE_MIDDLEWARE = True
 
-
 class TGBot:
     def __init__(self, cardinal: Cardinal):
         self.cardinal = cardinal
-        # Оптимизация RAM: уменьшено количество потоков с 5 до 2
+                                                                
         self.bot = telebot.TeleBot(self.cardinal.MAIN_CFG["Telegram"]["token"], parse_mode="HTML",
                                    allow_sending_without_reply=True, num_threads=2)
 
-        self.file_handlers = {}  # хэндлеры, привязанные к получению файла.
-        self.attempts = {}  # {user_id: attempts} - попытки авторизации в Telegram ПУ.
-        self.init_messages = []  # [(chat_id, message_id)] - список сообщений о запуске TG бота.
+        self.file_handlers = {}                                            
+        self.attempts = {}                                                            
+        self.init_messages = []                                                                 
 
-        # {
-        #     chat_id: {
-        #         user_id: {
-        #             "state": "state",
-        #             "data": { ... },
-        #             "mid": int
-        #         }
-        #     }
-        # }
         self.user_states = {}
 
-        # {
-        #    chat_id: {
-        #        utils.NotificationTypes.new_message: bool,
-        #        utils.NotificationTypes.new_order: bool,
-        #        ...
-        #    },
-        # }
-        #
-        self.notification_settings = utils.load_notification_settings()  # настройки уведомлений.
-        self.answer_templates = utils.load_answer_templates()  # заготовки ответов.
-        self.authorized_users = utils.load_authorized_users()  # авторизированные пользователи.
+        self.notification_settings = utils.load_notification_settings()                          
+        self.answer_templates = utils.load_answer_templates()                      
+        self.authorized_users = utils.load_authorized_users()                                  
 
         self.commands = {
             "menu": "cmd_menu",
@@ -100,45 +77,21 @@ class TGBot:
             utils.NotificationTypes.announcement: 1
         }
 
-    # User states
     def get_state(self, chat_id: int, user_id: int) -> dict | None:
-        """
-        Получает текущее состояние пользователя.
-
-        :param chat_id: id чата.
-        :param user_id: id пользователя.
-
-        :return: данные состояния пользователя.
-        """
+                   
         try:
             return self.user_states[chat_id][user_id]
         except KeyError:
             return None
 
     def set_state(self, chat_id: int, message_id: int, user_id: int, state: str, data: dict | None = None):
-        """
-        Устанавливает состояние для пользователя.
-
-        :param chat_id: id чата.
-        :param message_id: id сообщения, после которого устанавливается данное состояние.
-        :param user_id: id пользователя.
-        :param state: состояние.
-        :param data: доп. данные.
-        """
+                   
         if chat_id not in self.user_states:
             self.user_states[chat_id] = {}
         self.user_states[chat_id][user_id] = {"state": state, "mid": message_id, "data": data or {}}
 
     def clear_state(self, chat_id: int, user_id: int, del_msg: bool = False) -> int | None:
-        """
-        Очищает состояние пользователя.
-
-        :param chat_id: id чата.
-        :param user_id: id пользователя.
-        :param del_msg: удалять ли сообщение, после которого было обозначено текущее состояние.
-
-        :return: ID сообщения-инициатора или None, если состояние и так было пустое.
-        """
+                   
         try:
             state = self.user_states[chat_id][user_id]
         except KeyError:
@@ -154,42 +107,21 @@ class TGBot:
         return msg_id
 
     def check_state(self, chat_id: int, user_id: int, state: str) -> bool:
-        """
-        Проверяет, является ли состояние указанным.
-
-        :param chat_id: id чата.
-        :param user_id: id пользователя.
-        :param state: состояние.
-
-        :return: True / False
-        """
+                   
         try:
             return self.user_states[chat_id][user_id]["state"] == state
         except KeyError:
             return False
 
-    # Notification settings
     def is_notification_enabled(self, chat_id: int | str, notification_type: str) -> bool:
-        """
-        Включен ли указанный тип уведомлений в указанном чате?
-
-        :param chat_id: ID Telegram чата.
-        :param notification_type: тип уведомлений.
-        """
+                   
         try:
             return bool(self.notification_settings[str(chat_id)][notification_type])
         except KeyError:
             return False
 
     def toggle_notification(self, chat_id: int, notification_type: str) -> bool:
-        """
-        Переключает указанный тип уведомлений в указанном чате и сохраняет настройки уведомлений.
-
-        :param chat_id: ID Telegram чата.
-        :param notification_type: тип уведомлений.
-
-        :return: вкл / выкл указанный тип уведомлений в указанном чате.
-        """
+                   
         chat_id = str(chat_id)
         if chat_id not in self.notification_settings:
             self.notification_settings[chat_id] = {}
@@ -199,7 +131,6 @@ class TGBot:
         utils.save_notification_settings(self.notification_settings)
         return self.notification_settings[chat_id][notification_type]
 
-    # handler binders
     def is_file_handler(self, m: Message):
         return self.get_state(m.chat.id, m.from_user.id) and m.content_type in ["photo", "document"]
 
@@ -207,8 +138,7 @@ class TGBot:
         self.file_handlers[state] = handler
 
     def run_file_handlers(self, m: Message):
-        if (state := self.get_state(m.chat.id, m.from_user.id)) is None \
-                or state["state"] not in self.file_handlers:
+        if (state := self.get_state(m.chat.id, m.from_user.id)) is None                or state["state"] not in self.file_handlers:
             return
         try:
             self.file_handlers[state["state"]](m)
@@ -217,12 +147,7 @@ class TGBot:
             logger.debug("TRACEBACK", exc_info=True)
 
     def msg_handler(self, handler, **kwargs):
-        """
-        Регистрирует хэндлер, срабатывающий при новом сообщении.
-
-        :param handler: хэндлер.
-        :param kwargs: аргументы для хэндлера.
-        """
+                   
         bot_instance = self.bot
 
         @bot_instance.message_handler(**kwargs)
@@ -234,13 +159,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
 
     def cbq_handler(self, handler, func, **kwargs):
-        """
-        Регистрирует хэндлер, срабатывающий при новом callback'е.
-
-        :param handler: хэндлер.
-        :param func: функция-фильтр.
-        :param kwargs: аргументы для хэндлера.
-        """
+                   
         bot_instance = self.bot
 
         @bot_instance.callback_query_handler(func, **kwargs)
@@ -252,12 +171,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
 
     def mdw_handler(self, handler, **kwargs):
-        """
-        Регистрирует промежуточный хэндлер.
-
-        :param handler: хэндлер.
-        :param kwargs: аргументы для хэндлера.
-        """
+                   
         bot_instance = self.bot
 
         @bot_instance.middleware_handler(**kwargs)
@@ -268,16 +182,11 @@ class TGBot:
                 logger.error(_("log_tg_handler_error"))
                 logger.debug("TRACEBACK", exc_info=True)
 
-    # Система свой-чужой 0_0
     def setup_chat_notifications(self, bot: TGBot, m: Message):
-        """
-        Устанавливает настройки уведомлений по умолчанию в новом чате.
-        """
-        if str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and \
-                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
+                   
+        if str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
             return
-        elif str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and not \
-                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
+        elif str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and not                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
             self.notification_settings[str(m.chat.id)][NotificationTypes.critical] = 1
             utils.save_notification_settings(self.notification_settings)
             return
@@ -286,14 +195,11 @@ class TGBot:
             utils.save_notification_settings(self.notification_settings)
 
     def reg_admin(self, m: Message):
-        """
-        Проверяет, есть ли пользователь в списке пользователей с доступом к ПУ TG.
-        """
+                   
         lang = m.from_user.language_code
         if m.chat.type != "private" or (self.attempts.get(m.from_user.id, 0) >= 5) or m.text is None:
             return
-        if not self.cardinal.block_tg_login and \
-                cardinal_tools.check_password(m.text, self.cardinal.MAIN_CFG["Telegram"]["secretKeyHash"]):
+        if not self.cardinal.block_tg_login and                cardinal_tools.check_password(m.text, self.cardinal.MAIN_CFG["Telegram"]["secretKeyHash"]):
             self.send_notification(text=_("access_granted_notification", m.from_user.username, m.from_user.id),
                                    notification_type=NotificationTypes.critical, pin=True)
             self.authorized_users[m.from_user.id] = {}
@@ -314,9 +220,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, text, reply_markup=kb_links)
 
     def ignore_unauthorized_users(self, c: CallbackQuery):
-        """
-        Игнорирует callback'и от не авторизированных пользователей.
-        """
+                   
         logger.warning(_("log_click_attempt", hashlib.sha256(c.from_user.username.encode()).hexdigest()[:8], c.from_user.id, hashlib.sha256(c.message.chat.username.encode()).hexdigest()[:8] if c.message.chat.username else None,
                           c.message.chat.id))
         self.attempts[c.from_user.id] = self.attempts.get(c.from_user.id, 0) + 1
@@ -324,31 +228,22 @@ class TGBot:
             self.bot.answer_callback_query(c.id, _("adv_fps", language=c.from_user.language_code), show_alert=True)
         return
 
-    # Команды
     def send_settings_menu(self, m: Message):
-        """
-        Отправляет основное меню настроек (новым сообщением).
-        """
+                   
         self.bot.send_message(m.chat.id, _("desc_main"), reply_markup=skb.SETTINGS_SECTIONS())
 
     def send_profile(self, m: Message):
-        """
-        Отправляет статистику аккаунта.
-        """
+                   
         self.bot.send_message(m.chat.id, utils.generate_profile_text(self.cardinal),
                               reply_markup=skb.REFRESH_BTN())
 
     def act_change_cookie(self, m: Message):
-        """
-        Активирует режим ввода golden_key.
-        """
+                   
         result = self.bot.send_message(m.chat.id, _("act_change_golden_key"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.CHANGE_GOLDEN_KEY)
 
     def change_cookie(self, m: Message):
-        """
-        Меняет golden_key аккаунта FunPay.
-        """
+                   
         self.clear_state(m.chat.id, m.from_user.id, True)
         golden_key = m.text
         if len(golden_key) != 32 or golden_key != golden_key.lower() or len(golden_key.split()) != 1:
@@ -360,7 +255,7 @@ class TGBot:
         try:
             new_account.get()
         except:
-            logger.warning("Произошла ошибка")  # locale
+            logger.warning("Произошла ошибка")          
             logger.debug("TRACEBACK", exc_info=True)
             self.bot.send_message(m.chat.id, _("cookie_error"))
             return
@@ -372,17 +267,14 @@ class TGBot:
             try:
                 self.cardinal.account.get()
             except:
-                logger.warning("Произошла ошибка")  # locale
+                logger.warning("Произошла ошибка")          
                 logger.debug("TRACEBACK", exc_info=True)
                 self.bot.send_message(m.chat.id, _("cookie_error"))
                 return
             accs = f" (<a href='https://funpay.com/users/{new_account.id}/'>{new_account.username}</a>)"
         else:
-            accs = f" (<a href='https://funpay.com/users/{self.cardinal.account.id}/'>" \
-                   f"{self.cardinal.account.username}</a> ➔ <a href='https://funpay.com/users/{new_account.id}/'>" \
-                   f"{new_account.username}</a>)"
+            accs = f" (<a href='https://funpay.com/users/{self.cardinal.account.id}/'>"                   f"{self.cardinal.account.username}</a> ➔ <a href='https://funpay.com/users/{new_account.id}/'>"                   f"{new_account.username}</a>)"
 
-        # Шифруем golden_key перед сохранением
         encrypted_key = f"b64:{cardinal_tools.obfuscate_data(golden_key)}"
         self.cardinal.MAIN_CFG.set("FunPay", "golden_key", encrypted_key)
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
@@ -405,16 +297,12 @@ class TGBot:
                                    c.message.id, reply_markup=skb.REFRESH_BTN())
 
     def act_manual_delivery_test(self, m: Message):
-        """
-        Активирует режим ввода названия лота для ручной генерации ключа теста автовыдачи.
-        """
+                   
         result = self.bot.send_message(m.chat.id, _("create_test_ad_key"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.MANUAL_AD_TEST)
 
     def manual_delivery_text(self, m: Message):
-        """
-        Генерирует ключ теста автовыдачи (ручной режим).
-        """
+                   
         self.clear_state(m.chat.id, m.from_user.id, True)
         lot_name = m.text.strip()
         key = "".join(random.sample(string.ascii_letters + string.digits, 50))
@@ -424,16 +312,12 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("test_ad_key_created", utils.escape(lot_name), key))
 
     def act_ban(self, m: Message):
-        """
-        Активирует режим ввода никнейма пользователя, которого нужно добавить в ЧС.
-        """
+                   
         result = self.bot.send_message(m.chat.id, _("act_blacklist"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.BAN)
 
     def ban(self, m: Message):
-        """
-        Добавляет пользователя в ЧС.
-        """
+                   
         self.clear_state(m.chat.id, m.from_user.id, True)
         nickname = m.text.strip()
 
@@ -447,16 +331,12 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("user_blacklisted", nickname))
 
     def act_unban(self, m: Message):
-        """
-        Активирует режим ввода никнейма пользователя, которого нужно удалить из ЧС.
-        """
+                   
         result = self.bot.send_message(m.chat.id, _("act_unban"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.UNBAN)
 
     def unban(self, m: Message):
-        """
-        Удаляет пользователя из ЧС.
-        """
+                   
         self.clear_state(m.chat.id, m.from_user.id, True)
         nickname = m.text.strip()
         if nickname not in self.cardinal.blacklist:
@@ -468,9 +348,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("user_unbanned", nickname))
 
     def send_ban_list(self, m: Message):
-        """
-        Отправляет ЧС.
-        """
+                   
         if not self.cardinal.blacklist:
             self.bot.send_message(m.chat.id, _("blacklist_empty"))
             return
@@ -478,9 +356,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, blacklist)
 
     def act_edit_watermark(self, m: Message):
-        """
-        Активирует режим ввода вотемарки сообщений.
-        """
+                   
         watermark = self.cardinal.MAIN_CFG["Other"]["watermark"]
         watermark = f"\n<code>{utils.escape(watermark)}</code>" if watermark else ""
         result = self.bot.send_message(m.chat.id, _("act_edit_watermark").format(watermark),
@@ -494,9 +370,7 @@ class TGBot:
             self.bot.reply_to(m, _("watermark_error"))
             return
 
-        preview = f"<a href=\"https://sfunpay.com/s/chat/zb/wl/zbwl4vwc8cc1wsftqnx5.jpg\">⁢</a>" if not \
-            utils.has_brand_mark(watermark) else \
-            f"<a href=\"https://sfunpay.com/s/chat/kd/8i/kd8isyquw660kcueck3g.jpg\">⁢</a>"
+        preview = f"<a href=\"https://sfunpay.com/s/chat/zb/wl/zbwl4vwc8cc1wsftqnx5.jpg\">⁢</a>" if not            utils.has_brand_mark(watermark) else            f"<a href=\"https://sfunpay.com/s/chat/kd/8i/kd8isyquw660kcueck3g.jpg\">⁢</a>"
         self.cardinal.MAIN_CFG["Other"]["watermark"] = watermark
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         if watermark:
@@ -507,9 +381,7 @@ class TGBot:
             self.bot.reply_to(m, preview + _("watermark_deleted"))
 
     def send_logs(self, m: Message):
-        """
-        Отправляет файл логов.
-        """
+                   
         if not os.path.exists("logs/log.log"):
             self.bot.send_message(m.chat.id, _("logfile_not_found"))
         else:
@@ -523,25 +395,23 @@ class TGBot:
                     if "TRACEBACK" in file_content:
                         file_content, right = file_content.rsplit("TRACEBACK", 1)
                         file_content = "\n[".join(file_content.rsplit("\n[", 2)[-2:])
-                        right = right.split("\n[", 1)[0]  # locale
+                        right = right.split("\n[", 1)[0]          
                         result = f"<b>Текст последней ошибки:</b>\n\n[{utils.escape(file_content)}TRACEBACK{utils.escape(right)}"
                         while result:
                             text, result = result[:4096], result[4096:]
                             self.bot.send_message(m.chat.id, text)
                             time.sleep(0.5)
                     else:
-                        self.bot.send_message(m.chat.id, "<b>Ошибок в последнем лог-файле не обнаружено.</b>")  # locale
+                        self.bot.send_message(m.chat.id, "<b>Ошибок в последнем лог-файле не обнаружено.</b>")          
             except:
                 logger.debug("TRACEBACK", exc_info=True)
                 self.bot.send_message(m.chat.id, _("logfile_error"))
 
     def del_logs(self, m: Message):
-        """
-        Удаляет старые лог-файлы.
-        """
+                   
         logger.info(
             f"[IMPORTANT] Удаляю логи по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
-        deleted = 0  # locale
+        deleted = 0          
         for file in os.listdir("logs"):
             if not file.endswith(".log"):
                 try:
@@ -552,9 +422,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("logfile_deleted").format(deleted))
 
     def about(self, m: Message):
-        """
-        Отправляет информацию о текущей версии бота.
-        """
+                   
         self.bot.send_message(m.chat.id, _("about", self.cardinal.VERSION))
 
     def check_updates(self, m: Message):
@@ -568,19 +436,19 @@ class TGBot:
             }
             self.bot.send_message(m.chat.id, _(errors[releases][0], *errors[releases][1]))
             return
-        # Показываем только самый новый релиз (первый в списке)
+                                                               
         if releases:
             latest_release = releases[0]
             self.bot.send_message(m.chat.id, _("update_available", latest_release.name, latest_release.description))
             self.bot.send_message(m.chat.id, _("update_update"))
         else:
-            # Нет обновлений - список пустой
+                                            
             self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
 
     def get_backup(self, m: Message):
         logger.info(
             f"[IMPORTANT] Получаю бэкап по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
-        if os.path.exists("backup.zip"):  # locale
+        if os.path.exists("backup.zip"):          
             with open(file_path := "backup.zip", 'rb') as file:
                 modification_time = os.path.getmtime(file_path)
                 formatted_time = time.strftime('%d.%m.%Y %H:%M:%S', time.localtime(modification_time))
@@ -612,17 +480,15 @@ class TGBot:
             return
 
         if not releases:
-            # Нет обновлений - список пустой
+                                            
             self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
             return
 
-        # Берём самый новый релиз (первый в списке)
         release = releases[0]
-        if updater.download_zip(release.sources_link) \
-                or (release_folder := updater.extract_update_archive()) == 1:
+        if updater.download_zip(release.sources_link)                or (release_folder := updater.extract_update_archive()) == 1:
             self.bot.send_message(m.chat.id, _("update_download_error"))
             return
-        # Количество пропущенных релизов = всего релизов
+                                                        
         self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(len(releases))))
 
         if updater.install_release(release_folder):
@@ -630,23 +496,20 @@ class TGBot:
             return
 
         if getattr(sys, 'frozen', False):
-            # Для .exe версии нужен ручной перенос файла
+                                                        
             self.bot.send_message(m.chat.id, _(("update_done_exe")))
         else:
-            # Для .py версии - автоматический рестарт после обновления
+                                                                      
             self.bot.send_message(m.chat.id, _(("update_done")))
             logger.info("Обновление установлено. Выполняю автоматический рестарт...")
-            time.sleep(2)  # Даём время отправить сообщение
+            time.sleep(2)                                  
             cardinal_tools.restart_program()
 
     def send_update_confirmation(self, release):
-        """
-        Отправляет уведомление о новой версии с кнопками подтверждения.
-        """
+                   
         keyboard = K().row(B("✅ Да", callback_data="update:yes"), B("❌ Нет", callback_data="update:no"))
         text = _("update_available", release.name, release.description) + "\n\n<b>Обновить автоматически?</b>"
         
-        # Получаем админов из authorized_users если есть, иначе ничего не делаем
         if not self.authorized_users:
             return
 
@@ -657,9 +520,7 @@ class TGBot:
                 pass
 
     def confirm_update_handler(self, c: CallbackQuery):
-        """
-        Обрабатывает ответ на вопрос об обновлении.
-        """
+                   
         answer = c.data.split(":")[1]
         try:
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id, reply_markup=None)
@@ -674,9 +535,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def send_system_info(self, m: Message):
-        """
-        Отправляет информацию о нагрузке на систему.
-        """
+                   
         current_time = int(time.time())
         uptime = current_time - self.cardinal.start_time
 
@@ -689,29 +548,21 @@ class TGBot:
                                            cardinal_tools.time_to_str(uptime), m.chat.id))
 
     def restart_cardinal(self, m: Message):
-        """
-        Перезапускает кардинал.
-        """
+                   
         self.bot.send_message(m.chat.id, _("restarting"))
         cardinal_tools.restart_program()
 
     def ask_power_off(self, m: Message):
-        """
-        Просит подтверждение на отключение FPS.
-        """
+                   
         self.bot.send_message(m.chat.id, _("power_off_0"), reply_markup=kb.power_off(self.cardinal.instance_id, 0))
 
     def cancel_power_off(self, c: CallbackQuery):
-        """
-        Отменяет выключение (удаляет клавиатуру с кнопками подтверждения).
-        """
+                   
         self.bot.edit_message_text(_("power_off_cancelled"), c.message.chat.id, c.message.id)
         self.bot.answer_callback_query(c.id)
 
     def power_off(self, c: CallbackQuery):
-        """
-        Отключает FPS.
-        """
+                   
         split = c.data.split(":")
         state = int(split[1])
         instance_id = int(split[2])
@@ -731,11 +582,8 @@ class TGBot:
                                    reply_markup=kb.power_off(instance_id, state))
         self.bot.answer_callback_query(c.id)
 
-    # Чат FunPay
     def act_send_funpay_message(self, c: CallbackQuery):
-        """
-        Активирует режим ввода сообщения для отправки его в чат FunPay.
-        """
+                   
         split = c.data.split(":")
         node_id = int(split[1])
         try:
@@ -748,9 +596,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def send_funpay_message(self, message: Message):
-        """
-        Отправляет сообщение в чат FunPay.
-        """
+                   
         data = self.get_state(message.chat.id, message.from_user.id)["data"]
         node_id, username = data["node_id"], data["username"]
         self.clear_state(message.chat.id, message.from_user.id, True)
@@ -764,17 +610,13 @@ class TGBot:
                               reply_markup=kb.reply(node_id, username, again=True, extend=True))
 
     def act_upload_image(self, m: Message):
-        """
-        Активирует режим ожидания изображения для последующей выгрузки на FunPay.
-        """
+                   
         cbt = CBT.UPLOAD_CHAT_IMAGE if m.text.startswith("/upload_chat_img") else CBT.UPLOAD_OFFER_IMAGE
         result = self.bot.send_message(m.chat.id, _("send_img"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, cbt)
 
     def act_upload_backup(self, m: Message):
-        """
-        Активирует режим ожидания бекапа.
-        """
+                   
         result = self.bot.send_message(m.chat.id, _("send_backup"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.UPLOAD_BACKUP)
 
@@ -791,8 +633,7 @@ class TGBot:
         self.cardinal.MAIN_CFG["Greetings"]["greetingsText"] = m.text
         logger.info(_("log_greeting_changed", m.from_user.username, m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_GREETINGS_TEXT))
         self.bot.reply_to(m, _("greeting_changed"), reply_markup=keyboard)
 
@@ -812,8 +653,7 @@ class TGBot:
         self.cardinal.MAIN_CFG["Greetings"]["greetingsCooldown"] = str(cooldown)
         logger.info(_("log_greeting_cooldown_changed", m.from_user.username, m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_GREETINGS_COOLDOWN))
         self.bot.reply_to(m, _("greeting_cooldown_changed").format(m.text), reply_markup=keyboard)
 
@@ -831,8 +671,7 @@ class TGBot:
         self.cardinal.MAIN_CFG["OrderConfirm"]["replyText"] = m.text
         logger.info(_("log_order_confirm_changed", m.from_user.username, m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:oc"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:oc"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT))
         self.bot.reply_to(m, _("order_confirm_changed"), reply_markup=keyboard)
 
@@ -932,15 +771,12 @@ class TGBot:
         self.cardinal.MAIN_CFG["ReviewReply"][f"star{stars}ReplyText"] = m.text
         logger.info(_("log_review_reply_changed", m.from_user.username, m.from_user.id, stars, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:rr"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:rr"),
                  B(_("gl_edit"), callback_data=f"{CBT.EDIT_REVIEW_REPLY_TEXT}:{stars}"))
         self.bot.reply_to(m, _("review_reply_changed", '⭐' * stars), reply_markup=keyboard)
 
     def open_reply_menu(self, c: CallbackQuery):
-        """
-        Открывает меню ответа на сообщение (callback используется в кнопках "назад").
-        """
+                   
         split = c.data.split(":")
         node_id, username, again = int(split[1]), split[2], int(split[3])
         extend = True if len(split) > 4 and int(split[4]) else False
@@ -948,9 +784,7 @@ class TGBot:
                                            reply_markup=kb.reply(node_id, username, bool(again), extend))
 
     def extend_new_message_notification(self, c: CallbackQuery):
-        """
-        "Расширяет" уведомление о новом сообщении.
-        """
+                   
         chat_id, username = c.data.split(":")[1:]
         try:
             chat = self.cardinal.account.get_chat(int(chat_id))
@@ -969,8 +803,7 @@ class TGBot:
         last_badge = None
         last_by_vertex = False
         for i in messages:
-            if i.author_id == last_message_author_id and i.by_bot == last_by_bot and i.badge == last_badge and \
-                    last_by_vertex == i.by_vertex:
+            if i.author_id == last_message_author_id and i.by_bot == last_by_bot and i.badge == last_badge and                    last_by_vertex == i.by_vertex:
                 author = ""
             elif i.author_id == self.cardinal.account.id:
                 author = f"<i><b>🤖 {_('you')} (<i>FPS</i>):</b></i> " if i.by_bot else f"<i><b>🫵 {_('you')}:</b></i> "
@@ -992,9 +825,7 @@ class TGBot:
                     author = f"<i><b>🐺 {i.message.author}: </b></i>"
             else:
                 author = f"<i><b>🆘 {i.author} ({_('support')}): </b></i>"
-            msg_text = f"<code>{utils.escape(i.text)}</code>" if i.text else \
-                f"<a href=\"{i.image_link}\">" \
-                f"{self.cardinal.show_image_name and not (i.author_id == self.cardinal.account.id and i.by_bot) and i.image_name or _('photo')}</a>"
+            msg_text = f"<code>{utils.escape(i.text)}</code>" if i.text else                f"<a href=\"{i.image_link}\">"                f"{self.cardinal.show_image_name and not (i.author_id == self.cardinal.account.id and i.by_bot) and i.image_name or _('photo')}</a>"
             text += f"{author}{msg_text}\n\n"
             last_message_author_id = i.author_id
             last_by_bot = i.by_bot
@@ -1004,11 +835,8 @@ class TGBot:
         self.bot.edit_message_text(text, c.message.chat.id, c.message.id,
                                    reply_markup=kb.reply(int(chat_id), username, False, False))
 
-    # Ордер
     def ask_confirm_refund(self, call: CallbackQuery):
-        """
-        Просит подтвердить возврат денег.
-        """
+                   
         split = call.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         keyboard = kb.new_order(order_id, username, node_id, confirmation=True)
@@ -1016,9 +844,7 @@ class TGBot:
         self.bot.answer_callback_query(call.id)
 
     def cancel_refund(self, call: CallbackQuery):
-        """
-        Отменяет возврат.
-        """
+                   
         split = call.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         keyboard = kb.new_order(order_id, username, node_id)
@@ -1026,9 +852,7 @@ class TGBot:
         self.bot.answer_callback_query(call.id)
 
     def refund(self, c: CallbackQuery):
-        """
-        Оформляет возврат за заказ.
-        """
+                   
         split = c.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         new_msg = None
@@ -1068,41 +892,32 @@ class TGBot:
         self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                            reply_markup=kb.new_order(order_id, username, node_id, no_refund=no_refund))
 
-    # Панель управления
     def open_cp(self, c: CallbackQuery):
-        """
-        Открывает основное меню настроек (редактирует сообщение).
-        """
+                   
         self.bot.edit_message_text(_("desc_main"), c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS())
         self.bot.answer_callback_query(c.id)
 
     def open_cp2(self, c: CallbackQuery):
-        """
-        Открывает 2 страницу основного меню настроек (редактирует сообщение).
-        """
+                   
         self.bot.edit_message_text(_("desc_main"), c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS_2())
         self.bot.answer_callback_query(c.id)
 
     def open_cp3(self, c: CallbackQuery):
-        """
-        Открывает 3 страницу основного меню настроек - встроенные модули (редактирует сообщение).
-        """
+                   
         self.bot.edit_message_text("📦 <b>Встроенные модули</b>\n\nНастройки дополнительных функций:", c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS_3())
         self.bot.answer_callback_query(c.id)
 
     def switch_param(self, c: CallbackQuery):
-        """
-        Переключает переключаемые настройки FPS.
-        """
+                   
         split = c.data.split(":")
         section, option = split[1], split[2]
         if section == "FunPay" and option == "oldMsgGetMode":
             self.cardinal.switch_msg_get_mode()
         elif section == "Proxy" and option == "enable":
-            # Обработка переключения прокси "на лету"
+                                                     
             current_state = self.cardinal.MAIN_CFG[section].getboolean(option)
             new_state = not current_state
             self.cardinal.toggle_proxy(new_state)
@@ -1118,13 +933,13 @@ class TGBot:
             "OrderConfirm": kb.order_confirm_reply_settings,
             "OrderReminders": kb.order_reminders_settings,
             "ReviewReply": kb.review_reply_settings,
-            "Proxy": kb.proxy  # Добавляем поддержку обновления клавиатуры прокси
+            "Proxy": kb.proxy                                                    
         }
         if section == "Telegram":
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=kb.authorized_users(self.cardinal, offset=int(split[3])))
         elif section == "Proxy":
-            # Обработка обновления клавиатуры прокси с учетом смещения
+                                                                      
             offset = int(split[3]) if len(split) > 3 else 0
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=kb.proxy(self.cardinal, offset, {}))
@@ -1143,17 +958,13 @@ class TGBot:
         logger.info(_("log_notification_switched", c.from_user.username, c.from_user.id,
                       notification_type, c.message.chat.id, result))
         keyboard = kb.announcements_settings if notification_type in [utils.NotificationTypes.announcement,
-                                                                      utils.NotificationTypes.ad] \
-            else kb.notifications_settings
+                                                                      utils.NotificationTypes.ad]            else kb.notifications_settings
         self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                            reply_markup=keyboard(self.cardinal, c.message.chat.id))
         self.bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def open_settings_section(self, c: CallbackQuery):
-        """
-        Открывает выбранную категорию настроек.
-        """
-        #
+                   
         section = c.data.split(":")[1]
         sections = {
             "lang": (_("desc_lang"), kb.language_settings, [self.cardinal]),
@@ -1175,32 +986,24 @@ class TGBot:
         self.bot.edit_message_text(curr[0], c.message.chat.id, c.message.id, reply_markup=curr[1](*curr[2]))
         self.bot.answer_callback_query(c.id)
 
-    # Прочее
     def cancel_action(self, call: CallbackQuery):
-        """
-        Обнуляет состояние пользователя по кнопке "Отмена" (CBT.CLEAR_STATE).
-        """
+                   
         result = self.clear_state(call.message.chat.id, call.from_user.id, True)
         if result is None:
             self.bot.answer_callback_query(call.id)
 
     def param_disabled(self, c: CallbackQuery):
-        """
-        Отправляет сообщение о том, что параметр отключен в глобальных переключателях.
-        """
+                   
         self.bot.answer_callback_query(c.id, _("param_disabled"), show_alert=True)
 
     def send_announcements_kb(self, m: Message):
-        """
-        Отправляет сообщение с клавиатурой управления уведомлениями о новых объявлениях.
-        """
+                   
         self.bot.send_message(m.chat.id, _("desc_an"), reply_markup=kb.announcements_settings(self.cardinal, m.chat.id))
 
     def send_review_reply_text(self, c: CallbackQuery):
         stars = int(c.data.split(":")[1])
         text = self.cardinal.MAIN_CFG["ReviewReply"][f"star{stars}ReplyText"]
-        keyboard = K() \
-            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:rr"),
+        keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:rr"),
                  B(_("gl_edit"), callback_data=f"{CBT.EDIT_REVIEW_REPLY_TEXT}:{stars}"))
         if not text:
             self.bot.send_message(c.message.chat.id, _("review_reply_empty", "⭐" * stars), reply_markup=keyboard)
@@ -1236,9 +1039,7 @@ class TGBot:
         self.open_settings_section(c)
 
     def __register_handlers(self):
-        """
-        Регистрирует хэндлеры всех команд.
-        """
+                   
         self.mdw_handler(self.setup_chat_notifications, update_types=['message'])
         self.msg_handler(self.reg_admin, func=lambda msg: msg.from_user.id not in self.authorized_users,
                          content_types=['text', 'document', 'photo', 'sticker'])
@@ -1326,29 +1127,16 @@ class TGBot:
         self.cbq_handler(self.switch_lang, lambda c: c.data.startswith(f"{CBT.LANG}:"))
         self.cbq_handler(self.confirm_update_handler, lambda c: c.data.startswith("update:"))
 
-        # Fallback обработчик для отладки - ловит все необработанные callback'и
-        # Закомментируйте после отладки!
-        # self.cbq_handler(self._fallback_callback, lambda c: True)
-
     def send_notification(self, text: str | None, keyboard: K | None = None,
                           notification_type: str = utils.NotificationTypes.other, photo: bytes | None = None,
                           pin: bool = False):
-        """
-        Отправляет сообщение во все чаты для уведомлений из self.notification_settings.
-
-        :param text: текст уведомления.
-        :param keyboard: экземпляр клавиатуры.
-        :param notification_type: тип уведомления.
-        :param photo: фотография (если нужна).
-        :param pin: закреплять ли сообщение.
-        """
+                   
         kwargs = {}
         if keyboard is not None:
             kwargs["reply_markup"] = keyboard
         to_delete = []
         for chat_id in self.notification_settings:
-            if notification_type != utils.NotificationTypes.important_announcement and \
-                    not self.is_notification_enabled(chat_id, notification_type):
+            if notification_type != utils.NotificationTypes.important_announcement and                    not self.is_notification_enabled(chat_id, notification_type):
                 continue
 
             try:
@@ -1367,8 +1155,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
                 if isinstance(e, ApiTelegramException) and (
                         e.result.status_code == 403 or e.result.status_code == 400 and
-                        (e.result_json.get('description') in \
-                         ("Bad Request: group chat was upgraded to a supergroup chat", "Bad Request: chat not found"))):
+                        (e.result_json.get('description') in                         ("Bad Request: group chat was upgraded to a supergroup chat", "Bad Request: chat not found"))):
                     to_delete.append(chat_id)
                 continue
         for chat_id in to_delete:
@@ -1377,20 +1164,11 @@ class TGBot:
                 utils.save_notification_settings(self.notification_settings)
 
     def add_command_to_menu(self, command: str, help_text: str) -> None:
-        """
-        Добавляет команду в список команд (в кнопке menu).
-
-        :param command: текст команды.
-
-        :param help_text: текст справки.
-        """
+                   
         self.commands[command] = help_text
 
     def setup_commands(self):
-        """
-        Устанавливает меню команд.
-        """
-        # Добавляем команды от встроенных модулей
+                   
         if hasattr(self.cardinal, 'builtin_tg_commands'):
             for module_name, cmds in self.cardinal.builtin_tg_commands.items():
                 for cmd, desc, is_admin in cmds:
@@ -1403,10 +1181,7 @@ class TGBot:
             self.bot.set_my_commands(commands, language_code=lang)
 
     def edit_bot(self):
-        """
-        Изменяет описания и название бота.
-        """
-
+                   
         name = self.bot.get_me().full_name
         limit = 64
         add_to_name = ["FunPay Bot | Бот ФанПей", "FunPay Bot", "FunPayBot", "FunPay"]
@@ -1436,9 +1211,7 @@ class TGBot:
         logger.info(_("log_tg_initialized"))
 
     def run(self):
-        """
-        Запускает поллинг.
-        """
+                   
         self.send_notification(_("bot_started"), notification_type=utils.NotificationTypes.bot_start)
         k_err = 0
         while True:

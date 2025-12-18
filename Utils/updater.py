@@ -1,6 +1,3 @@
-"""
-Проверка на обновления.
-"""
 import time
 from logging import getLogger
 from locales.localizer import Localizer
@@ -18,31 +15,16 @@ HEADERS = {
     "accept": "application/vnd.github+json"
 }
 
-
 class Release:
-    """
-    Класс, описывающий релиз.
-    """
-
+           
     def __init__(self, name: str, description: str, sources_link: str):
-        """
-        :param name: название релиза.
-        :param description: описание релиза (список изменений).
-        :param sources_link: ссылка на архив с исходниками.
-        """
+                   
         self.name = name
         self.description = description
         self.sources_link = sources_link
 
-
-# Получение данных о новом релизе
 def get_tags(current_tag: str) -> list[str] | None:
-    """
-    Получает все теги с GitHub репозитория.
-
-    :param current_tag: текущий тег.
-    :return: список тегов или None в случае ошибки.
-    """
+           
     try:
         response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/tags", headers=HEADERS)
         response.raise_for_status()
@@ -52,37 +34,21 @@ def get_tags(current_tag: str) -> list[str] | None:
         logger.debug("TRACEBACK", exc_info=True)
         return None
 
-
 def get_next_tag(tags: list[str], current_tag: str):
-    """
-    Ищет след. тег после переданного.
-    Если не находит текущий тег, возвращает первый.
-    Если текущий тег - последний, возвращает None.
-
-    :param tags: список тегов (отсортированы от нового к старому).
-    :param current_tag: текущий тег.
-
-    :return: след. тег / первый тег / None
-    """
+           
     try:
         curr_index = tags.index(current_tag)
     except ValueError:
-        # Текущий тег не найден — возвращаем самый новый
+                                                        
         return tags[0] if tags else None
 
     if curr_index == 0:
-        # Текущий тег уже самый новый
+                                     
         return None
     return tags[curr_index - 1]
 
-
 def get_releases(from_tag: str) -> list[Release] | None:
-    """
-    Получает данные о доступных релизах, начиная с тега.
-
-    :param from_tag: тег релиза, с которого начинать поиск.
-    :return: список релизов или None в случае ошибки.
-    """
+           
     try:
         response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases", headers=HEADERS)
         response.raise_for_status()
@@ -97,20 +63,14 @@ def get_releases(from_tag: str) -> list[Release] | None:
         logger.debug("TRACEBACK", exc_info=True)
         return None
 
-
 def get_new_releases(current_tag) -> int | list[Release]:
-    """
-    Проверяет на наличие обновлений.
-
-    :param current_tag: тег текущей версии.
-    :return: список новых релизов или код ошибки.
-    """
+           
     tags = get_tags(current_tag)
     if tags is None:
-        return 3  # Ошибка получения тегов
+        return 3                          
 
     if current_tag not in tags:
-        # Если текущий тег не найден, считаем его устаревшим и возвращаем последний релиз
+                                                                                         
         releases = get_releases("")
         if releases is None:
             return 3
@@ -118,24 +78,16 @@ def get_new_releases(current_tag) -> int | list[Release]:
 
     next_tag = get_next_tag(tags, current_tag)
     if next_tag is None:
-        return 2  # Текущий тег последний
+        return 2                         
 
     releases = get_releases(current_tag)
     if releases is None:
-        return 3  # Ошибка получения релизов
+        return 3                            
 
     return releases
 
-
-#  Загрузка нового релиза
 def download_zip(url: str) -> int:
-    """
-    Загружает zip архив с обновлением в файл storage/cache/update.zip.
-
-    :param url: ссылка на zip архив.
-
-    :return: 0, если архив с обновлением загружен, иначе - 1.
-    """
+           
     try:
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
@@ -147,13 +99,8 @@ def download_zip(url: str) -> int:
         logger.debug("TRACEBACK", exc_info=True)
         return 1
 
-
 def extract_update_archive() -> str | int:
-    """
-    Разархивирует скачанный update.zip.
-
-    :return: название папки с обновлением (storage/cache/update/<папка с обновлением>) или 1, если произошла ошибка.
-    """
+           
     try:
         if os.path.exists("storage/cache/update/"):
             shutil.rmtree("storage/cache/update/", ignore_errors=True)
@@ -167,14 +114,8 @@ def extract_update_archive() -> str | int:
         logger.debug("TRACEBACK", exc_info=True)
         return 1
 
-
 def zipdir(path, zip_obj):
-    """
-    Рекурсивно архивирует папку.
-
-    :param path: путь до папки.
-    :param zip_obj: объект zip архива.
-    """
+           
     for root, dirs, files in os.walk(path):
         if os.path.basename(root) == "__pycache__":
             continue
@@ -183,13 +124,8 @@ def zipdir(path, zip_obj):
                           os.path.relpath(os.path.join(root, file),
                                           os.path.join(path, '..')))
 
-
 def create_backup() -> int:
-    """
-    Создает резервную копию с папками storage и configs.
-
-    :return: 0, если бэкап создан успешно, иначе - 1.
-    """
+           
     try:
         with zipfile.ZipFile("backup.zip", "w") as zip:
             zipdir("storage", zip)
@@ -200,13 +136,8 @@ def create_backup() -> int:
         logger.debug("TRACEBACK", exc_info=True)
         return 1
 
-
 def extract_backup_archive() -> bool:
-    """
-    Разархивирует скачанный backup.zip. в storage/cache/backup/
-
-    :return: True, если разархивировано. False в случае ошибок.
-    """
+           
     try:
         if os.path.exists("storage/cache/backup/"):
             shutil.rmtree("storage/cache/backup/", ignore_errors=True)
@@ -219,16 +150,8 @@ def extract_backup_archive() -> bool:
         logger.debug("TRACEBACK", exc_info=True)
         return False
 
-
 def install_release(folder_name: str) -> int:
-    """
-    Устанавливает обновление.
-
-    :param folder_name: название папки со скачанным обновлением в storage/cache/update
-    :return: 0, если обновление установлено.
-        1 - произошла непредвиденная ошибка.
-        2 - папка с обновлением отсутствует.
-    """
+           
     try:
         release_folder = os.path.join("storage/cache/update", folder_name)
         if not os.path.exists(release_folder):
@@ -265,11 +188,8 @@ def install_release(folder_name: str) -> int:
         logger.debug("TRACEBACK", exc_info=True)
         return 1
 
-
 def install_backup() -> bool:
-    """
-    Устанавливает бекап.
-    """
+           
     try:
         backup_folder = "storage/cache/backup"
         if not os.path.exists(backup_folder):

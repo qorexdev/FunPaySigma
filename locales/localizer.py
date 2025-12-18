@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger("localizer")
 
-
 class Localizer:
     def __new__(cls, curr_lang: str | None = None):
         if not hasattr(cls, "instance"):
@@ -23,15 +22,7 @@ class Localizer:
         return cls.instance
 
     def translate(self, variable_name: str, *args, language: str | None = None):
-        """
-        Возвращает форматированный локализированный текст.
-
-        :param variable_name: название переменной с текстом.
-        :param args: аргументы для форматирования.
-        :param language: язык перевода, опционально.
-
-        :return: форматированный локализированный текст.
-        """
+                   
         text = variable_name
         for lang in self.languages.values():
             if hasattr(lang, variable_name):
@@ -51,11 +42,11 @@ class Localizer:
             return text
 
     def add_translation(self, uuid: str, variable_name: str, value: str, language: Literal["uk", "ru", "en"]):
-        """Позволяет добавить перевод фраз из плагина."""
+                                                         
         setattr(self.languages[language], f"{uuid}_{variable_name}", value)
 
     def plugin_translate(self, uuid: str, variable_name: str, *args, language: str | None = None):
-        """Позволяет получить перевод фраз из плагина."""
+                                                         
         s = f"{uuid}_{variable_name}"
         result = self.translate(s, *args, language=language)
         if result != s:
