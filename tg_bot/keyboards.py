@@ -129,6 +129,16 @@ def order_reminders_settings(c: Cardinal):
     kb = K()        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled"))        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL))        .add(B(_("or_send_all"), None, CBT.SEND_ALL_REMINDERS))        .add(B(_("gl_back"), None, CBT.MAIN2))
     return kb
 
+def review_reminders_settings(c: Cardinal):
+           
+    enabled = bool_to_text(int(c.MAIN_CFG['ReviewReminders']['enabled']))
+    timeout = c.MAIN_CFG['ReviewReminders']['timeout']
+    repeat_count = c.MAIN_CFG['ReviewReminders']['repeatCount']
+    interval = c.MAIN_CFG['ReviewReminders']['interval']
+
+    kb = K()        .add(B(_("rr_enabled", enabled), None, f"{CBT.SWITCH}:ReviewReminders:enabled"))        .add(B(_("rr_timeout").format(timeout), None, CBT.EDIT_REVIEW_REMINDERS_TIMEOUT))        .add(B(_("rr_template"), None, CBT.EDIT_REVIEW_REMINDERS_TEMPLATE))        .add(B(_("rr_repeat_count").format(repeat_count), None, CBT.EDIT_REVIEW_REMINDERS_REPEAT_COUNT))        .add(B(_("rr_interval").format(interval), None, CBT.EDIT_REVIEW_REMINDERS_INTERVAL))        .add(B(_("rr_send_all"), None, CBT.SEND_ALL_REVIEW_REMINDERS))        .add(B(_("gl_back"), None, CBT.MAIN2))
+    return kb
+
 def authorized_users(c: Cardinal, offset: int):
            
     kb = K()

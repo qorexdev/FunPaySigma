@@ -818,6 +818,188 @@ class TGBot:
             reply_markup=keyboard
         )
 
+    def act_edit_review_reminders_timeout(self, c: CallbackQuery):
+        text = _("v_edit_review_reminders_timeout")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TIMEOUT)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_review_reminders_timeout(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            timeout = int(m.text)
+            if timeout <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["ReviewReminders"]["timeout"] = str(timeout)
+        logger.info(_("log_review_reminders_timeout_changed", m.from_user.username, m.from_user.id, timeout))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.review_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("review_reminders_timeout_changed", timeout), reply_markup=keyboard)
+
+    def act_edit_review_reminders_template(self, c: CallbackQuery):
+        variables = ["v_order_id", "v_order_link", "v_username"]
+        current_template = self.cardinal.MAIN_CFG["ReviewReminders"].get("template", "")
+        text = f"{_('v_edit_review_reminders_template')}{_('v_edit_review_reminders_template_warning')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        text += f"\n\n📝 <b>Текущий шаблон:</b>\n<code>{current_template}</code>"
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TEMPLATE)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_review_reminders_template(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        self.cardinal.MAIN_CFG["ReviewReminders"]["template"] = m.text
+        logger.info(_("log_review_reminders_template_changed", m.from_user.username, m.from_user.id))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.review_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("review_reminders_template_changed"), reply_markup=keyboard)
+
+    def act_edit_review_reminders_repeat_count(self, c: CallbackQuery):
+        text = _("v_edit_review_reminders_repeat_count")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_REVIEW_REMINDERS_REPEAT_COUNT)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_review_reminders_repeat_count(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            repeat_count = int(m.text)
+            if repeat_count < 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["ReviewReminders"]["repeatCount"] = str(repeat_count)
+        logger.info(_("log_review_reminders_repeat_count_changed", m.from_user.username, m.from_user.id, repeat_count))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.review_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("review_reminders_repeat_count_changed", repeat_count), reply_markup=keyboard)
+
+    def act_edit_review_reminders_interval(self, c: CallbackQuery):
+        text = _("v_edit_review_reminders_interval")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_REVIEW_REMINDERS_INTERVAL)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_review_reminders_interval(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            interval = int(m.text)
+            if interval <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        self.cardinal.MAIN_CFG["ReviewReminders"]["interval"] = str(interval)
+        logger.info(_("log_review_reminders_interval_changed", m.from_user.username, m.from_user.id, interval))
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        keyboard = kb.review_reminders_settings(self.cardinal)
+        self.bot.reply_to(m, _("review_reminders_interval_changed", interval), reply_markup=keyboard)
+
+    def send_all_review_reminders(self, c: CallbackQuery):
+        from Utils import cardinal_tools
+        from FunPayAPI import types
+        
+        try:
+            cursor, orders, locale, subcats = self.cardinal.account.get_sales(state="closed", include_paid=False, include_refunded=False)
+            closed_orders = [o for o in orders if o.status == types.OrderStatuses.CLOSED]
+        except Exception as e:
+            logger.warning(f"Ошибка получения заказов: {e}")
+            self.bot.answer_callback_query(c.id, _("gl_error"), show_alert=True)
+            return
+        
+        if not closed_orders:
+            self.bot.answer_callback_query(c.id, _("rr_send_all_no_orders"), show_alert=True)
+            return
+        
+        self.bot.answer_callback_query(c.id)
+        
+        template = self.cardinal.MAIN_CFG["ReviewReminders"]["template"]
+        if not template:
+            template = "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз"
+        
+        progress_msg = self.bot.send_message(c.message.chat.id, _("rr_send_all_started"))
+        
+        sent_count = 0
+        error_count = 0
+        skipped_count = 0
+        buyers_already_sent = getattr(self.cardinal, '_review_reminder_sent_buyers', set())
+        self.cardinal._review_reminder_sent_buyers = buyers_already_sent
+        
+        unique_buyers = {}
+        sorted_orders = sorted(closed_orders, key=lambda o: o.date, reverse=True)
+        for order in sorted_orders:
+            buyer = order.buyer_username
+            if buyer not in unique_buyers:
+                unique_buyers[buyer] = order
+        
+        to_send = [(buyer, order) for buyer, order in unique_buyers.items() if buyer not in buyers_already_sent]
+        total = len(to_send)
+        
+        if total == 0:
+            keyboard = kb.review_reminders_settings(self.cardinal)
+            self.bot.edit_message_text(
+                "✅ Всем уже отправлено",
+                progress_msg.chat.id,
+                progress_msg.id,
+                reply_markup=keyboard
+            )
+            return
+        
+        for i, (buyer, order) in enumerate(to_send):
+            try:
+                if self.cardinal.buyer_has_any_review(buyer):
+                    skipped_count += 1
+                    continue
+                
+                order_link = f"https://funpay.com/orders/{order.id}/"
+                formatted_text = template.replace("$order_link", order_link).replace("$order_id", order.id).replace("$username", buyer)
+                
+                chat = self.cardinal.account.get_chat_by_name(buyer, True)
+                result = self.cardinal.send_message(chat.id, formatted_text, buyer)
+                
+                if result:
+                    sent_count += 1
+                    buyers_already_sent.add(buyer)
+                else:
+                    error_count += 1
+                    
+            except Exception as e:
+                err_str = str(e).lower()
+                if "слишком часто" in err_str or "too often" in err_str:
+                    logger.warning(f"Rate limit FunPay, жду 30 сек...")
+                    time.sleep(30)
+                else:
+                    logger.warning(f"Ошибка при отправке напоминания об отзыве для заказа {order.id}: {e}")
+                error_count += 1
+            
+            remaining = total - (i + 1)
+            remaining_minutes = (remaining * 15) // 60
+            
+            try:
+                progress_text = f"📤 Отправлено: {sent_count}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}\n\n⏳ Осталось: ~{remaining_minutes} мин. ({remaining} чел.)"
+                self.bot.edit_message_text(
+                    progress_text,
+                    progress_msg.chat.id,
+                    progress_msg.id
+                )
+            except:
+                pass
+            
+            if remaining > 0 and sent_count > 0:
+                time.sleep(15)
+        
+        keyboard = kb.review_reminders_settings(self.cardinal)
+        self.bot.edit_message_text(
+            f"✅ Готово!\n\n📨 Отправлено: {sent_count}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}",
+            progress_msg.chat.id,
+            progress_msg.id,
+            reply_markup=keyboard
+        )
+
+
     def act_edit_review_reply_text(self, c: CallbackQuery):
         stars = int(c.data.split(":")[1])
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
@@ -995,6 +1177,7 @@ class TGBot:
             "Greetings": kb.greeting_settings,
             "OrderConfirm": kb.order_confirm_reply_settings,
             "OrderReminders": kb.order_reminders_settings,
+            "ReviewReminders": kb.review_reminders_settings,
             "ReviewReply": kb.review_reply_settings,
             "Proxy": kb.proxy                                                    
         }
@@ -1042,7 +1225,8 @@ class TGBot:
                    kb.greeting_settings, [self.cardinal]),
             "oc": (_("desc_oc", utils.escape(self.cardinal.MAIN_CFG['OrderConfirm']['replyText'])),
                    kb.order_confirm_reply_settings, [self.cardinal]),
-            "or": (_("desc_order_reminders"), kb.order_reminders_settings, [self.cardinal])
+            "or": (_("desc_order_reminders"), kb.order_reminders_settings, [self.cardinal]),
+            "revr": (_("desc_review_reminders"), kb.review_reminders_settings, [self.cardinal])
         }
 
         curr = sections[section]
@@ -1142,6 +1326,19 @@ class TGBot:
         self.msg_handler(self.edit_order_reminders_interval,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_INTERVAL))
         self.cbq_handler(self.send_all_reminders, lambda c: c.data == CBT.SEND_ALL_REMINDERS)
+        self.cbq_handler(self.act_edit_review_reminders_timeout, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_TIMEOUT)
+        self.msg_handler(self.edit_review_reminders_timeout,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TIMEOUT))
+        self.cbq_handler(self.act_edit_review_reminders_template, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_TEMPLATE)
+        self.msg_handler(self.edit_review_reminders_template,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TEMPLATE))
+        self.cbq_handler(self.act_edit_review_reminders_repeat_count, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_REPEAT_COUNT)
+        self.msg_handler(self.edit_review_reminders_repeat_count,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_REPEAT_COUNT))
+        self.cbq_handler(self.act_edit_review_reminders_interval, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_INTERVAL)
+        self.msg_handler(self.edit_review_reminders_interval,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_INTERVAL))
+        self.cbq_handler(self.send_all_review_reminders, lambda c: c.data == CBT.SEND_ALL_REVIEW_REMINDERS)
         self.cbq_handler(self.act_edit_review_reply_text, lambda c: c.data.startswith(f"{CBT.EDIT_REVIEW_REPLY_TEXT}:"))
         self.msg_handler(self.edit_review_reply_text,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REPLY_TEXT))

@@ -753,6 +753,21 @@ def remove_order_from_reminders_handler(c: Cardinal, e: OrderStatusChangedEvent)
         del c.pending_orders[order_id]
         logger.info(f"Заказ {order_id} удален из списка напоминаний (статус: {e.order.status.name})")
 
+def add_order_to_review_reminders_handler(c: Cardinal, e: OrderStatusChangedEvent):
+    if not c.MAIN_CFG["ReviewReminders"].getboolean("enabled"):
+        return
+    
+    if e.order.status != types.OrderStatuses.CLOSED:
+        return
+    
+    order_id = e.order.id
+    buyer_username = e.order.buyer_username
+    buyer_id = e.order.buyer_id
+    
+    c.add_confirmed_order(order_id, buyer_username, buyer_id)
+    logger.info(f"Заказ {order_id} добавлен в список для напоминаний об отзывах")
+
+
 def send_bot_started_notification_handler(c: Cardinal, *args):
            
     if c.telegram is None:
@@ -796,7 +811,7 @@ BIND_TO_NEW_ORDER = [log_new_order_handler, setup_event_attributes_handler,
                      update_lots_state_handler, add_order_to_reminders_handler]
 
 BIND_TO_ORDER_STATUS_CHANGED = [send_thank_u_message_handler, send_order_confirmed_notification_handler,
-                                remove_order_from_reminders_handler]
+                                remove_order_from_reminders_handler, add_order_to_review_reminders_handler]
 
 BIND_TO_POST_DELIVERY = [send_delivery_notification_handler]
 
