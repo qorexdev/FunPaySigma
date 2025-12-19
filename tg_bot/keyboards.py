@@ -548,8 +548,11 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
     kb = add_navigation_buttons(kb, offset, MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT, len(lots_slice),
                                 len(lots), CBT.FP_LOT_EDIT_LIST)
 
-    kb.row(B(_("gl_refresh"), None, f"{CBT.UPDATE_FP_EDIT_LOTS}:{offset}"))
-    kb.add(B(_("gl_back"), None, CBT.MAIN))
+    kb.row(
+        B(_("le_search_menu"), None, CBT.LE_SEARCH_MENU),
+        B(_("gl_refresh"), None, f"{CBT.UPDATE_FP_EDIT_LOTS}:{offset}")
+    )
+    kb.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
     return kb
 
 def edit_funpay_lot(lot_fields, offset: int, confirm_delete: bool = False) -> K:
@@ -608,7 +611,7 @@ def edit_funpay_lot(lot_fields, offset: int, confirm_delete: bool = False) -> K:
     
     kb.add(B(_("le_open_fp"), url=lot_fields.public_link))
     
-    kb.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT_LIST}:{offset}"))
+    kb.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
     
     return kb
 

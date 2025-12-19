@@ -30,6 +30,11 @@ mm_configs = "📁 Configuration"
 mm_authorized_users = "👤 Users"
 mm_proxy = "🌍 Proxy"
 
+mm_graphs = "📊 Statistics"
+mm_chat_sync = "🔄 Chat Sync"
+mm_review_chat_reply = "💬 Chat Replies"
+mm_rating_limits = "📈 Rating Limits"
+
 gs_autoraise = "{} Auto-raise"
 gs_autoresponse = "{} Autoresponse"
 gs_autodelivery = "{} Auto-delivery"
@@ -190,7 +195,7 @@ fps_init = """✅ <b><u>FPS initialized!</u></b>\n
 📊 <b><i>Active orders:</i></b>  <code>{}</code>
 
 👨‍💻 <b>Developers:</b> @qorexdev, @sidor0912
-📢 <b>Updates:</b> @fpsfork"""
+💬 <b>Chat:</b> @FunPaySigmaChat"""
 
 create_test_ad_key = "Enter the name of the lot whose auto-delivery you want to test."
 
@@ -202,8 +207,8 @@ about = """<b>🤖 FunPay Sigma v{}</b>
 <i>Fork based on FunPayCardinal</i>
 
 👨‍💻 <b>Developers:</b> @qorexdev, @sidor0912
-📢 <b>Updates channel:</b> @fpsfork
-🔗 <b>Repository:</b> https://github.com/qorexdev/FunPaySigma"""
+💬 <b>Chat:</b> @FunPaySigmaChat
+🔗 <b>Repository:</b> github.com/qorexdev/FunPaySigma"""
 
 sys_info = """<b><u>Data summary</u></b>
 
@@ -426,7 +431,24 @@ adv_description = """🤖 FunPay Sigma v{}🤖
 🧩 Plugins
 🌟 And much more..."""
 
-desc_main = "Select a settings category."
+desc_main = """🏠 <b>Main Menu</b>  <i>(1/3)</i>
+
+⚡ <b>Automation & Sales</b>
+
+Select a section:"""
+
+desc_main2 = """🏠 <b>Main Menu</b>  <i>(2/3)</i>
+
+💬 <b>Notifications & Communication</b>
+
+Configure how the bot communicates:"""
+
+desc_main3 = """🏠 <b>Main Menu</b>  <i>(3/3)</i>
+
+🛠 <b>Tools & Service</b>
+
+Advanced features:"""
+
 desc_lang = desc_main
 desc_gs = "Here you can turn the basic <i>FPS</i> functions on and off."
 desc_ns = """Here you can configure notifications.\n
@@ -611,3 +633,293 @@ crd_uuid_already_registered = "UUID {} ({}) is already registered."
 crd_handlers_registered = "The handlers from $YELLOW{}.py$RESET are registered."
 crd_handler_err = "An error occurred in the handler's execution."
 crd_tg_au_err = "Failed to update the message with user information: {}. I will try without a link."
+
+mm_support_tickets = "📨 Order Confirmation Tickets"
+
+st_enabled = "{} Auto-send (once per 24h)"
+st_send_now = "📨 Send now"
+st_cooldown = "⏳ Next in: {}"
+
+desc_support_tickets = """🏠 Menu > 📨 <b>Order Confirmation Tickets</b>
+
+Automatically sends a ticket to FunPay support requesting to close unconfirmed orders.
+
+<b>Limit:</b> Once per 24 hours (manual or auto).
+
+{} <b>Auto:</b> {}
+📦 <b>Awaiting confirmation:</b> {} orders
+⏰ <b>Next send in:</b> {}"""
+
+st_auto_enabled = "✅ Enabled"
+st_auto_disabled = "❌ Disabled"
+st_ready = "ready to send"
+st_wait_hours = "{}h {}m"
+
+st_sending = "📨 Sending ticket..."
+st_sent = """✅ <b>Ticket sent!</b>
+
+📦 Orders in ticket: {}
+⏰ Next one available in 24 hours"""
+
+st_error = "❌ Failed to send ticket. Try again later."
+st_no_orders = "📭 No unconfirmed orders older than 24h."
+st_cooldown_active = "⏳ Please wait {}h {}m before the next ticket."
+st_toggled_on = "✅ Auto-send enabled (once per 24h)"
+st_toggled_off = "❌ Auto-send disabled"
+
+log_st_sent = "$CYAN[TICKETS]$RESET Ticket sent for {} orders."
+log_st_error = "$RED[TICKETS]$RESET Failed to send ticket: {}"
+log_st_toggled = "$MAGENTA@{} (ID: {})$RESET: auto-tickets -> $YELLOW{}$RESET."
+
+le_search_menu = "🔍 Search"
+le_search_by_lot_id = "🔢 By Lot ID"
+le_search_by_category = "📁 By Category"
+le_search_by_category_id = "🔢 By Category ID"
+le_search_by_text = "📝 By Text"
+le_all_lots = "📋 All Lots"
+le_category_id_invalid = "❌ Enter a valid category ID (numbers only)."
+
+desc_le_categories_list = """🛍️ <b>FunPay Lot Editor</b>
+
+Select a category or search for a lot.
+
+🕒 Updated: {}"""
+
+le_enter_lot_id = """🔢 <b>Enter Lot ID</b>
+
+You can find it in the FunPay URL:
+<code>funpay.com/chips/123456/</code> → ID = 123456"""
+
+le_enter_category_id = """📁 <b>Enter Category ID</b>
+
+Find it in the category URL:
+<code>funpay.com/chips/123/</code> → ID = 123
+
+Or enter part of the category name."""
+
+le_enter_search_text = """📝 <b>Enter search text</b>
+
+You can search by:
+• lot title
+• description
+• emoji 🎮
+• any words"""
+
+le_category_view_title = """📁 <b>Category: {}</b>
+
+🎮 <b>Game:</b> {}
+📦 <b>Lots:</b> {}
+
+Choose an action or lot:"""
+
+le_bulk_actions = "⚡ Bulk Actions"
+le_bulk_activate_all = "✅ Activate All ({})"
+le_bulk_deactivate_all = "❌ Deactivate All ({})"
+le_bulk_delete_all = "🗑️ Delete All ({})"
+
+le_bulk_confirm_activate = """⚠️ <b>ACTIVATE ALL LOTS</b>
+
+📁 Category: <code>{}</code>
+📦 Lots: <b>{}</b>
+
+Activate all lots in this category?"""
+
+le_bulk_confirm_deactivate = """⚠️ <b>DEACTIVATE ALL LOTS</b>
+
+📁 Category: <code>{}</code>
+📦 Lots: <b>{}</b>
+
+Deactivate all lots in this category?"""
+
+le_bulk_confirm_delete = """⛔ <b>DELETE ALL LOTS</b>
+
+📁 Category: <code>{}</code>
+📦 Lots: <b>{}</b>
+
+❌ <b>This cannot be undone!</b>
+Are you sure?"""
+
+le_bulk_processing = "⏳ Processing..."
+le_bulk_done_activate = "✅ Activated: {}"
+le_bulk_done_deactivate = "❌ Deactivated: {}"
+le_bulk_done_delete = "🗑️ Deleted: {}"
+le_bulk_error = "⚠️ Errors: {}"
+
+le_search_results = """🔍 <b>Search Results</b>
+
+<b>Query:</b> <code>{}</code>
+<b>Found:</b> {} lots"""
+
+le_search_no_results = """🔍 <b>Nothing found</b>
+
+<b>Query:</b> <code>{}</code>
+
+Try different words or check the ID."""
+
+le_category_not_found = "❌ Category not found."
+le_lot_id_invalid = "❌ Enter a valid ID (numbers only)."
+
+desc_le_search_menu = """🛍️ <b>FunPay Lot Editor</b>
+
+🔍 <b>Search:</b>
+• By lot ID — enter the number
+• By category — select all lots in section
+• By text — find by title/emoji
+
+⚡ <b>Bulk:</b>
+• Activate/deactivate all lots in category
+• Delete all lots in category
+
+🕒 Updated: {}"""
+
+log_le_bulk_action = "$MAGENTA@{} (ID: {})$RESET: bulk {} for category $CYAN{}$RESET ({} lots)."
+
+mm_lots_editor = "🛍️ Lot Editor"
+
+le_edit_title_ru = "📝 Title (RU)"
+le_edit_title_en = "📝 Title (EN)"
+le_edit_title_en_auto = "🌐 EN (auto)"
+le_edit_desc_ru = "📄 Description (RU)"
+le_edit_desc_en = "📄 Description (EN)"
+le_edit_desc_en_auto = "🌐 EN (auto)"
+le_edit_price = "💰 Price: {}{}"
+le_edit_amount = "📦 Amount: {}"
+le_edit_payment_msg_ru = "💬 Auto-reply (RU)"
+le_edit_payment_msg_en = "💬 Auto-reply (EN)"
+le_edit_payment_msg_en_auto = "🌐 EN (auto)"
+le_edit_secrets = "🎁 Products"
+le_toggle_active = "{} Active"
+le_toggle_deactivate = "{} Deactivate after sale"
+le_toggle_auto_delivery = "{} FP Auto-delivery"
+le_category_fields = "⚙️ Category"
+le_save = "💾 Save"
+le_open_fp = "🌐 Open"
+le_view_details = "📋 Info"
+le_delete = "🗑️ Delete"
+le_confirm_delete = "⚠️ Confirm"
+le_cancel_delete = "🚫 Cancel"
+
+le_no_value = "—"
+le_active = "✅ Active"
+le_inactive = "❌ Inactive"
+le_enabled = "✅ On"
+le_disabled = "❌ Off"
+le_no_lots = "🤷 No lots found. Try refreshing."
+le_updating_lots = "🔄 Updating lots..."
+le_lots_update_error = "❌ Failed to update lots."
+le_loading_lot = "⏳ Loading lot..."
+le_lot_not_found = "❌ Lot not found or deleted."
+le_invalid_price = "❌ Price must be a number."
+le_invalid_amount = "❌ Amount must be a whole number."
+le_enter_secrets = """🎁 <b>Auto-delivery products</b>
+
+Current: <code>{}</code> items
+
+<b>Existing:</b>
+<code>{}</code>
+
+✍️ <b>Enter new products (one per line):</b>"""
+le_field_updated = "✅ Field «{}» updated."
+le_select_option = """⚙️ <b>Select value for «{}»</b>
+
+<b>Current:</b> <code>{}</code>"""
+le_enter_category_field = """✍️ <b>New value for «{}»:</b>
+
+<b>Current:</b> <code>{}</code>"""
+le_saving = "💾 Saving..."
+le_saved = "✅ Lot saved to FunPay!"
+le_save_error = "❌ Save failed: {}"
+le_deleting = "🗑️ Deleting..."
+le_deleted = "✅ Lot deleted."
+le_delete_error = "❌ Delete failed: {}"
+
+log_le_field_changed = "$MAGENTA@{} (ID: {})$RESET: field $YELLOW{}$RESET of lot $CYAN#{}$RESET changed."
+log_le_lot_toggled = "$MAGENTA@{} (ID: {})$RESET: $YELLOW{}$RESET of lot $CYAN#{}$RESET -> $GREEN{}$RESET."
+log_le_lot_saved = "$MAGENTA@{} (ID: {})$RESET: saved lot $CYAN#{}$RESET."
+log_le_lot_deleted = "$MAGENTA@{} (ID: {})$RESET: deleted lot $CYAN#{}$RESET."
+
+desc_le_list = """🛍️ <b>FunPay Lot Editor</b>
+
+Pick a lot. Edit it right here.
+<i>Changes will be saved to FunPay!</i>
+
+🕒 Updated: {}"""
+
+desc_le_edit_compact = """✏️ <b>Lot #{}</b>
+
+<b>🎮 Game:</b> <code>{}</code>
+<b>📁 Category:</b> <code>{}</code>
+
+━━ <b>Titles</b> ━━
+<b>🏷️ RU:</b> <code>{}</code>
+<b>🌐 EN:</b> <code>{}</code>
+
+━━ <b>Descriptions</b> ━━
+<b>📄 RU:</b> <code>{}</code>
+<b>🌐 EN:</b> <code>{}</code>
+
+━━ <b>Auto-reply</b> ━━
+<b>💬 RU:</b> <code>{}</code>
+<b>🌐 EN:</b> <code>{}</code>
+
+━━ <b>Parameters</b> ━━
+<b>💰</b> <code>{}{}</code> | <b>📦</b> <code>{}</code>
+<b>🎁 Products:</b> <code>{}</code>
+
+<b>Status:</b> {} | <b>Deact:</b> {} | <b>FP auto:</b> {}
+{}
+<i>🌐 EN auto-translate!</i>
+⚠️ <b>Don't forget to save!</b>"""
+
+desc_le_category_fields = """⚙️ <b>Category parameters</b>
+
+Special fields for this game."""
+
+desc_le_delete_confirm = """⚠️ <b>DELETE LOT</b>
+
+Are you sure?
+
+<b>🏷️</b> <code>{}</code>
+<b>💰</b> <code>{}{}</code>
+
+<b>❌ This cannot be undone!</b>"""
+
+le_enter_title_ru = """✍️ <b>New title (RU):</b>
+
+<b>Current:</b>
+<code>{}</code>"""
+
+le_enter_title_en = """✍️ <b>New title (EN):</b>
+
+<b>Current:</b>
+<code>{}</code>"""
+
+le_enter_desc_ru = """✍️ <b>New description (RU):</b>
+
+<b>Current:</b>
+<code>{}</code>"""
+
+le_enter_desc_en = """✍️ <b>New description (EN):</b>
+
+<b>Current:</b>
+<code>{}</code>"""
+
+le_enter_price = """✍️ <b>New price (number):</b>
+
+<b>💰 Current:</b> <code>{}</code>"""
+
+le_enter_amount = """✍️ <b>New amount:</b>
+(0 = infinite)
+
+<b>📦 Current:</b> <code>{}</code>"""
+
+le_enter_payment_msg_ru = """✍️ <b>Auto-reply (RU):</b>
+(Sent to buyer after payment)
+
+<b>💬 Current:</b>
+<code>{}</code>"""
+
+le_enter_payment_msg_en = """✍️ <b>Auto-reply (EN):</b>
+
+<b>💬 Current:</b>
+<code>{}</code>"""
