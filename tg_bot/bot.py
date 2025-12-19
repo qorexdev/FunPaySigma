@@ -899,61 +899,133 @@ class TGBot:
         self.bot.reply_to(m, _("review_reminders_interval_changed", interval), reply_markup=keyboard)
 
     def send_all_review_reminders(self, c: CallbackQuery):
-        from Utils import cardinal_tools
         from FunPayAPI import types
         
+        self.bot.answer_callback_query(c.id)
+        progress_msg = self.bot.send_message(c.message.chat.id, "🔍 Сканирую все закрытые заказы...")
+        
         try:
-            cursor, orders, locale, subcats = self.cardinal.account.get_sales(state="closed", include_paid=False, include_refunded=False)
-            closed_orders = [o for o in orders if o.status == types.OrderStatuses.CLOSED]
+            all_closed_orders = []
+            next_order_id, orders, locale, subcats = self.cardinal.account.get_sales(
+                state="closed", include_paid=False, include_refunded=False
+            )
+            all_closed_orders.extend([o for o in orders if o.status == types.OrderStatuses.CLOSED])
+            
+            request_count = 1
+            while next_order_id is not None:
+                for attempts in range(3, 0, -1):
+                    try:
+                        time.sleep(1)
+                        next_order_id, new_orders, locale, subcats = self.cardinal.account.get_sales(
+                            start_from=next_order_id, locale=locale, sudcategories=subcats,
+                            state="closed", include_paid=False, include_refunded=False
+                        )
+                        all_closed_orders.extend([o for o in new_orders if o.status == types.OrderStatuses.CLOSED])
+                        break
+                    except Exception as e:
+                        logger.debug(f"Не удалось получить заказы (#{next_order_id}). Попыток: {attempts}")
+                        if attempts == 1:
+                            next_order_id = None
+                
+                request_count += 1
+                if request_count % 5 == 0:
+                    try:
+                        last_id = all_closed_orders[-1].id if all_closed_orders else "?"
+                        self.bot.edit_message_text(
+                            f"🔍 Сканирую заказы... Запрос #{request_count}\nНайдено: {len(all_closed_orders)} заказов",
+                            progress_msg.chat.id,
+                            progress_msg.id
+                        )
+                    except:
+                        pass
+                        
         except Exception as e:
             logger.warning(f"Ошибка получения заказов: {e}")
-            self.bot.answer_callback_query(c.id, _("gl_error"), show_alert=True)
-            return
-        
-        if not closed_orders:
-            self.bot.answer_callback_query(c.id, _("rr_send_all_no_orders"), show_alert=True)
-            return
-        
-        self.bot.answer_callback_query(c.id)
-        
-        template = self.cardinal.MAIN_CFG["ReviewReminders"]["template"]
-        if not template:
-            template = "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз"
-        
-        progress_msg = self.bot.send_message(c.message.chat.id, _("rr_send_all_started"))
-        
-        sent_count = 0
-        error_count = 0
-        skipped_count = 0
-        buyers_already_sent = getattr(self.cardinal, '_review_reminder_sent_buyers', set())
-        self.cardinal._review_reminder_sent_buyers = buyers_already_sent
-        
-        unique_buyers = {}
-        sorted_orders = sorted(closed_orders, key=lambda o: o.date, reverse=True)
-        for order in sorted_orders:
-            buyer = order.buyer_username
-            if buyer not in unique_buyers:
-                unique_buyers[buyer] = order
-        
-        to_send = [(buyer, order) for buyer, order in unique_buyers.items() if buyer not in buyers_already_sent]
-        total = len(to_send)
-        
-        if total == 0:
             keyboard = kb.review_reminders_settings(self.cardinal)
             self.bot.edit_message_text(
-                "✅ Всем уже отправлено",
+                f"❌ Ошибка сканирования: {e}",
                 progress_msg.chat.id,
                 progress_msg.id,
                 reply_markup=keyboard
             )
             return
         
-        for i, (buyer, order) in enumerate(to_send):
+        if not all_closed_orders:
+            keyboard = kb.review_reminders_settings(self.cardinal)
+            self.bot.edit_message_text(
+                _("rr_send_all_no_orders"),
+                progress_msg.chat.id,
+                progress_msg.id,
+                reply_markup=keyboard
+            )
+            return
+        
+        self.bot.edit_message_text(
+            f"✅ Найдено {len(all_closed_orders)} закрытых заказов\n🔎 Проверяю отзывы...",
+            progress_msg.chat.id,
+            progress_msg.id
+        )
+        
+        unique_buyers = {}
+        sorted_orders = sorted(all_closed_orders, key=lambda o: o.date, reverse=True)
+        for order in sorted_orders:
+            buyer = order.buyer_username
+            if buyer not in unique_buyers:
+                unique_buyers[buyer] = order
+        
+        buyers_already_sent = getattr(self.cardinal, '_review_reminder_sent_buyers', set())
+        self.cardinal._review_reminder_sent_buyers = buyers_already_sent
+        
+        to_check = [(buyer, order) for buyer, order in unique_buyers.items() if buyer not in buyers_already_sent]
+        
+        to_send = []
+        skipped_count = 0
+        
+        for i, (buyer, order) in enumerate(to_check):
             try:
                 if self.cardinal.buyer_has_any_review(buyer):
                     skipped_count += 1
-                    continue
-                
+                else:
+                    to_send.append((buyer, order))
+            except:
+                to_send.append((buyer, order))
+            
+            if (i + 1) % 10 == 0:
+                try:
+                    self.bot.edit_message_text(
+                        f"🔎 Проверяю отзывы: {i + 1}/{len(to_check)}\n⏭️ Уже с отзывами: {skipped_count}\n📤 К отправке: {len(to_send)}",
+                        progress_msg.chat.id,
+                        progress_msg.id
+                    )
+                except:
+                    pass
+        
+        if not to_send:
+            keyboard = kb.review_reminders_settings(self.cardinal)
+            self.bot.edit_message_text(
+                f"✅ Готово!\n\n⏭️ Уже с отзывами: {skipped_count}\n📤 Новых для рассылки: 0",
+                progress_msg.chat.id,
+                progress_msg.id,
+                reply_markup=keyboard
+            )
+            return
+        
+        template = self.cardinal.MAIN_CFG["ReviewReminders"]["template"]
+        if not template:
+            template = "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз"
+        
+        total = len(to_send)
+        sent_count = 0
+        error_count = 0
+        
+        self.bot.edit_message_text(
+            f"📤 Начинаю рассылку: {total} покупателей\n⏭️ Уже с отзывами: {skipped_count}",
+            progress_msg.chat.id,
+            progress_msg.id
+        )
+        
+        for i, (buyer, order) in enumerate(to_send):
+            try:
                 order_link = f"https://funpay.com/orders/{order.id}/"
                 formatted_text = template.replace("$order_link", order_link).replace("$order_id", order.id).replace("$username", buyer)
                 
@@ -976,10 +1048,11 @@ class TGBot:
                 error_count += 1
             
             remaining = total - (i + 1)
-            remaining_minutes = (remaining * 15) // 60
+            remaining_seconds = remaining * 5
+            remaining_time = f"{remaining_seconds // 60} мин." if remaining_seconds >= 60 else f"{remaining_seconds} сек."
             
             try:
-                progress_text = f"📤 Отправлено: {sent_count}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}\n\n⏳ Осталось: ~{remaining_minutes} мин. ({remaining} чел.)"
+                progress_text = f"📤 Отправлено: {sent_count}/{total}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}\n\n⏳ Осталось: ~{remaining_time}"
                 self.bot.edit_message_text(
                     progress_text,
                     progress_msg.chat.id,
@@ -988,8 +1061,8 @@ class TGBot:
             except:
                 pass
             
-            if remaining > 0 and sent_count > 0:
-                time.sleep(15)
+            if remaining > 0:
+                time.sleep(5)
         
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.edit_message_text(
@@ -1144,14 +1217,12 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def open_cp2(self, c: CallbackQuery):
-                   
-        self.bot.edit_message_text(_("desc_main"), c.message.chat.id, c.message.id,
+        self.bot.edit_message_text(_("desc_main2"), c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS_2())
         self.bot.answer_callback_query(c.id)
 
     def open_cp3(self, c: CallbackQuery):
-                   
-        self.bot.edit_message_text("📦 <b>Встроенные модули</b>\n\nНастройки дополнительных функций:", c.message.chat.id, c.message.id,
+        self.bot.edit_message_text(_("desc_main3"), c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS_3())
         self.bot.answer_callback_query(c.id)
 

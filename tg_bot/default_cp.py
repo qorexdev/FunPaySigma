@@ -18,6 +18,9 @@ BUILTIN_CALLBACK_PREFIXES = [
     "sras_info.",
     "sync.",
     "adv_profile_",
+    "101",
+    "102",
+    "103",
 ]
 
 def init_default_cp(crd: Cardinal, *args):
