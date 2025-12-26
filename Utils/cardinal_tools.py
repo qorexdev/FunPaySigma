@@ -171,11 +171,15 @@ def load_disabled_plugins() -> list[str]:
             return []
 
 def cache_old_users(old_users: dict[int, float]):
-           
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
-    with open(f"storage/cache/old_users.json", "w", encoding="utf-8") as f:
-        f.write(json.dumps(old_users, ensure_ascii=False))
+    try:
+        with open("storage/cache/old_users.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(old_users, ensure_ascii=False))
+    except PermissionError:
+        logger.warning("Нет доступа к файлу old_users.json, пропускаю кэширование")
+    except OSError as e:
+        logger.warning(f"Ошибка записи old_users.json: {e}")
 
 def load_old_users(greetings_cooldown: float) -> dict[int, float]:
            

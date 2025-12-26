@@ -473,22 +473,21 @@ class Cardinal(object):
                 continue
 
             raise_ok = False
-            error_text = ""
-            time_delta = ""
+            wait_time = 0
+            last_interval = None
             try:
                 time.sleep(1)
                 self.account.raise_lots(subcat.category.id)
                 logger.info(_("crd_lots_raised", subcat.category.name))
                 raise_ok = True
                 last_time = self.raised_time.get(subcat.category.id)
-                self.raised_time[subcat.category.id] = new_time = int(time.time())          
-                time_delta = "" if not last_time else f" Последнее поднятие: {cardinal_tools.time_to_str(new_time - last_time)} назад."
+                self.raised_time[subcat.category.id] = new_time = int(time.time())
+                last_interval = (new_time - last_time) if last_time else None
                 time.sleep(1)
                 self.account.raise_lots(subcat.category.id)
             except FunPayAPI.exceptions.RaiseError as e:
-                if e.error_message is not None:
-                    error_text = e.error_message
                 if e.wait_time is not None:
+                    wait_time = e.wait_time
 
                     next_time = int(time.time()) + e.wait_time
                 else:
@@ -512,7 +511,8 @@ class Cardinal(object):
                 next_call = next_time if next_time < next_call else next_call
                 if not raise_ok:
                     continue
-            self.run_handlers(self.post_lots_raise_handlers, (self, subcat.category, error_text + time_delta))
+            raise_info = {"wait_time": wait_time, "last_interval": last_interval}
+            self.run_handlers(self.post_lots_raise_handlers, (self, subcat.category, raise_info))
         return next_call if next_call < float("inf") else 10
 
     def get_order_from_object(self, obj: types.OrderShortcut | types.Message | types.ChatShortcut,

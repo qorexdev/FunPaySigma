@@ -14,3 +14,5 @@ mplcyberpunk>=0.7.1
 numpy>=1.26.0
 PySocks>=1.7.1
 googletrans==4.0.0-rc1
+tgcrypto
+https://github.com/KurimuzonAkuma/pyrogram/archive/master.zip

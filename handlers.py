@@ -410,12 +410,31 @@ def test_auto_delivery_handler(c: Cardinal, e: NewMessageEvent | LastChatMessage
     fake_event = NewOrderEvent(e.runner_tag, fake_order)
     c.run_handlers(c.new_order_handlers, (c, fake_event,))
 
-def send_categories_raised_notification_handler(c: Cardinal, cat: types.Category, error_text: str = "") -> None:
-           
+def send_categories_raised_notification_handler(c: Cardinal, cat: types.Category, raise_info: dict = None) -> None:
     if not c.telegram:
         return
-
-    text = f"""⤴️<b><i>Поднял все лоты категории</i></b> <code>{cat.name}</code>\n<tg-spoiler>{error_text}</tg-spoiler>"""          
+    
+    if raise_info is None:
+        raise_info = {}
+    
+    wait_time = raise_info.get("wait_time", 0)
+    last_interval = raise_info.get("last_interval")
+    
+    lines = [f"⤴️ Поднял все лоты категории <b>{cat.name}</b>"]
+    
+    if wait_time > 0:
+        from datetime import datetime, timedelta
+        next_raise = datetime.now() + timedelta(seconds=wait_time)
+        next_raise_str = next_raise.strftime("%H:%M")
+        lines.append(f"⏰ Следующее поднятие: <code>{next_raise_str}</code>")
+    
+    if last_interval:
+        from Utils import cardinal_tools
+        interval_str = cardinal_tools.time_to_str(last_interval)
+        lines.append(f"🔄 Интервал поднятий: <code>{interval_str}</code>")
+    
+    text = "\n".join(lines)
+    
     Thread(target=c.telegram.send_notification,
            args=(text,),
            kwargs={"notification_type": utils.NotificationTypes.lots_raise}, daemon=True).start()
