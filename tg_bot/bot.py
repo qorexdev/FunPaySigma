@@ -449,11 +449,16 @@ class TGBot:
         logger.info(
             f"[IMPORTANT] Получаю бэкап по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
         if os.path.exists("backup.zip"):          
-            with open(file_path := "backup.zip", 'rb') as file:
-                modification_time = os.path.getmtime(file_path)
-                formatted_time = time.strftime('%d.%m.%Y %H:%M:%S', time.localtime(modification_time))
-                self.bot.send_document(chat_id=m.chat.id, document=InputFile(file),
-                                       caption=f'{_("update_backup")}\n\n{formatted_time}')
+            file_path = "backup.zip"
+            modification_time = os.path.getmtime(file_path)
+            formatted_time = time.strftime('%d.%m.%Y %H:%M:%S', time.localtime(modification_time))
+            with open(file_path, 'rb') as file:
+                self.bot.send_document(
+                    chat_id=m.chat.id, 
+                    document=file,
+                    visible_file_name='backup.zip',
+                    caption=f'{_("update_backup")}\n\n{formatted_time}'
+                )
         else:
             self.bot.send_message(m.chat.id, _("update_backup_not_found"))
 

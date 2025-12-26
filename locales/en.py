@@ -4,8 +4,8 @@ gl_yes = "✅ Yes"
 gl_yep = "✅ yep"
 gl_no = "❌ No"
 gl_cancel = "✖️ Cancel"
-gl_error = "⚠️ Error"
-gl_try_again = "Try again"
+gl_error = "⚠️ The Grinch Stole Data (Error)"
+gl_try_again = "Try again before the snow melts"
 gl_error_try_again = f"{gl_error}. {gl_try_again}."
 gl_refresh = "🔄 Refresh"
 gl_delete = "🗑️ Delete"
@@ -15,20 +15,20 @@ gl_pcs = "pcs."
 gl_last_update = "Last update"
 
 mm_language = "🌐 Language"
-mm_global = "⚡ Main Features"
-mm_notifications = "🔔 Notifications"
+mm_global = "⚡ Main Features 🎄"
+mm_notifications = "🔔 Notifications ❄️"
 mm_autoresponse = "🤖 Autoresponse"
-mm_autodelivery = "📦 Auto-delivery"
-mm_blacklist = "🚫 Blacklist"
+mm_autodelivery = "🎁 Auto-delivery"
+mm_blacklist = "📜 Naughty List (Blacklist) 🥶"
 mm_templates = "📝 Templates"
-mm_greetings = "👋 Greeting"
+mm_greetings = "🎅 Greeting"
 mm_order_confirm = "✅ Order Confirmation"
 mm_review_reply = "⭐ Reviews"
-mm_new_msg_view = "💬 Message View"
+mm_new_msg_view = "💬 Message View 📨"
 mm_plugins = "🧩 Plugins"
 mm_configs = "📁 Configuration"
-mm_authorized_users = "👤 Users"
-mm_proxy = "🌍 Proxy"
+mm_authorized_users = "🧝 Elves (Users)"
+mm_proxy = "🦌 Reindeer (Proxy)"
 
 mm_graphs = "📊 Statistics"
 mm_chat_sync = "🔄 Chat Sync"
@@ -44,20 +44,20 @@ gs_autodisable = "{} Deactivate lots"
 gs_old_msg_mode = "{} Old Message Receiving Mode"
 gs_keep_sent_messages_unread = "{} Keep unread when sending"
 
-ns_new_msg = "{} New message"
+ns_new_msg = "{} New message 📨"
 ns_cmd = "{} Command received"
-ns_new_order = "{} New order"
+ns_new_order = "{} Order under the tree 🎁"
 ns_order_confirmed = "{} Order confirmed"
 ns_lot_activate = "{} Lot reactivated"
 ns_lot_deactivate = "{} Lot deactivated"
-ns_delivery = "{} Goods delivered"
-ns_raise = "{} Lots raised"
-ns_new_review = "{} New review"
+ns_delivery = "{} Sleigh Delivery 🛷"
+ns_raise = "{} Lots raised 🚀"
+ns_new_review = "{} New review ⭐️"
 ns_bot_start = "{} Bot start"
 ns_other = "{} Other (plugins)"
 
 ar_edit_commands = "✏️ Edit existing commands"
-ar_add_command = "➕ Add command / set of commands"
+ar_add_command = "➕ Add command 📝"
 ar_to_ar = "🤖 Back to autoresponse settings"
 ar_to_mm = "📋 Back to main menu"
 ar_edit_response = "✏️ Edit response"
@@ -72,7 +72,7 @@ ad_add_another_ad = "➕ Link another"
 ad_add_more_ad = "➕ Link more"
 ad_edit_goods_file = "📋 Edit goods files"
 ad_upload_goods_file = "⤴️ Upload goods file"
-ad_create_goods_file = "➕ Create goods file"
+ad_create_goods_file = "➕ Create goods file 📄"
 ad_to_ad = "📦 Back to auto-delivery settings"
 ad_to_mm = "📋 Back to main menu"
 
@@ -89,7 +89,7 @@ ea_link_another_gf = "⛓️ Another file"
 fl_manual = "➕ Enter manually"
 
 gf_add_goods = "➕ Add goods"
-gf_download = "⤵️ Download"
+gf_download = "⤵️ Download 🎁"
 gf_create_another = "➕ Create another"
 gf_create_more = "➕ Create more"
 gf_add_more = "➕ Add more"
@@ -101,7 +101,7 @@ bl_new_msg_notifications = "{} Don't notify about new messages"
 bl_new_order_notifications = "{} Don't notify about new orders"
 bl_command_notifications = "{} Don't notify about commands received"
 
-tmplt_add = "➕ Add template"
+tmplt_add = "➕ Add template 📝"
 tmplt_add_more = "➕ Add more"
 tmplt_add_another = "➕ Add another"
 
@@ -138,7 +138,7 @@ cfg_upload_ad = "⤴️ Upload auto-delivery config"
 
 tg_block_login = "{} Block logins by password"
 
-prx_proxy_add = "➕ Add proxy"
+prx_proxy_add = "➕ Add proxy 🛡️"
 prx_proxy_enabled = "{} Use proxy"
 prx_proxy_type = "Proxy type: {}"
 
@@ -159,9 +159,9 @@ msg_reply2 = "📨 Reply"
 msg_templates = "📝 Templates"
 msg_more = "➕ More"
 
-access_denied = "👋 Hi, <b><i>{}</i></b>!\n\n❌ You are an unauthorized user.\n\n"                "🔑 Send me the <u><b>secret key</b></u> you entered during the initial setup to "                "gain access to the control panel."
+access_denied = "👋 Ho-ho-ho, <b><i>{}</i></b>!\n\n❌ You are not on the Nice List.\n\n"                "🔑 Send me the <u><b>magic word</b></u> (secret key) "                "to get a gift (access)."
 
-access_granted = "🔓 Access granted!\n\n"                 "🔕 Keep in mind that I <b><u>don't send any notifications to this chat</u></b>.\n\n"                 "🔔 You can set up notifications for <b><u>this chat</u></b> in the settings menu.\n\n"                 "⚙️ To open the <i>FunPay Sigma</i> settings menu, send me /menu."
+access_granted = "🔓 <b>Magic happened! Access granted!</b>\n\n"                 "🔕 Keep in mind that I'm silent as a snowflake.\n\n"                 "🔔 You can set up notifications in the settings if you are waiting for a miracle.\n\n"                 "⚙️ Santa's Workshop: /menu."
 
 access_granted_notification = "<b>🚨 ATTENTION! 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 \"<a href=\"tg://user?id={1}\"> {0} </a>\" <b>(ID: {1}) has just accessed the Telegram Control Panel! 🔓</b>"
 
@@ -182,13 +182,13 @@ old_mode_help = """<b>New Message Receiving Mode</b>
 
 ❗ If you click the <code>More</code> button in a new message notification, <i>FPS</i> will "read" the chat and show the last 15 messages, including images. <i>FPS</i> will also be able to determine who the author of the messages is."""
 
-bot_started = """✅ Telegram bot is running!\n
-✅ You can <b><u>customize configurations</u></b> and <b><u>make full use of the <i>Telegram</i> bot's functionality.</u></b>.\n
-❌ <i>FunPay Sigma</i> is not initialized yet and none of its functions work.\n
-🔃 As soon as <i>FunPay Sigma</i> is initialized, this message will change.\n
-📋 If <i>FPS</i> does not initialize for a long time, check the logs with /logs"""
+bot_started = """🎅 <b>Ho-ho-ho! Sigma is here! Happy 2026! 🎄</b>\n
+✅ Sleigh is ready, reindeer are set.\n
+❌ <i>FunPay Sigma</i> is not initialized yet (Santa is sleeping).\n
+🔃 As soon as <i>FunPay Sigma</i> wakes up, this message will change.\n
+📋 If <i>FPS</i> is sleeping for too long, check the /logs"""
 
-fps_init = """✅ <b><u>FPS initialized!</u></b>\n
+fps_init = """✅ <b><u>FPS initialized! Happy New Year 2026! ❄️</u></b>\n
 ℹ️ <b><i>Version:</i></b> <code>{}</code>
 👑 <b><i>Account:</i></b>  <code>{}</code> | <code>{}</code>
 💰 <b><i>Balance:</i></b> <code>{}₽, {}$, {}€</code>
@@ -226,13 +226,13 @@ sys_info = """<b><u>Data summary</u></b>
     Uptime:  <code>{}</code>
     Chat ID:  <code>{}</code>"""
 
-act_blacklist = """Enter the username you want to add to the blacklist."""
-already_blacklisted = "❌ <code>{}</code> is already on the blacklist."
-user_blacklisted = "✅ <code>{}</code> is blacklisted."
-act_unban = "Enter the username you want to remove from the blacklist."
-not_blacklisted = "❌ <code>{}</code> is not blacklisted."
-user_unbanned = "✅ <code>{}</code> is no longer blacklisted."
-blacklist_empty = "❌ Blacklist is empty."
+act_blacklist = """Enter the name of the naughty one."""
+already_blacklisted = "❌ <code>{}</code> already got coal."
+user_blacklisted = "✅ <code>{}</code> is on the Naughty List."
+act_unban = "Enter the name of the one to forgive."
+not_blacklisted = "❌ <code>{}</code> is on the Nice List."
+user_unbanned = "✅ <code>{}</code> is forgiven."
+blacklist_empty = "❌ Everyone was good this year (List is empty)."
 
 act_proxy = "Enter the proxy in the format <u>login:password@ip:port</u> or <u>ip:port</u>."
 proxy_already_exists = "❌ The proxy <code>{}</code> already exists."
@@ -252,7 +252,7 @@ logfile_error = "❌ Failed to send log file."
 logfile_deleted = "🗑️ Deleted {} logfile(s)."
 
 update_no_tags = "❌ <b>Update Check Failed</b>\n\nFailed to retrieve release list from GitHub. Try again later."
-update_lasted = "✅ <b>You have the latest version!</b>\n\n📌 <b>Version:</b> <code>{}</code>"
+update_lasted = "✅ <b>You have the latest version! 🎄</b>\n\n📌 <b>Version:</b> <code>{}</code>"
 update_get_error = "❌ <b>Data Error</b>\n\nFailed to get new version information. Try again later."
 
 update_available = """<b>✨ NEW UPDATE AVAILABLE ✨</b>
@@ -289,7 +289,7 @@ update_downloaded = """<b>🔽 DOWNLOADING UPDATE</b>
 
 update_download_error = "❌ <b>Download Error</b>\n\nFailed to download update files."
 
-update_done = """<b>✅ UPDATE COMPLETED SUCCESSFULLY!</b>
+update_done = """<b>✅ UPDATE COMPLETED SUCCESSFULLY! 🍾</b>
 
 🎉 <b>FunPay Sigma updated!</b>
 
@@ -313,8 +313,8 @@ update_ask = "\n\n<b>❓ Do you want to install this update automatically?</b>"
 send_backup = "Send me the backup.\n\n<b>⚠️ WARNING! Uploading backups from untrusted sources may lead to serious consequences.</b>"
 
 restarting = "Restarting..."
-power_off_0 = """<b><u>Are you sure you want to turn me off?</u></b>\n
-You <b><u>wont be able</u></b> to turn me on via <i>Telegram</i>!"""
+power_off_0 = """<b><u>Turning off the Christmas lights? (Shutdown)</u></b>\n
+I won't turn on myself from under the snow!"""
 power_off_1 = "I'll ask again, just in case.\n\n<b><u>Are you sure about this?</u></b>"
 power_off_2 = """Just for the record:
 you have to go to the server or go to your computer (or wherever you have me) and run me manually!"""
@@ -353,7 +353,7 @@ updating_profile = "Updating account statistics (this may take some time)..."
 profile_updating_error = "❌ Failed to update account statistics."
 
 act_change_golden_key = "Enter golden_key"
-cookie_changed = "✅ golden_key successfully changed{}.\n"
+cookie_changed = "✅ golden_key successfully changed{}. 🍪\n"
 cookie_changed2 = "Restart the bot with the /restart command."
 cookie_incorrect_format = "❌ Incorrect format of golden_key. Please try again."
 cookie_error = "❌ Authorization failed. The golden_key might be incorrect?"
@@ -362,7 +362,7 @@ ad_lot_not_found_err = "❌ Lot with index <code>{}</code> not found."
 ad_already_ad_err = "❌ Lot <code>{}</code> is already set up for auto-delivery."
 ad_lot_already_exists = "❌ The lot <code>{}</code> already has auto-delivery linked to it."
 ad_lot_linked = "✅ Auto-delivery linked to lot <code>{}</code>."
-ad_link_gf = "Enter the goods file name.\nSend <code>-</code>, if you want to unlink the goods file.\n\n"             "If the goods file does not exist, it will be created automatically."
+ad_link_gf = "Enter the name of the gift bag (file).\nSend <code>-</code>, if you want to throw away the bag.\n\n"             "If the bag does not exist, elves will sew a new one."
 ad_gf_unlinked = "✅ Goods file successfully unlinked from <code>{}</code>."
 ad_gf_linked = "✅ The goods file <code>storage/products/{}</code> linked to <code>{}</code>."
 ad_gf_created_and_linked = "✅ The goods file <code>storage/products/{}</code> <b><u>created</u></b> and linked to <code>{}</code>."
@@ -382,7 +382,7 @@ gf_creation_err = "❌ An error occurred while creating the <code>{}</code> file
 gf_created = "✅ Goods file <code>storage/products/{}</code> created."
 gf_amount = "Goods amount"
 gf_uses = "Used in lots"
-gf_send_new_goods = "Enter the goods you want to add to goods file.\n\nEach new line (<code>Shift+Enter</code>) is a new item."
+gf_send_new_goods = "Pack gifts into the bag (goods).\n\nEach new line (<code>Shift+Enter</code>) is a new gift."
 gf_add_goods_err = "❌ Failed to add new goods."
 gf_new_goods = "✅ <code>{}</code> item(s) added to <code>storage/products/{}</code>."
 gf_empty_error = "❌ File storage/products/{} is empty."
@@ -418,7 +418,7 @@ pl_new = "Send me a plugin.\n\n<b>⚠️ ATTENTION! Downloading plugins from que
 
 au_user_settings = "Settings for user {}"
 adv_fps = "😎 FunPay Sigma - the best bot for FunPay"
-adv_description = """🤖 FunPay Sigma v{}🤖
+adv_description = """🤖 FunPay Sigma v{} 🎄🤖
 
 🤖 Automatic product delivery
 🚀 Auto-raise of lots
@@ -431,19 +431,19 @@ adv_description = """🤖 FunPay Sigma v{}🤖
 🧩 Plugins
 🌟 And much more..."""
 
-desc_main = """🏠 <b>Main Menu</b>  <i>(1/3)</i>
+desc_main = """🎄 <b>Main Menu</b>  <i>(1/3)</i>
 
 ⚡ <b>Automation & Sales</b>
 
 Select a section:"""
 
-desc_main2 = """🏠 <b>Main Menu</b>  <i>(2/3)</i>
+desc_main2 = """🎄 <b>Main Menu</b>  <i>(2/3)</i>
 
 💬 <b>Notifications & Communication</b>
 
 Configure how the bot communicates:"""
 
-desc_main3 = """🏠 <b>Main Menu</b>  <i>(3/3)</i>
+desc_main3 = """🎄 <b>Main Menu</b>  <i>(3/3)</i>
 
 🛠 <b>Tools & Service</b>
 
@@ -454,7 +454,7 @@ desc_gs = "Here you can turn the basic <i>FPS</i> functions on and off."
 desc_ns = """Here you can configure notifications.\n
 <b><u>Settings are separate for each <i>Telegram</i> chat!</u></b>\n
 Current chat ID: <code>{}</code>"""
-desc_bl = "Here you can set restrictions for blacklisted users."
+desc_bl = "Here you can give coal to naughty users."
 desc_ar = "Here you can add commands or edit existing ones."
 desc_ar_list = "Chose a command / commands set you are interested in."
 
@@ -471,10 +471,10 @@ desc_an = "Here you can configure notifications about announcements."
 desc_cfg = "Hare you can download and upload configs."
 desc_tmplt = "Here you can add and delete answer templates."
 desc_pl = "Here you can get information about the plugins, as well as configure them.\n\n"          "⚠️ <b><u>After activating / deactivating / adding / removing a plugin, you must restart the bot!</u></b>"          " (/restart)"
-desc_au = "Here you can configure authorization in the Telegram control panel."
-desc_proxy = "Here you can set up the proxy."
+desc_au = "Here you can manage the Elves (authorization)."
+desc_proxy = "Here you can harness the Reindeer (proxy)."
 
-cmd_menu = "open settings"
+cmd_menu = "open settings 🎄"
 cmd_language = "change language"
 cmd_profile = "account statistics"
 cmd_lots = "FunPay lots editor"
@@ -483,9 +483,9 @@ cmd_test_lot = "create one-time delivery key"
 cmd_upload_chat_img = "(chat) upload an image to FunPay"
 cmd_upload_offer_img = "(lot) upload an image to FunPay"
 cmd_upload_plugin = "upload a plugin"
-cmd_ban = "add user to the blacklist"
-cmd_unban = "delete user from blacklist"
-cmd_black_list = "blacklist"
+cmd_ban = "add to naughty list"
+cmd_unban = "remove from naughty list"
+cmd_black_list = "naughty list"
 cmd_watermark = "change message watermark"
 cmd_logs = "download current log-file"
 cmd_del_logs = "delete old log-files"
@@ -622,7 +622,7 @@ crd_session_timeout_err = "Failed to refresh session: timeout exceeded."
 crd_session_unexpected_err = "An unexpected error occurred while refreshing the session."
 crd_session_no_more_attempts_err = "Failed to refresh session: the number of attempts was exceeded."
 crd_session_updated = "Session updated."
-crd_raise_loop_started = "$CYANThe auto-raise loop is running (this does not mean that auto-raise are enabled)."
+crd_raise_loop_started = "$CYANThe auto-raise loop is running on a sleigh 🛷"
 crd_raise_loop_not_started = "$CYANThe auto-raise loop was not started because there are no lots detected on the account."
 crd_session_loop_started = "$CYANThe session refresh loop is running."
 crd_no_plugins_folder = "The plugins folder is not detected."
