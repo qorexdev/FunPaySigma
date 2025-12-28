@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, time as dt_time
 import time
 import json
 import os
@@ -10,7 +10,7 @@ import random
 import threading
 import logging
 
-from telebot.types import CallbackQuery
+from telebot.types import CallbackQuery, Message
 from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
 
 from tg_bot import CBT
@@ -31,12 +31,15 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
 ]
 
-
 def load_tickets_config() -> dict:
     default = {
         "auto_enabled": False,
         "last_sent_timestamp": 0,
-        "phpsessid": ""
+        "phpsessid": "",
+        "hours_threshold": 24,
+        "send_time": "10:00",
+        "unconfirmed_orders": [],
+        "last_orders_update": 0
     }
     
     os.makedirs(os.path.dirname(STORAGE_PATH), exist_ok=True)
@@ -55,12 +58,10 @@ def load_tickets_config() -> dict:
     save_tickets_config(default)
     return default
 
-
 def save_tickets_config(config: dict):
     os.makedirs(os.path.dirname(STORAGE_PATH), exist_ok=True)
     with open(STORAGE_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=4, ensure_ascii=False)
-
 
 def get_cooldown_remaining(config: dict) -> tuple[int, int]:
     last_sent = config.get("last_sent_timestamp", 0)
@@ -77,11 +78,18 @@ def get_cooldown_remaining(config: dict) -> tuple[int, int]:
     minutes = int((remaining % 3600) // 60)
     return hours, minutes
 
-
 def can_send_ticket(config: dict) -> bool:
     hours, minutes = get_cooldown_remaining(config)
     return hours == 0 and minutes == 0
 
+def is_send_time_now(config: dict) -> bool:
+    send_time_str = config.get("send_time", "10:00")
+    try:
+        hour, minute = map(int, send_time_str.split(":"))
+        now = datetime.now()
+        return now.hour == hour and now.minute < minute + 5 and now.minute >= minute
+    except Exception:
+        return False
 
 def init_support_tickets_cp(crd: Cardinal, *args):
     tg = crd.telegram
@@ -189,7 +197,7 @@ def init_support_tickets_cp(crd: Cardinal, *args):
     
     ticket_sender = TicketSender()
     
-    def get_old_orders() -> list:
+    def get_old_orders(hours_threshold: int = 24) -> list:
         try:
             orders = []
             start_from = ""
@@ -208,7 +216,7 @@ def init_support_tickets_cp(crd: Cardinal, *args):
                 current_time = datetime.now()
                 for order in result[1]:
                     order_time = order.date if isinstance(order.date, datetime) else datetime.fromtimestamp(order.date)
-                    if (current_time - order_time).total_seconds() >= 24 * 3600:
+                    if (current_time - order_time).total_seconds() >= hours_threshold * 3600:
                         orders.append(order)
                 
                 time.sleep(0.5)
@@ -218,10 +226,39 @@ def init_support_tickets_cp(crd: Cardinal, *args):
             logger.error(_("log_st_error", str(e)))
             return []
     
+    def update_orders_cache():
+        config = load_tickets_config()
+        hours_threshold = config.get("hours_threshold", 24)
+        orders = get_old_orders(hours_threshold)
+        
+        order_data = []
+        for order in orders:
+            order_time = order.date if isinstance(order.date, datetime) else datetime.fromtimestamp(order.date)
+            order_data.append({
+                "id": order.id,
+                "title": getattr(order, 'title', 'Заказ'),
+                "date": order_time.isoformat() if isinstance(order_time, datetime) else str(order_time),
+                "buyer": getattr(order, 'buyer_username', 'Неизвестно')
+            })
+        
+        config["unconfirmed_orders"] = order_data
+        config["last_orders_update"] = time.time()
+        save_tickets_config(config)
+        
+        return orders
+    
     def build_keyboard(config: dict) -> K:
         kb = K()
         auto_status = "🟢" if config["auto_enabled"] else "🔴"
         kb.add(B(_("st_enabled").format(auto_status), callback_data=CBT.SUPPORT_TICKETS_TOGGLE_AUTO))
+        
+        hours_threshold = config.get("hours_threshold", 24)
+        kb.add(B(_("st_hours_threshold").format(hours_threshold), callback_data=CBT.SUPPORT_TICKETS_SET_HOURS))
+        
+        send_time = config.get("send_time", "10:00")
+        kb.add(B(_("st_send_time").format(send_time), callback_data=CBT.SUPPORT_TICKETS_SET_TIME))
+        
+        kb.add(B(_("st_refresh_orders"), callback_data=CBT.SUPPORT_TICKETS_REFRESH))
         
         hours, minutes = get_cooldown_remaining(config)
         if hours == 0 and minutes == 0:
@@ -247,13 +284,22 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         else:
             cooldown_str = _("st_wait_hours").format(hours, minutes)
         
-        try:
-            orders = get_old_orders()
-            orders_count = len(orders)
-        except Exception:
-            orders_count = 0
+        cached_orders = config.get("unconfirmed_orders", [])
+        orders_count = len(cached_orders)
         
-        text = _("desc_support_tickets").format(auto_icon, auto_status, orders_count, cooldown_str)
+        hours_threshold = config.get("hours_threshold", 24)
+        send_time = config.get("send_time", "10:00")
+        
+        last_update = config.get("last_orders_update", 0)
+        if last_update > 0:
+            last_update_str = datetime.fromtimestamp(last_update).strftime("%H:%M:%S")
+        else:
+            last_update_str = _("st_never")
+        
+        text = _("desc_support_tickets_v2").format(
+            auto_icon, auto_status, orders_count, cooldown_str, 
+            hours_threshold, send_time, last_update_str
+        )
         
         kb = build_keyboard(config)
         
@@ -278,6 +324,84 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         
         open_tickets_menu(c)
     
+    def refresh_orders(c: CallbackQuery):
+        bot.answer_callback_query(c.id, _("st_refreshing"))
+        
+        try:
+            orders = update_orders_cache()
+            bot.answer_callback_query(c.id, _("st_refreshed").format(len(orders)), show_alert=True)
+        except Exception as e:
+            logger.error(_("log_st_error", str(e)))
+            bot.answer_callback_query(c.id, _("st_refresh_error"), show_alert=True)
+        
+        open_tickets_menu(c)
+    
+    def set_hours_threshold(c: CallbackQuery):
+        bot.answer_callback_query(c.id)
+        
+        config = load_tickets_config()
+        current = config.get("hours_threshold", 24)
+        
+        text = _("st_enter_hours").format(current)
+        kb = K().add(B(_("gl_back"), callback_data=CBT.SUPPORT_TICKETS))
+        
+        msg = bot.send_message(c.message.chat.id, text, parse_mode="HTML", reply_markup=kb)
+        bot.register_next_step_handler(msg, process_hours_input)
+    
+    def process_hours_input(message: Message):
+        try:
+            hours = int(message.text.strip())
+            if hours < 1 or hours > 720:
+                bot.send_message(message.chat.id, _("st_hours_invalid"))
+                return
+            
+            config = load_tickets_config()
+            config["hours_threshold"] = hours
+            save_tickets_config(config)
+            
+            kb = K().add(B(_("gl_back"), callback_data=CBT.SUPPORT_TICKETS))
+            bot.send_message(message.chat.id, _("st_hours_set").format(hours), 
+                           parse_mode="HTML", reply_markup=kb)
+        except ValueError:
+            bot.send_message(message.chat.id, _("st_hours_invalid"))
+    
+    def set_send_time(c: CallbackQuery):
+        bot.answer_callback_query(c.id)
+        
+        config = load_tickets_config()
+        current = config.get("send_time", "10:00")
+        
+        text = _("st_enter_time").format(current)
+        kb = K().add(B(_("gl_back"), callback_data=CBT.SUPPORT_TICKETS))
+        
+        msg = bot.send_message(c.message.chat.id, text, parse_mode="HTML", reply_markup=kb)
+        bot.register_next_step_handler(msg, process_time_input)
+    
+    def process_time_input(message: Message):
+        try:
+            time_str = message.text.strip()
+            parts = time_str.split(":")
+            if len(parts) != 2:
+                raise ValueError()
+            
+            hour = int(parts[0])
+            minute = int(parts[1])
+            
+            if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+                raise ValueError()
+            
+            formatted_time = f"{hour:02d}:{minute:02d}"
+            
+            config = load_tickets_config()
+            config["send_time"] = formatted_time
+            save_tickets_config(config)
+            
+            kb = K().add(B(_("gl_back"), callback_data=CBT.SUPPORT_TICKETS))
+            bot.send_message(message.chat.id, _("st_time_set").format(formatted_time), 
+                           parse_mode="HTML", reply_markup=kb)
+        except ValueError:
+            bot.send_message(message.chat.id, _("st_time_invalid"))
+    
     def send_ticket_now(c: CallbackQuery):
         config = load_tickets_config()
         
@@ -288,7 +412,8 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         
         bot.answer_callback_query(c.id, _("st_sending"))
         
-        orders = get_old_orders()
+        hours_threshold = config.get("hours_threshold", 24)
+        orders = get_old_orders(hours_threshold)
         if not orders:
             bot.answer_callback_query(c.id, _("st_no_orders"), show_alert=True)
             open_tickets_menu(c)
@@ -353,19 +478,44 @@ def init_support_tickets_cp(crd: Cardinal, *args):
             
             bot.send_message(c.message.chat.id, _("st_error"), parse_mode="HTML")
     
+    def send_auto_notification(order_count: int, success: bool):
+        for uid in tg.authorized_users:
+            try:
+                if success:
+                    text = _("st_auto_sent_notification").format(order_count)
+                else:
+                    text = _("st_auto_error_notification")
+                
+                kb = K().add(B(_("st_open_menu"), callback_data=CBT.SUPPORT_TICKETS))
+                bot.send_message(uid, text, parse_mode="HTML", reply_markup=kb)
+            except Exception as e:
+                logger.error(f"Failed to send auto-ticket notification to {uid}: {e}")
+    
     def auto_send_loop():
+        last_check_hour = -1
+        
         while True:
             try:
-                time.sleep(3600)
+                time.sleep(60)
                 
                 config = load_tickets_config()
+                
+                current_hour = datetime.now().hour
+                if current_hour != last_check_hour:
+                    last_check_hour = current_hour
+                    update_orders_cache()
+                
                 if not config["auto_enabled"]:
                     continue
                 
                 if not can_send_ticket(config):
                     continue
                 
-                orders = get_old_orders()
+                if not is_send_time_now(config):
+                    continue
+                
+                hours_threshold = config.get("hours_threshold", 24)
+                orders = get_old_orders(hours_threshold)
                 if not orders:
                     continue
                 
@@ -379,6 +529,7 @@ def init_support_tickets_cp(crd: Cardinal, *args):
                         save_tickets_config(config)
                 
                 if not phpsessid:
+                    send_auto_notification(0, False)
                     continue
                 
                 order_ids = [order.id for order in orders[:10]]
@@ -388,9 +539,26 @@ def init_support_tickets_cp(crd: Cardinal, *args):
                     config["last_sent_timestamp"] = time.time()
                     save_tickets_config(config)
                     logger.info(_("log_st_sent", len(order_ids)))
+                    send_auto_notification(len(order_ids), True)
                 else:
                     config["phpsessid"] = ""
                     save_tickets_config(config)
+                    
+                    phpsessid = ticket_sender.extract_phpsessid(golden_key)
+                    if phpsessid:
+                        config["phpsessid"] = phpsessid
+                        save_tickets_config(config)
+                        success = ticket_sender.send_ticket(order_ids, crd.account.username, phpsessid)
+                        
+                        if success:
+                            config["last_sent_timestamp"] = time.time()
+                            save_tickets_config(config)
+                            logger.info(_("log_st_sent", len(order_ids)))
+                            send_auto_notification(len(order_ids), True)
+                        else:
+                            send_auto_notification(0, False)
+                    else:
+                        send_auto_notification(0, False)
                     
             except Exception as e:
                 logger.error(_("log_st_error", str(e)))
@@ -401,6 +569,8 @@ def init_support_tickets_cp(crd: Cardinal, *args):
     tg.cbq_handler(open_tickets_menu, lambda c: c.data == CBT.SUPPORT_TICKETS)
     tg.cbq_handler(toggle_auto_send, lambda c: c.data == CBT.SUPPORT_TICKETS_TOGGLE_AUTO)
     tg.cbq_handler(send_ticket_now, lambda c: c.data == CBT.SUPPORT_TICKETS_SEND_NOW)
-
+    tg.cbq_handler(refresh_orders, lambda c: c.data == CBT.SUPPORT_TICKETS_REFRESH)
+    tg.cbq_handler(set_hours_threshold, lambda c: c.data == CBT.SUPPORT_TICKETS_SET_HOURS)
+    tg.cbq_handler(set_send_time, lambda c: c.data == CBT.SUPPORT_TICKETS_SET_TIME)
 
 BIND_TO_PRE_INIT = [init_support_tickets_cp]

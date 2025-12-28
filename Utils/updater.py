@@ -23,30 +23,6 @@ class Release:
         self.description = description
         self.sources_link = sources_link
 
-def get_tags(current_tag: str) -> list[str] | None:
-           
-    try:
-        response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/tags", headers=HEADERS)
-        response.raise_for_status()
-        tags = [tag["name"] for tag in response.json()]
-        return tags
-    except:
-        logger.debug("TRACEBACK", exc_info=True)
-        return None
-
-def get_next_tag(tags: list[str], current_tag: str):
-           
-    try:
-        curr_index = tags.index(current_tag)
-    except ValueError:
-                                                        
-        return tags[0] if tags else None
-
-    if curr_index == 0:
-                                     
-        return None
-    return tags[curr_index - 1]
-
 def get_releases(from_tag: str) -> list[Release] | None:
            
     try:
@@ -65,25 +41,11 @@ def get_releases(from_tag: str) -> list[Release] | None:
 
 def get_new_releases(current_tag) -> int | list[Release]:
            
-    tags = get_tags(current_tag)
-    if tags is None:
-        return 3                          
-
-    if current_tag not in tags:
-                                                                                         
-        releases = get_releases("")
-        if releases is None:
-            return 3
-        return releases
-
-    next_tag = get_next_tag(tags, current_tag)
-    if next_tag is None:
-        return 2                         
-
     releases = get_releases(current_tag)
     if releases is None:
-        return 3                            
-
+        return 3
+    if not releases:
+        return 2
     return releases
 
 def download_zip(url: str) -> int:

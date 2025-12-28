@@ -369,7 +369,6 @@ class Cardinal(object):
             self.save_confirmed_orders()
             self._cleanup_confirmed_orders()
 
-
     def __init_account(self) -> None:
                    
         while True:
@@ -754,7 +753,6 @@ class Cardinal(object):
         if orders_to_remove:
             self.save_confirmed_orders()
 
-
     def send_message(self, chat_id: int | str, message_text: str, chat_name: str | None = None,
                      interlocutor_id: int | None = None, attempts: int = 3,
                      watermark: bool = True) -> list[FunPayAPI.types.Message] | None:
@@ -940,7 +938,6 @@ class Cardinal(object):
                 logger.debug("TRACEBACK", exc_info=True)
             time.sleep(120)
                            
-
     def init(self):
                    
         self.add_handlers_from_plugin(handlers)
