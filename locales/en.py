@@ -504,7 +504,7 @@ activity_info = """📊 <b>FunPay Sigma — Status</b>
 
 ⚡ <b>Your Sigma:</b> <code>Running</code>
 ⏱️ <b>Uptime:</b> <code>{}</code>
-👥 <b>Sigmas online:</b> <code>~{}</code>
+👥 <b>Sigmas online:</b> <code>{}</code>
 
 🌐 <b>Project on GitHub:</b>
 ⭐ <b>Stars:</b> <code>{}</code>
