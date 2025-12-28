@@ -10,24 +10,27 @@ logger = logging.getLogger("FPS.activity")
 GITHUB_API = "https://api.github.com/repos/qorexdev/FunPaySigma"
 COUNTER_API = "https://counterapi.com/api"
 COUNTER_NAMESPACE = "funpaysigma"
-HEARTBEAT_INTERVAL = 60
+HEARTBEAT_INTERVAL = 30
 TIME_SLOT = 60
 
 _instance_hash: Optional[str] = None
 _running = False
 _start_time = 0
-_last_heartbeat = 0
+_last_slot_sent = 0
+
+
+def _get_time_slot() -> int:
+    return int(time.time()) // TIME_SLOT
 
 
 def _get_time_key() -> str:
-    now = int(time.time())
-    slot = now // TIME_SLOT
+    slot = _get_time_slot()
     return f"min_{slot}"
 
 
 def _generate_instance_hash(account_id: int, username: str) -> str:
-    data = f"{account_id}:{username}:{int(time.time())}"
-    return hashlib.md5(data.encode()).hexdigest()[:12]
+    data = f"{account_id}:{username}"
+    return hashlib.md5(data.encode()).hexdigest()[:8]
 
 
 def start_tracking(account_id: int, username: str) -> None:
@@ -40,7 +43,7 @@ def start_tracking(account_id: int, username: str) -> None:
     _send_heartbeat()
     
     Thread(target=_tracking_loop, daemon=True).start()
-    logger.debug("Activity tracking started")
+    logger.debug(f"Activity tracking started, hash: {_instance_hash}")
 
 
 def stop_tracking() -> None:
@@ -58,19 +61,24 @@ def _tracking_loop() -> None:
 
 
 def _send_heartbeat() -> None:
-    global _last_heartbeat
+    global _last_slot_sent
     
     if not _instance_hash:
+        return
+    
+    current_slot = _get_time_slot()
+    
+    if _last_slot_sent == current_slot:
         return
     
     time_key = _get_time_key()
     
     try:
         requests.get(
-            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}",
+            f"{COUNTER_API}/{COUNTER_NAMESPACE}/online/{time_key}",
             timeout=5
         )
-        _last_heartbeat = int(time.time())
+        _last_slot_sent = current_slot
         logger.debug(f"Heartbeat sent: {time_key}")
     except Exception as e:
         logger.debug(f"Heartbeat failed: {e}")
@@ -81,7 +89,7 @@ def get_active_count() -> int | None:
     
     try:
         response = requests.get(
-            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}",
+            f"{COUNTER_API}/{COUNTER_NAMESPACE}/online/{time_key}?readOnly=true",
             timeout=5
         )
         if response.status_code == 200:
