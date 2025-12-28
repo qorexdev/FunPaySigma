@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time, timedelta
 import time
 import json
 import os
@@ -24,6 +24,9 @@ localizer = Localizer()
 _ = localizer.translate
 
 STORAGE_PATH = "storage/cache/support_tickets.json"
+MAX_ORDERS_IN_MESSAGE = 5
+MAX_ORDERS_IN_TICKET = 15
+COOLDOWN_HOURS = 24
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -39,7 +42,8 @@ def load_tickets_config() -> dict:
         "hours_threshold": 24,
         "send_time": "10:00",
         "unconfirmed_orders": [],
-        "last_orders_update": 0
+        "last_orders_update": 0,
+        "orders_page": 0
     }
     
     os.makedirs(os.path.dirname(STORAGE_PATH), exist_ok=True)
@@ -69,7 +73,7 @@ def get_cooldown_remaining(config: dict) -> tuple[int, int]:
         return 0, 0
     
     elapsed = time.time() - last_sent
-    remaining = 24 * 3600 - elapsed
+    remaining = COOLDOWN_HOURS * 3600 - elapsed
     
     if remaining <= 0:
         return 0, 0
@@ -78,18 +82,76 @@ def get_cooldown_remaining(config: dict) -> tuple[int, int]:
     minutes = int((remaining % 3600) // 60)
     return hours, minutes
 
+def get_next_auto_send_time(config: dict) -> datetime | None:
+    if not config.get("auto_enabled", False):
+        return None
+    
+    send_time_str = config.get("send_time", "10:00")
+    try:
+        hour, minute = map(int, send_time_str.split(":"))
+    except:
+        return None
+    
+    now = datetime.now()
+    next_send = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    
+    if next_send <= now:
+        next_send += timedelta(days=1)
+    
+    last_sent = config.get("last_sent_timestamp", 0)
+    if last_sent > 0:
+        cooldown_end = datetime.fromtimestamp(last_sent + COOLDOWN_HOURS * 3600)
+        if next_send < cooldown_end:
+            next_send = cooldown_end.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if next_send < cooldown_end:
+                next_send += timedelta(days=1)
+    
+    return next_send
+
 def can_send_ticket(config: dict) -> bool:
     hours, minutes = get_cooldown_remaining(config)
     return hours == 0 and minutes == 0
 
 def is_send_time_now(config: dict) -> bool:
-    send_time_str = config.get("send_time", "10:00")
-    try:
-        hour, minute = map(int, send_time_str.split(":"))
-        now = datetime.now()
-        return now.hour == hour and now.minute < minute + 5 and now.minute >= minute
-    except Exception:
+    next_send = get_next_auto_send_time(config)
+    if next_send is None:
         return False
+    
+    now = datetime.now()
+    
+    time_diff = (now - next_send).total_seconds()
+    if -60 <= time_diff <= 300:
+        return True
+    
+    return False
+
+def validate_send_time(config: dict, new_time_str: str) -> tuple[bool, str]:
+    try:
+        hour, minute = map(int, new_time_str.split(":"))
+        if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+            return False, _("st_time_invalid")
+    except:
+        return False, _("st_time_invalid")
+    
+    last_sent = config.get("last_sent_timestamp", 0)
+    if last_sent == 0:
+        return True, ""
+    
+    cooldown_end = datetime.fromtimestamp(last_sent + COOLDOWN_HOURS * 3600)
+    now = datetime.now()
+    
+    if now >= cooldown_end:
+        return True, ""
+    
+    proposed_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if proposed_time <= now:
+        proposed_time += timedelta(days=1)
+    
+    if proposed_time < cooldown_end:
+        cooldown_h, cooldown_m = get_cooldown_remaining(config)
+        return False, _("st_time_blocked_by_cooldown").format(cooldown_h, cooldown_m)
+    
+    return True, ""
 
 def init_support_tickets_cp(crd: Cardinal, *args):
     tg = crd.telegram
@@ -173,12 +235,13 @@ def init_support_tickets_cp(crd: Cardinal, *args):
                 if not csrf_token:
                     return False
                 
-                order_ids_str = ", ".join(f"#{oid}" for oid in order_ids)
+                limited_ids = order_ids[:MAX_ORDERS_IN_TICKET]
+                order_ids_str = ", ".join(f"#{oid}" for oid in limited_ids)
                 message = f"Пожалуйста, подтвердите заказы: {order_ids_str}"
                 
                 payload = {
                     "ticket[fields][1]": username,
-                    "ticket[fields][2]": order_ids[0] if order_ids else "",
+                    "ticket[fields][2]": limited_ids[0] if limited_ids else "",
                     "ticket[fields][3]": "2",
                     "ticket[fields][5]": "201",
                     "ticket[comment][body_html]": f'<p dir="auto">{message}</p>',
@@ -267,7 +330,7 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         
         return all_orders
     
-    def build_keyboard(config: dict) -> K:
+    def build_keyboard(config: dict, page: int = 0) -> K:
         kb = K()
         auto_status = "🟢" if config["auto_enabled"] else "🔴"
         kb.add(B(_("st_enabled").format(auto_status), callback_data=CBT.SUPPORT_TICKETS_TOGGLE_AUTO))
@@ -280,6 +343,19 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         
         kb.add(B(_("st_refresh_orders"), callback_data=CBT.SUPPORT_TICKETS_REFRESH))
         
+        cached_orders = config.get("unconfirmed_orders", [])
+        total_orders = len(cached_orders)
+        total_pages = (total_orders + MAX_ORDERS_IN_MESSAGE - 1) // MAX_ORDERS_IN_MESSAGE if total_orders > 0 else 1
+        
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 0:
+                nav_buttons.append(B("⬅️", callback_data=f"st_page:{page - 1}"))
+            nav_buttons.append(B(f"{page + 1}/{total_pages}", callback_data="st_page:noop"))
+            if page < total_pages - 1:
+                nav_buttons.append(B("➡️", callback_data=f"st_page:{page + 1}"))
+            kb.add(*nav_buttons)
+        
         hours, minutes = get_cooldown_remaining(config)
         if hours == 0 and minutes == 0:
             kb.add(B(_("st_send_now"), callback_data=CBT.SUPPORT_TICKETS_SEND_NOW))
@@ -290,7 +366,7 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         kb.add(B(_("gl_back"), callback_data=CBT.MAIN3))
         return kb
     
-    def format_orders_summary(config: dict) -> str:
+    def format_orders_summary(config: dict, page: int = 0) -> str:
         cached_orders = config.get("unconfirmed_orders", [])
         hours_threshold = config.get("hours_threshold", 24)
         
@@ -298,17 +374,18 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         old_count = sum(1 for o in cached_orders if o.get("is_old", False))
         
         if total == 0:
-            return _("st_no_orders")
+            return ""
+        
+        start_idx = page * MAX_ORDERS_IN_MESSAGE
+        end_idx = start_idx + MAX_ORDERS_IN_MESSAGE
+        orders_slice = cached_orders[start_idx:end_idx]
         
         lines = []
-        for order in cached_orders[:10]:
+        for order in orders_slice:
             age = order.get("age_hours", 0)
             is_old = order.get("is_old", False)
             
-            if is_old:
-                status = "🔴"
-            else:
-                status = "🟢"
+            status = "🔴" if is_old else "🟢"
             
             if age >= 24:
                 days = int(age // 24)
@@ -321,15 +398,12 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         
         result = "\n".join(lines)
         
-        if total > 10:
-            result += f"\n\n... и ещё {total - 10} заказов"
-        
         result += f"\n\n🔴 Старых ({hours_threshold}+ ч): {old_count}"
         result += f"\n🟢 Свежих: {total - old_count}"
         
         return result
     
-    def open_tickets_menu(c: CallbackQuery):
+    def open_tickets_menu(c: CallbackQuery, page: int = 0):
         bot.answer_callback_query(c.id)
         
         chat_id = c.message.chat.id
@@ -360,22 +434,41 @@ def init_support_tickets_cp(crd: Cardinal, *args):
         else:
             last_update_str = _("st_never")
         
-        text = _(f"desc_support_tickets_v3").format(
+        next_auto = get_next_auto_send_time(config)
+        if next_auto and config.get("auto_enabled", False):
+            next_auto_str = next_auto.strftime("%d.%m %H:%M")
+        else:
+            next_auto_str = "-"
+        
+        text = _("desc_support_tickets_v4").format(
             auto_icon, auto_status, orders_count, old_count, cooldown_str, 
-            hours_threshold, send_time, last_update_str
+            hours_threshold, send_time, last_update_str, next_auto_str
         )
         
         if orders_count > 0:
-            text += "\n\n📦 <b>Заказы:</b>\n"
-            text += format_orders_summary(config)
+            text += "\n\n📦 Заказы:\n"
+            text += format_orders_summary(config, page)
         
-        kb = build_keyboard(config)
+        kb = build_keyboard(config, page)
         
         try:
             bot.edit_message_text(text, c.message.chat.id, c.message.id, 
                                   parse_mode="HTML", reply_markup=kb)
         except Exception:
             bot.send_message(c.message.chat.id, text, parse_mode="HTML", reply_markup=kb)
+    
+    def handle_page_change(c: CallbackQuery):
+        try:
+            page_str = c.data.split(":")[1]
+            if page_str == "noop":
+                bot.answer_callback_query(c.id)
+                return
+            page = int(page_str)
+        except (ValueError, IndexError):
+            bot.answer_callback_query(c.id)
+            return
+        
+        open_tickets_menu(c, page)
     
     def toggle_auto_send(c: CallbackQuery):
         config = load_tickets_config()
@@ -753,5 +846,6 @@ def init_support_tickets_cp(crd: Cardinal, *args):
     tg.cbq_handler(set_send_time, lambda c: c.data == CBT.SUPPORT_TICKETS_SET_TIME)
     tg.cbq_handler(handle_hours_preset, lambda c: c.data.startswith("st_hours:"))
     tg.cbq_handler(handle_time_preset, lambda c: c.data.startswith("st_time:"))
+    tg.cbq_handler(handle_page_change, lambda c: c.data.startswith("st_page:"))
 
 BIND_TO_PRE_INIT = [init_support_tickets_cp]

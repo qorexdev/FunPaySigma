@@ -681,6 +681,21 @@ Sends a ticket to FunPay support requesting to close unconfirmed orders.
 🕐 <b>Auto at:</b> {}
 🔄 <b>Updated:</b> {}"""
 
+desc_support_tickets_v4 = """🏠 Menu > 📨 <b>Order Confirmation Tickets</b>
+
+Sends a ticket to FunPay support requesting to close unconfirmed orders.
+
+{} <b>Auto:</b> {}
+📦 <b>Total orders:</b> {} (🔴 old: {})
+⏰ <b>Cooldown:</b> {}
+
+━━━━━━━━━━━━━━━━━━
+⚙️ <b>Settings</b>
+⏱️ <b>Threshold:</b> {} h (order becomes "old")
+🕐 <b>Auto at:</b> {}
+🔄 <b>Updated:</b> {}
+🚀 <b>Next auto:</b> {}"""
+
 st_auto_enabled = "✅ Enabled"
 st_auto_disabled = "❌ Disabled"
 st_ready = "ready"
@@ -694,7 +709,7 @@ st_sent = """✅ <b>Ticket sent!</b>
 ⏰ Next one available in 24 hours"""
 
 st_error = "❌ Failed to send ticket. Try again later."
-st_no_orders = "📭 No unconfirmed orders."
+st_no_orders = "📭 No old orders to send."
 st_cooldown_active = "⏳ Please wait {}h {}m before the next ticket."
 st_toggled_on = "✅ Auto-send enabled"
 st_toggled_off = "❌ Auto-send disabled"
@@ -718,6 +733,7 @@ Current: <code>{}</code>
 Enter time in HH:MM format (e.g., 10:00 or 18:30)."""
 st_time_invalid = "❌ Invalid format. Use HH:MM (e.g., 10:00)."
 st_time_set = "✅ Auto-send time: <b>{}</b>"
+st_time_blocked_by_cooldown = "⏳ This time falls under cooldown ({}h {}m left). Choose a time after cooldown ends."
 
 st_auto_sent_notification = """📬 <b>Ticket sent automatically!</b>
 
