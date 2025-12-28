@@ -667,6 +667,20 @@ Automatically sends a ticket to FunPay support requesting to close unconfirmed o
 🕐 <b>Auto-send at:</b> {}
 🔄 <b>Updated:</b> {}"""
 
+desc_support_tickets_v3 = """🏠 Menu > 📨 <b>Order Confirmation Tickets</b>
+
+Sends a ticket to FunPay support requesting to close unconfirmed orders.
+
+{} <b>Auto:</b> {}
+📦 <b>Total orders:</b> {} (🔴 old: {})
+⏰ <b>Cooldown:</b> {}
+
+━━━━━━━━━━━━━━━━━━
+⚙️ <b>Settings</b>
+⏱️ <b>Threshold:</b> {} h (order becomes "old")
+🕐 <b>Auto at:</b> {}
+🔄 <b>Updated:</b> {}"""
+
 st_auto_enabled = "✅ Enabled"
 st_auto_disabled = "❌ Disabled"
 st_ready = "ready"

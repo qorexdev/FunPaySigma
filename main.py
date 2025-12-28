@@ -78,7 +78,7 @@ logo = """
 ██║░░░░░╚██████╔╝██║░╚███║██║░░░░░██║░░██║░░░██║░░░██████╔╝██║╚██████╔╝██║░╚═╝░██║██║░░██║
 ╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝╚═╝░░░░░╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░╚═╝░╚═════╝░╚═╝░░░░░╚═╝╚═╝░░╚═╝"""
 
-VERSION = "2.7.4"
+VERSION = "27.41"
 
 Utils.cardinal_tools.set_console_title(f"FunPay Sigma v{VERSION}")
 
@@ -180,7 +180,7 @@ except KeyboardInterrupt:
     logger.info("Завершаю программу...")          
     sys.exit()
 except:
-    logger.critical("При работе Кардинала произошла необработанная ошибка.")          
+    logger.critical("При работе Сигмы произошла необработанная ошибка.")          
     logger.warning("TRACEBACK", exc_info=True)
     logger.critical("Завершаю программу...")          
     time.sleep(5)
