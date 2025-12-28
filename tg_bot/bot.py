@@ -445,11 +445,42 @@ class TGBot:
         forks = stats.get("forks", "—")
         watchers = stats.get("watchers", "—")
         
+        kb = K()
+        kb.add(B(_("gl_refresh"), callback_data=CBT.ACTIVITY_REFRESH))
+        
         self.bot.send_message(
             m.chat.id, 
             _("activity_info", uptime_str, active_str, stars, forks, watchers),
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            reply_markup=kb
         )
+
+    def refresh_activity(self, c: CallbackQuery):
+        from Utils import activity_tracker
+        
+        uptime_seconds = activity_tracker.get_instance_uptime()
+        uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
+        
+        active_count = activity_tracker.get_active_count()
+        active_str = str(active_count) if active_count is not None else "?"
+        
+        stats = activity_tracker.get_project_stats()
+        
+        stars = stats.get("stars", "—")
+        forks = stats.get("forks", "—")
+        watchers = stats.get("watchers", "—")
+        
+        kb = K()
+        kb.add(B(_("gl_refresh"), callback_data=CBT.ACTIVITY_REFRESH))
+        
+        self.bot.edit_message_text(
+            _("activity_info", uptime_str, active_str, stars, forks, watchers),
+            c.message.chat.id,
+            c.message.id,
+            disable_web_page_preview=True,
+            reply_markup=kb
+        )
+        self.bot.answer_callback_query(c.id)
 
     def check_updates(self, m: Message):
         curr_tag = f"v{self.cardinal.VERSION}"
@@ -1461,6 +1492,7 @@ class TGBot:
         self.msg_handler(self.del_logs, commands=["del_logs"])
         self.msg_handler(self.about, commands=["about"])
         self.msg_handler(self.send_activity, commands=["activity"])
+        self.cbq_handler(self.refresh_activity, lambda c: c.data == CBT.ACTIVITY_REFRESH)
         self.msg_handler(self.check_updates, commands=["check_updates"])
         self.msg_handler(self.update, commands=["update"])
         self.msg_handler(self.get_backup, commands=["get_backup"])
