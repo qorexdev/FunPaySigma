@@ -11,6 +11,7 @@ GITHUB_API = "https://api.github.com/repos/qorexdev/FunPaySigma"
 COUNTER_API = "https://counterapi.com/api"
 COUNTER_NAMESPACE = "funpaysigma"
 HEARTBEAT_INTERVAL = 60
+TIME_SLOT = 60
 
 _instance_hash: Optional[str] = None
 _running = False
@@ -20,8 +21,8 @@ _last_heartbeat = 0
 
 def _get_time_key() -> str:
     now = int(time.time())
-    slot = now // 180
-    return f"online_{slot}"
+    slot = now // TIME_SLOT
+    return f"min_{slot}"
 
 
 def _generate_instance_hash(account_id: int, username: str) -> str:
@@ -36,6 +37,8 @@ def start_tracking(account_id: int, username: str) -> None:
     _start_time = int(time.time())
     _running = True
     
+    _send_heartbeat()
+    
     Thread(target=_tracking_loop, daemon=True).start()
     logger.debug("Activity tracking started")
 
@@ -46,7 +49,6 @@ def stop_tracking() -> None:
 
 
 def _tracking_loop() -> None:
-    _send_heartbeat()
     while _running:
         time.sleep(HEARTBEAT_INTERVAL)
         try:
@@ -69,8 +71,9 @@ def _send_heartbeat() -> None:
             timeout=5
         )
         _last_heartbeat = int(time.time())
-    except:
-        pass
+        logger.debug(f"Heartbeat sent: {time_key}")
+    except Exception as e:
+        logger.debug(f"Heartbeat failed: {e}")
 
 
 def get_active_count() -> int | None:
@@ -78,7 +81,7 @@ def get_active_count() -> int | None:
     
     try:
         response = requests.get(
-            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}?readOnly=true",
+            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}",
             timeout=5
         )
         if response.status_code == 200:

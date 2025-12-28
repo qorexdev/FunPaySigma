@@ -569,7 +569,7 @@ activity_info = """📊 <b>FunPay Sigma — Status</b>
 
 ⚡ <b>Твоя Сигма:</b> <code>Работает</code>
 ⏱️ <b>Аптайм:</b> <code>{}</code>
-👥 <b>Сигм онлайн:</b> <code>~{}</code>
+👥 <b>Сигм онлайн:</b> <code>{}</code>
 
 🌐 <b>Проект на GitHub:</b>
 ⭐ <b>Звёзд:</b> <code>{}</code>
