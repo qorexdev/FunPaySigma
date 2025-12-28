@@ -6,6 +6,7 @@ import os
 import zipfile
 import shutil
 import json
+import re
 
 logger = getLogger("FPS.update_checker")
 localizer = Localizer()
@@ -17,11 +18,34 @@ HEADERS = {
 
 class Release:
            
-    def __init__(self, name: str, description: str, sources_link: str):
+    def __init__(self, name: str, description: str, sources_link: str, tag_name: str):
                    
         self.name = name
         self.description = description
         self.sources_link = sources_link
+        self.tag_name = tag_name
+
+def parse_version(version_str: str) -> tuple:
+    version_str = version_str.lstrip('v')
+    
+    if '.' in version_str:
+        parts = version_str.split('.')
+        major_minor = int(parts[0])
+        patch_build = int(parts[1]) if len(parts) > 1 else 0
+        return (major_minor, patch_build)
+    else:
+        return (int(version_str), 0)
+
+def compare_versions(version1: str, version2: str) -> int:
+    v1 = parse_version(version1)
+    v2 = parse_version(version2)
+    
+    if v1 > v2:
+        return 1
+    elif v1 < v2:
+        return -1
+    else:
+        return 0
 
 def get_releases(from_tag: str) -> list[Release] | None:
            
@@ -30,16 +54,25 @@ def get_releases(from_tag: str) -> list[Release] | None:
         response.raise_for_status()
         releases_data = response.json()
         releases = []
+        
         for release in releases_data:
-            if release["tag_name"] == from_tag:
-                break
-            releases.append(Release(release["tag_name"], release["body"], release["zipball_url"]))
+            tag = release["tag_name"]
+            if compare_versions(tag, from_tag) <= 0:
+                continue
+            releases.append(Release(
+                release["tag_name"], 
+                release["body"], 
+                release["zipball_url"],
+                release["tag_name"]
+            ))
+        
+        releases.sort(key=lambda r: parse_version(r.tag_name), reverse=True)
         return releases
     except:
         logger.debug("TRACEBACK", exc_info=True)
         return None
 
-def get_new_releases(current_tag) -> int | list[Release]:
+def get_new_releases(current_tag: str) -> int | list[Release]:
            
     releases = get_releases(current_tag)
     if releases is None:
@@ -47,6 +80,17 @@ def get_new_releases(current_tag) -> int | list[Release]:
     if not releases:
         return 2
     return releases
+
+def get_skipped_count(releases: list[Release]) -> int:
+    return len(releases) - 1 if releases else 0
+
+def format_version_info(current_version: str, releases: list[Release]) -> dict:
+    return {
+        "current": current_version,
+        "latest": releases[0].tag_name if releases else current_version,
+        "skipped": get_skipped_count(releases),
+        "total_available": len(releases)
+    }
 
 def download_zip(url: str) -> int:
            

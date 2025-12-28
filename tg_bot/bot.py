@@ -439,10 +439,13 @@ class TGBot:
                                                                
         if releases:
             latest_release = releases[0]
-            self.bot.send_message(m.chat.id, _("update_available", latest_release.name, latest_release.description))
+            skipped = updater.get_skipped_count(releases)
+            version_info = f"\n\n📊 <b>Твоя версия:</b> <code>v{self.cardinal.VERSION}</code>"
+            if skipped > 0:
+                version_info += f"\n⏭️ <b>Пропущено:</b> <code>{skipped}</code> релизов"
+            self.bot.send_message(m.chat.id, _("update_available", latest_release.name, latest_release.description) + version_info)
             self.bot.send_message(m.chat.id, _("update_update"))
         else:
-                                            
             self.bot.send_message(m.chat.id, _("update_lasted", self.cardinal.VERSION))
 
     def get_backup(self, m: Message):
@@ -490,11 +493,12 @@ class TGBot:
             return
 
         release = releases[0]
-        if updater.download_zip(release.sources_link)                or (release_folder := updater.extract_update_archive()) == 1:
+        skipped = updater.get_skipped_count(releases)
+        if updater.download_zip(release.sources_link) or (release_folder := updater.extract_update_archive()) == 1:
             self.bot.send_message(m.chat.id, _("update_download_error"))
             return
                                                         
-        self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(len(releases))))
+        self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(skipped)))
 
         if updater.install_release(release_folder):
             self.bot.send_message(m.chat.id, _("update_install_error"))
