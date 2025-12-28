@@ -357,48 +357,83 @@ class Account:
 
     def get_all_my_lots(self, profile: types.UserProfile | None = None,
                         locale: Literal["ru", "en", "uk"] | None = None) -> list[types.MyLotShortcut]:
-                   
+               
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         
-        all_lots = []
+        import os
+        from datetime import datetime
+        storage_dir = "storage"
+        categories_file = os.path.join(storage_dir, "known_lot_categories.json")
+        
+        saved_category_ids = set()
+        if os.path.exists(categories_file):
+            try:
+                with open(categories_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    saved_category_ids = set(data.get("category_ids", []))
+                    logger.info(f"Загружено {len(saved_category_ids)} сохранённых категорий")
+            except Exception as e:
+                logger.warning(f"Не удалось загрузить сохранённые категории: {e}")
+        
+        subcategory_ids = set()
         
         if profile:
-                                                         
             subcategories_with_lots = profile.get_sorted_lots(2)
-            subcategory_ids = set()
             for subcat in subcategories_with_lots.keys():
                 if subcat and hasattr(subcat, 'id') and subcat.type == enums.SubCategoryTypes.COMMON:
                     subcategory_ids.add(subcat.id)
-            
-            logger.info(f"Загрузка лотов из {len(subcategory_ids)} подкатегорий...")
-        else:
-                                                          
+        
+        subcategory_ids.update(saved_category_ids)
+        
+        if not subcategory_ids:
             subcategories = self.get_sorted_subcategories().get(enums.SubCategoryTypes.COMMON, {})
             subcategory_ids = set(subcategories.keys())
-            logger.warning(f"Профиль не передан, загрузка из всех {len(subcategory_ids)} подкатегорий (медленно)...")
+            logger.warning(f"Нет категорий, загрузка из всех {len(subcategory_ids)} (медленно)...")
+        else:
+            logger.info(f"Загрузка лотов из {len(subcategory_ids)} категорий (в т.ч. сохранённых)...")
         
+        all_lots = []
+        categories_with_lots = set()
         total = len(subcategory_ids)
         loaded = 0
         
         for subcategory_id in subcategory_ids:
             try:
                 lots = self.get_my_subcategory_lots(subcategory_id, locale)
-                all_lots.extend(lots)
+                if lots:
+                    all_lots.extend(lots)
+                    categories_with_lots.add(subcategory_id)
                 loaded += 1
                 
                 active = sum(1 for l in lots if l.active)
                 inactive = len(lots) - active
-                logger.info(f"[{loaded}/{total}] Подкатегория {subcategory_id}: {len(lots)} лотов (✅{active} ❌{inactive})")
+                if lots:
+                    logger.info(f"[{loaded}/{total}] Категория {subcategory_id}: {len(lots)} лотов (✅{active} ❌{inactive})")
+                else:
+                    logger.debug(f"[{loaded}/{total}] Категория {subcategory_id}: пусто")
                 
             except Exception as e:
                 loaded += 1
-                logger.warning(f"[{loaded}/{total}] Подкатегория {subcategory_id}: ошибка - {e}")
+                logger.warning(f"[{loaded}/{total}] Категория {subcategory_id}: ошибка - {e}")
                 continue
+        
+        if categories_with_lots:
+            try:
+                os.makedirs(storage_dir, exist_ok=True)
+                categories_data = {
+                    "category_ids": list(categories_with_lots),
+                    "updated_at": datetime.now().isoformat()
+                }
+                with open(categories_file, "w", encoding="utf-8") as f:
+                    json.dump(categories_data, f, ensure_ascii=False, indent=2)
+                logger.debug(f"Сохранено {len(categories_with_lots)} категорий в {categories_file}")
+            except Exception as e:
+                logger.warning(f"Не удалось сохранить категории: {e}")
         
         active_total = sum(1 for l in all_lots if l.active)
         inactive_total = len(all_lots) - active_total
-        logger.info(f"Загружено всего: {len(all_lots)} лотов (✅{active_total} активных, ❌{inactive_total} деактивированных)")
+        logger.info(f"Загружено: {len(all_lots)} лотов (✅{active_total} активных, ❌{inactive_total} деактивированных)")
         
         return all_lots
 

@@ -756,8 +756,9 @@ le_search_no_results = """🔍 <b>Nothing found</b>
 
 Try different words or check the ID."""
 
-le_category_not_found = "❌ Category not found."
+le_category_not_found = "❌ Category not found or no lots in it."
 le_lot_id_invalid = "❌ Enter a valid ID (numbers only)."
+le_loading_category_direct = "🔄 Loading category from FunPay..."
 
 desc_le_search_menu = """🛍️ <b>FunPay Lot Editor</b>
 
