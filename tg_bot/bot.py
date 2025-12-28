@@ -71,6 +71,7 @@ class TGBot:
             "del_logs": "cmd_del_logs",
             "power_off": "cmd_power_off",
             "watermark": "cmd_watermark",
+            "activity": "cmd_activity",
         }
         self.__default_notification_settings = {
             utils.NotificationTypes.ad: 1,
@@ -424,6 +425,31 @@ class TGBot:
     def about(self, m: Message):
                    
         self.bot.send_message(m.chat.id, _("about", self.cardinal.VERSION))
+
+    def send_activity(self, m: Message):
+        from Utils import activity_tracker
+        
+        uptime_seconds = activity_tracker.get_instance_uptime()
+        uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
+        
+        active_count = activity_tracker.get_active_count()
+        active_str = str(active_count) if active_count is not None else "?"
+        
+        stats = activity_tracker.get_project_stats()
+        
+        if stats.get("error") and stats.get("stars") is None:
+            self.bot.send_message(m.chat.id, _("activity_error"))
+            return
+        
+        stars = stats.get("stars", "—")
+        forks = stats.get("forks", "—")
+        watchers = stats.get("watchers", "—")
+        
+        self.bot.send_message(
+            m.chat.id, 
+            _("activity_info", uptime_str, active_str, stars, forks, watchers),
+            disable_web_page_preview=True
+        )
 
     def check_updates(self, m: Message):
         curr_tag = f"v{self.cardinal.VERSION}"
@@ -1434,6 +1460,7 @@ class TGBot:
         self.msg_handler(self.send_logs, commands=["logs"])
         self.msg_handler(self.del_logs, commands=["del_logs"])
         self.msg_handler(self.about, commands=["about"])
+        self.msg_handler(self.send_activity, commands=["activity"])
         self.msg_handler(self.check_updates, commands=["check_updates"])
         self.msg_handler(self.update, commands=["update"])
         self.msg_handler(self.get_backup, commands=["get_backup"])

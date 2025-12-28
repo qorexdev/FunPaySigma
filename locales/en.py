@@ -498,6 +498,23 @@ cmd_get_backup = "get backup"
 cmd_upload_backup = "upload backup"
 cmd_restart = "restart FPS"
 cmd_power_off = "shutdown FPS"
+cmd_activity = "Sigma Activity"
+
+activity_info = """📊 <b>FunPay Sigma — Status</b>
+
+⚡ <b>Your Sigma:</b> <code>Running</code>
+⏱️ <b>Uptime:</b> <code>{}</code>
+👥 <b>Sigmas online:</b> <code>~{}</code>
+
+🌐 <b>Project on GitHub:</b>
+⭐ <b>Stars:</b> <code>{}</code>
+🍴 <b>Forks:</b> <code>{}</code>
+👀 <b>Watchers:</b> <code>{}</code>
+
+💬 <b>Chat:</b> @FunPaySigmaChat
+🐙 <b>GitHub:</b> github.com/qorexdev/FunPaySigma"""
+
+activity_error = "❌ Failed to get project stats."
 
 v_edit_greeting_text = "Enter the text of the welcome message."
 v_edit_greeting_cooldown = "Enter the greeting message cooldown (in days)."

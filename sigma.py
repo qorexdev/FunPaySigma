@@ -28,7 +28,7 @@ import handlers
 import announcements
 from locales.localizer import Localizer
 from FunPayAPI import utils as fp_utils
-from Utils import cardinal_tools
+from Utils import cardinal_tools, activity_tracker
 import tg_bot.bot
 
 from threading import Thread
@@ -379,6 +379,7 @@ class Cardinal(object):
                 cardinal_tools.set_console_title(f"FunPay Sigma - {self.account.username} ({self.account.id})")
                 for line in greeting_text.split("\n"):
                     logger.info(line)
+                activity_tracker.start_tracking(self.account.id, self.account.username)
                 break
             except TimeoutError:
                 logger.error(_("crd_acc_get_timeout_err"))
