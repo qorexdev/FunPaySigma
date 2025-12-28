@@ -808,7 +808,6 @@ def add_order_to_review_reminders_handler(c: Cardinal, e: OrderStatusChangedEven
     c.add_confirmed_order(order_id, buyer_username, buyer_id)
     logger.info(f"Заказ {order_id} добавлен в список для напоминаний об отзывах")
 
-
 def send_bot_started_notification_handler(c: Cardinal, *args):
            
     if c.telegram is None:

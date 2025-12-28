@@ -431,7 +431,7 @@ class TGBot:
         if isinstance(releases, int):
             errors = {
                 1: ["update_no_tags", ()],
-                2: ["update_lasted", (curr_tag,)],
+                2: ["update_lasted", (self.cardinal.VERSION,)],
                 3: ["update_get_error", ()],
             }
             self.bot.send_message(m.chat.id, _(errors[releases][0], *errors[releases][1]))
@@ -443,7 +443,7 @@ class TGBot:
             self.bot.send_message(m.chat.id, _("update_update"))
         else:
                                             
-            self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
+            self.bot.send_message(m.chat.id, _("update_lasted", self.cardinal.VERSION))
 
     def get_backup(self, m: Message):
         logger.info(
@@ -475,7 +475,7 @@ class TGBot:
         if isinstance(releases, int):
             errors = {
                 1: ["update_no_tags", ()],
-                2: ["update_lasted", (curr_tag,)],
+                2: ["update_lasted", (self.cardinal.VERSION,)],
                 3: ["update_get_error", ()],
             }
             self.bot.send_message(m.chat.id, _(errors[releases][0], *errors[releases][1]))
@@ -486,7 +486,7 @@ class TGBot:
 
         if not releases:
                                             
-            self.bot.send_message(m.chat.id, _("update_lasted", curr_tag))
+            self.bot.send_message(m.chat.id, _("update_lasted", self.cardinal.VERSION))
             return
 
         release = releases[0]
@@ -1076,7 +1076,6 @@ class TGBot:
             progress_msg.id,
             reply_markup=keyboard
         )
-
 
     def act_edit_review_reply_text(self, c: CallbackQuery):
         stars = int(c.data.split(":")[1])

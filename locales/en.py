@@ -636,9 +636,12 @@ crd_tg_au_err = "Failed to update the message with user information: {}. I will 
 
 mm_support_tickets = "📨 Order Confirmation Tickets"
 
-st_enabled = "{} Auto-send (once per 24h)"
+st_enabled = "{} Auto-send"
 st_send_now = "📨 Send now"
 st_cooldown = "⏳ Next in: {}"
+st_hours_threshold = "⏱️ Threshold: {} hours"
+st_send_time = "🕐 Send time: {}"
+st_refresh_orders = "🔄 Refresh order list"
 
 desc_support_tickets = """🏠 Menu > 📨 <b>Order Confirmation Tickets</b>
 
@@ -650,10 +653,25 @@ Automatically sends a ticket to FunPay support requesting to close unconfirmed o
 📦 <b>Awaiting confirmation:</b> {} orders
 ⏰ <b>Next send in:</b> {}"""
 
+desc_support_tickets_v2 = """🏠 Menu > 📨 <b>Order Confirmation Tickets</b>
+
+Automatically sends a ticket to FunPay support requesting to close unconfirmed orders.
+
+{} <b>Auto:</b> {}
+📦 <b>Unconfirmed:</b> {} orders
+⏰ <b>Cooldown:</b> {}
+
+━━━━━━━━━━━━━━━━━━
+⚙️ <b>Settings</b>
+⏱️ <b>Threshold:</b> {} hours (order is "old" after this)
+🕐 <b>Auto-send at:</b> {}
+🔄 <b>Updated:</b> {}"""
+
 st_auto_enabled = "✅ Enabled"
 st_auto_disabled = "❌ Disabled"
-st_ready = "ready to send"
+st_ready = "ready"
 st_wait_hours = "{}h {}m"
+st_never = "never"
 
 st_sending = "📨 Sending ticket..."
 st_sent = """✅ <b>Ticket sent!</b>
@@ -662,10 +680,41 @@ st_sent = """✅ <b>Ticket sent!</b>
 ⏰ Next one available in 24 hours"""
 
 st_error = "❌ Failed to send ticket. Try again later."
-st_no_orders = "📭 No unconfirmed orders older than 24h."
+st_no_orders = "📭 No unconfirmed orders."
 st_cooldown_active = "⏳ Please wait {}h {}m before the next ticket."
-st_toggled_on = "✅ Auto-send enabled (once per 24h)"
+st_toggled_on = "✅ Auto-send enabled"
 st_toggled_off = "❌ Auto-send disabled"
+
+st_refreshing = "🔄 Refreshing list..."
+st_refreshed = "✅ Updated! Found {} orders."
+st_refresh_error = "❌ Refresh failed"
+
+st_enter_hours = """⏱️ <b>How many hours should an order be unconfirmed?</b>
+
+Current: <code>{}</code> hours
+
+Enter a number from 1 to 720 (30 days)."""
+st_hours_invalid = "❌ Enter a number from 1 to 720."
+st_hours_set = "✅ Threshold set: <b>{}</b> hours"
+
+st_enter_time = """🕐 <b>When to send tickets automatically?</b>
+
+Current: <code>{}</code>
+
+Enter time in HH:MM format (e.g., 10:00 or 18:30)."""
+st_time_invalid = "❌ Invalid format. Use HH:MM (e.g., 10:00)."
+st_time_set = "✅ Auto-send time: <b>{}</b>"
+
+st_auto_sent_notification = """📬 <b>Ticket sent automatically!</b>
+
+📦 Orders in ticket: {}
+⏰ Next one in 24 hours"""
+
+st_auto_error_notification = """❌ <b>Auto-ticket failed</b>
+
+Check settings or send manually."""
+
+st_open_menu = "📨 Open tickets menu"
 
 log_st_sent = "$CYAN[TICKETS]$RESET Ticket sent for {} orders."
 log_st_error = "$RED[TICKETS]$RESET Failed to send ticket: {}"

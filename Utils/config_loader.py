@@ -293,7 +293,6 @@ def load_main_config(config_path: str):
             config.set("ReviewReminders", "interval", "4320")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
-
             try:
                 if values[section_name][param_name] == "any":
                     check_param(param_name, config[section_name])
