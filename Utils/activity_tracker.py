@@ -8,7 +8,8 @@ from typing import Optional
 logger = logging.getLogger("FPS.activity")
 
 GITHUB_API = "https://api.github.com/repos/qorexdev/FunPaySigma"
-COUNTER_NAMESPACE = "fps-sigma"
+COUNTER_API = "https://counterapi.com/api"
+COUNTER_NAMESPACE = "funpaysigma"
 HEARTBEAT_INTERVAL = 60
 
 _instance_hash: Optional[str] = None
@@ -20,7 +21,7 @@ _last_heartbeat = 0
 def _get_time_key() -> str:
     now = int(time.time())
     slot = now // 180
-    return f"active_{slot}"
+    return f"online_{slot}"
 
 
 def _generate_instance_hash(account_id: int, username: str) -> str:
@@ -64,19 +65,12 @@ def _send_heartbeat() -> None:
     
     try:
         requests.get(
-            f"https://api.countapi.xyz/hit/{COUNTER_NAMESPACE}/{time_key}",
+            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}",
             timeout=5
         )
         _last_heartbeat = int(time.time())
     except:
-        try:
-            requests.post(
-                f"https://counterapi.dev/api/{COUNTER_NAMESPACE}/{time_key}/up",
-                timeout=5
-            )
-            _last_heartbeat = int(time.time())
-        except:
-            pass
+        pass
 
 
 def get_active_count() -> int | None:
@@ -84,23 +78,14 @@ def get_active_count() -> int | None:
     
     try:
         response = requests.get(
-            f"https://api.countapi.xyz/get/{COUNTER_NAMESPACE}/{time_key}",
+            f"{COUNTER_API}/{COUNTER_NAMESPACE}/heartbeat/{time_key}?readOnly=true",
             timeout=5
         )
         if response.status_code == 200:
             data = response.json()
-            return data.get("value", 0)
-    except:
-        pass
-    
-    try:
-        response = requests.get(
-            f"https://counterapi.dev/api/{COUNTER_NAMESPACE}/{time_key}",
-            timeout=5
-        )
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("count", 0)
+            value = data.get("value")
+            if value is not None:
+                return value
     except:
         pass
     
