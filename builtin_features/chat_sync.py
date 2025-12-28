@@ -53,7 +53,6 @@ def templates_kb(cs):
     return markup
 
 def switchers_kb(cs, offset):
-                                             
     kb = K()
     kb.add(B(("🟢" if cs.settings["watermark_is_hidden"] else "🔴") + " Скрывать вотермарку",
              callback_data=f"{CBT_SWITCH}:watermark_is_hidden:{offset}"))
@@ -71,6 +70,8 @@ def switchers_kb(cs, offset):
              callback_data=f"{CBT_SWITCH}:self_notify:{offset}"))
     kb.add(B(("🟢" if cs.settings["tag_admins_on_reply"] else "🔴") + " @ при сообщении собеседника",
              callback_data=f"{CBT_SWITCH}:tag_admins_on_reply:{offset}"))
+    kb.add(B(("🟢" if cs.settings["hide_funpay_ads"] else "🔴") + " Скрывать рекламу FunPay",
+             callback_data=f"{CBT_SWITCH}:hide_funpay_ads:{offset}"))
     kb.add(B(_("gl_back"), callback_data=f"{CBT_OPEN_SETTINGS}"))
     return kb
 
@@ -133,7 +134,8 @@ class ChatSync:
             "edit_topic": True,
             "templates": False,
             "self_notify": True,
-            "tag_admins_on_reply": False
+            "tag_admins_on_reply": False,
+            "hide_funpay_ads": True
         }
         settings_path = os.path.join(PLUGIN_FOLDER, "settings.json")
         if os.path.exists(settings_path):
@@ -217,6 +219,32 @@ class ChatSync:
     def is_error_message(self, m):
         if self.settings["chat_id"] and m.chat.id == self.settings["chat_id"]                and m.reply_to_message and m.message_thread_id in self.__reversed_threads                and not m.reply_to_message.forum_topic_created:
             return True
+        return False
+
+    @staticmethod
+    def is_funpay_ad_message(message) -> bool:
+        if not message.text:
+            return False
+        if not message.is_support:
+            return False
+        if message.is_arbitration or message.is_moderation:
+            return False
+        ad_patterns = [
+            "мало кто знает, но на funpay",
+            "few people know, but on funpay",
+            "мало хто знає, але на funpay",
+            "самое выгодное пополнение",
+            "the most profitable",
+            "найвигідніше поповнення",
+            "расскажите об этом друзьям",
+            "tell your friends about it",
+            "розкажіть про це друзям",
+            "речь о лучших предложениях"
+        ]
+        text_lower = message.text.lower()
+        for pattern in ad_patterns:
+            if pattern in text_lower:
+                return True
         return False
 
     def new_synced_chat(self, chat_id, chat_name):
@@ -404,6 +432,8 @@ class ChatSync:
                 return
 
         events_list = [event for event in e.stack.get_stack() if not hasattr(event, "sync_ignore")]
+        if self.settings.get("hide_funpay_ads", True):
+            events_list = [event for event in events_list if not self.is_funpay_ad_message(event.message)]
         if not events_list:
             return
         tags = " " + " ".join([f"<a href='tg://user?id={i}'>{SPECIAL_SYMBOL}</a>" for i in c.telegram.authorized_users])
@@ -677,9 +707,15 @@ def init(cardinal: Cardinal):
 
 <b>📋 Как настроить:</b>
 1. Создайте группу с режимом "Темы" (Topics)
-2. Добавьте туда бота (минимум {MIN_BOTS})
-3. Выполните <code>/setup_sync_chat</code> в группе
-4. Добавьте дополнительных ботов ниже для обхода лимитов
+2. Добавьте бота в группу и дайте права администратора
+3. Убедитесь, что бот имеет право "Управлять темами"
+4. Выполните <code>/setup_sync_chat</code> в группе
+5. Добавьте дополнительных ботов (минимум {MIN_BOTS}) ниже
+
+<b>⚠️ Частые проблемы:</b>
+• <i>«Бот не создает топики»</i> — дайте боту права "Manage Topics"
+• <i>«Сообщения не приходят»</i> — проверьте /restart
+• <i>«Ошибки лимитов»</i> — добавьте больше ботов (до 10)
 
 <b>📊 Статус:</b>
 • <b>Группа:</b> {chat_name or '<code>Не установлена</code>'}

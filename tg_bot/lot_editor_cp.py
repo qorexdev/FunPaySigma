@@ -218,6 +218,52 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         lots = get_lots_by_category(category_id)
         
         if not lots:
+            try:
+                loading_msg = bot.reply_to(m, _("le_loading_category_direct"))
+                lots = crd.account.get_my_subcategory_lots(category_id)
+                bot.delete_message(loading_msg.chat.id, loading_msg.id)
+                
+                if lots:
+                    import os
+                    import json as json_lib
+                    storage_dir = "storage"
+                    categories_file = os.path.join(storage_dir, "known_lot_categories.json")
+                    
+                    saved_ids = set()
+                    if os.path.exists(categories_file):
+                        try:
+                            with open(categories_file, "r", encoding="utf-8") as f:
+                                data = json_lib.load(f)
+                                saved_ids = set(data.get("category_ids", []))
+                        except:
+                            pass
+                    
+                    saved_ids.add(category_id)
+                    try:
+                        os.makedirs(storage_dir, exist_ok=True)
+                        from datetime import datetime as dt
+                        categories_data = {
+                            "category_ids": list(saved_ids),
+                            "updated_at": dt.now().isoformat()
+                        }
+                        with open(categories_file, "w", encoding="utf-8") as f:
+                            json_lib.dump(categories_data, f, ensure_ascii=False, indent=2)
+                    except:
+                        pass
+                    
+                    if hasattr(crd, 'all_lots') and crd.all_lots is not None:
+                        existing_ids = {l.id for l in crd.all_lots}
+                        for lot in lots:
+                            if lot.id not in existing_ids:
+                                crd.all_lots.append(lot)
+                    
+            except Exception as e:
+                logger.warning(f"Не удалось загрузить категорию {category_id}: {e}")
+                bot.reply_to(m, _("le_category_not_found"),
+                            reply_markup=K().add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0")))
+                return
+        
+        if not lots:
             bot.reply_to(m, _("le_category_not_found"),
                         reply_markup=K().add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0")))
             return

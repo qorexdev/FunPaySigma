@@ -53,6 +53,31 @@ ORDER_HTML_TEMPLATE = """<a href="https://funpay.com/orders/DELITEST/" class="tc
    <div class="tc-price text-nowrap tc-seller-sum" bis_skin_checked="1">999999.0 <span class="unit">₽</span></div>
 </a>"""
 
+def is_funpay_ad_message(message) -> bool:
+    if not message.text:
+        return False
+    if not message.is_support:
+        return False
+    if message.is_arbitration or message.is_moderation:
+        return False
+    ad_patterns = [
+        "мало кто знает, но на funpay",
+        "few people know, but on funpay",
+        "мало хто знає, але на funpay",
+        "самое выгодное пополнение",
+        "the most profitable",
+        "найвигідніше поповнення",
+        "расскажите об этом друзьям",
+        "tell your friends about it",
+        "розкажіть про це друзям",
+        "речь о лучших предложениях"
+    ]
+    text_lower = message.text.lower()
+    for pattern in ad_patterns:
+        if pattern in text_lower:
+            return True
+    return False
+
 def save_init_chats_handler(c: Cardinal, e: InitialChatEvent):
            
     if c.MAIN_CFG["Greetings"].getboolean("sendGreetings") and e.chat.id not in c.old_users:
@@ -206,6 +231,8 @@ def send_new_msg_notification_handler(c: Cardinal, e: NewMessageEvent) -> None:
     events = []
     nm, m, f, b = False, False, False, False
     for i in e.stack.get_stack():
+        if is_funpay_ad_message(i.message):
+            continue
         if i.message.author_id == 0:
             if c.include_fp_msg_enabled:
                 events.append(i)
@@ -418,22 +445,17 @@ def send_categories_raised_notification_handler(c: Cardinal, cat: types.Category
         raise_info = {}
     
     wait_time = raise_info.get("wait_time", 0)
-    last_interval = raise_info.get("last_interval")
-    
-    lines = [f"⤴️ Поднял все лоты категории <b>{cat.name}</b>"]
     
     if wait_time > 0:
-        from datetime import datetime, timedelta
-        next_raise = datetime.now() + timedelta(seconds=wait_time)
-        next_raise_str = next_raise.strftime("%H:%M")
-        lines.append(f"⏰ Следующее поднятие: <code>{next_raise_str}</code>")
-    
-    if last_interval:
-        from Utils import cardinal_tools
-        interval_str = cardinal_tools.time_to_str(last_interval)
-        lines.append(f"🔄 Интервал поднятий: <code>{interval_str}</code>")
-    
-    text = "\n".join(lines)
+        hours = wait_time // 3600
+        minutes = (wait_time % 3600) // 60
+        if hours > 0:
+            time_str = f"{hours}ч {minutes}мин" if minutes else f"{hours}ч"
+        else:
+            time_str = f"{minutes}мин"
+        text = f"⤴️ Поднял лоты категории <b>{cat.name}</b>\n⏰ Следующее через <code>{time_str}</code>"
+    else:
+        text = f"⤴️ Поднял лоты категории <b>{cat.name}</b>"
     
     Thread(target=c.telegram.send_notification,
            args=(text,),
