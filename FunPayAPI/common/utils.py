@@ -52,9 +52,9 @@ def parse_wait_time(response: str) -> int:
     if "секунд" in response or "second" in response:
         return int(x) if x else 2
     elif "минут" in response or "хвилин" in response or "minute" in response:
-        return (int(x) - 1 if x else 1) * 60
+        return int(x) * 60 if x else 60
     elif "час" in response or "годин" in response or "hour" in response:
-        return int((int(x) - 0.5 if x else 1) * 3600)
+        return int(x) * 3600 if x else 3600
     else:
         return 10
 
