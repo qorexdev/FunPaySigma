@@ -78,7 +78,7 @@ logo = """
 ██║░░░░░╚██████╔╝██║░╚███║██║░░░░░██║░░██║░░░██║░░░██████╔╝██║╚██████╔╝██║░╚═╝░██║██║░░██║
 ╚═╝░░░░░░╚═════╝░╚═╝░░╚══╝╚═╝░░░░░╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░╚═╝░╚═════╝░╚═╝░░░░░╚═╝╚═╝░░╚═╝"""
 
-VERSION = "27.50"
+VERSION = "27.51"
 
 Utils.cardinal_tools.set_console_title(f"FunPay Sigma v{VERSION}")
 
@@ -91,13 +91,6 @@ folders = ["configs", "logs", "storage", "storage/cache", "storage/plugins", "st
 for i in folders:
     if not os.path.exists(i):
         os.makedirs(i)
-
-if os.path.exists("configsexample"):
-    try:
-        shutil.rmtree("configsexample")
-        print(f"{Fore.GREEN}[✓] Папка configsexample успешно удалена!{Style.RESET_ALL}")
-    except Exception as e:
-        print(f"{Fore.RED}[✗] Не удалось удалить configsexample: {e}{Style.RESET_ALL}")
 
 files = ["configs/auto_delivery.cfg", "configs/auto_response.cfg"]
 for i in files:
