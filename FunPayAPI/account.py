@@ -158,19 +158,24 @@ class Account:
                   "headers": headers,
                   "timeout": self.requests_timeout,
                   "proxies": self.proxy or {}}
-        i = 0
-        response = None
-        while i < 10 or response.status_code == 429:
-            i += 1
-            response = self.session.request(url=link, data=payload, allow_redirects=False, **kwargs)
-            if response.status_code == 429:
-                self.last_429_err_time = time.time()
-                time.sleep(min(2 ** i, 30))
-                continue
-            elif not (300 <= response.status_code < 400) or 'Location' not in response.headers:
-                break
-            link = response.headers['Location']
-            update_locale(link)
+        for attempt in range(1, 11):
+            try:
+                response = self.session.request(url=link, data=payload, allow_redirects=False, **kwargs)
+                if response.status_code == 429:
+                    self.last_429_err_time = time.time()
+                    time.sleep(min(2 ** attempt, 30))
+                    continue
+                elif not (300 <= response.status_code < 400) or 'Location' not in response.headers:
+                    break
+                link = response.headers['Location']
+                update_locale(link)
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"Сетевая ошибка (попытка {attempt}/10): {e}")
+                if attempt < 10:
+                    time.sleep(min(2 ** attempt, 10))
+                    continue
+                else:
+                    raise e
 
         else:
             response = self.session.request(url=link, data=payload, allow_redirects=True, **kwargs)
@@ -1472,6 +1477,93 @@ class Account:
                             field_options[field_name] = options
         
         return types.LotFields(lot_id, result, subcategory, currency, calc_result, field_labels, field_options)
+
+    def get_create_lot_fields(self, category_id: int) -> types.LotFields:
+                                                                           
+        if not self.is_initiated:
+            raise exceptions.AccountNotInitiatedError()
+        headers = {}
+        response = self.method("get", f"lots/offerEdit?node={category_id}", headers, {}, raise_not_200=True)
+
+        html_response = response.content.decode()
+        bs = BeautifulSoup(html_response, "lxml")
+        error_message = bs.find("p", class_="lead")
+        if error_message:
+            raise exceptions.LotParsingError(response, error_message.text, 0)
+        
+        result = {}
+        result.update(
+            {field["name"]: field.get("value") or "" for field in bs.find_all("input") if field["name"] != "query"})
+        result.update({field["name"]: field.text or "" for field in bs.find_all("textarea")})
+        for field in bs.find_all("select"):
+            parent = field.find_parent(class_="form-group")
+            if parent and "hidden" in parent.get("class", []):
+                continue
+            selected_option = field.find("option", selected=True)
+            if selected_option:
+                result[field["name"]] = selected_option["value"]
+            else:
+                first_option = field.find("option")
+                result[field["name"]] = first_option["value"] if first_option and first_option.get("value") else ""
+        result.update({field["name"]: "on" for field in bs.find_all("input", {"type": "checkbox"}, checked=True)})
+        
+        result["node_id"] = str(category_id)
+        
+        subcategory = self.get_subcategory(enums.SubCategoryTypes.COMMON, category_id)
+        self.csrf_token = result.get("csrf_token") or self.csrf_token
+        
+        currency_span = bs.find("span", class_="form-control-feedback")
+        currency = utils.parse_currency(currency_span.text) if currency_span else self.currency
+        
+        if self.currency != currency:
+            self.currency = currency
+            
+        bs_buyer_prices = bs.find("table", class_="table-buyers-prices")
+        payment_methods = []
+        if bs_buyer_prices:
+            for i, pm in enumerate(bs_buyer_prices.find_all("tr")):
+                pm_price, pm_currency = pm.find("td").text.rsplit(maxsplit=1)
+                pm_price = float(pm_price.replace(" ", ""))
+                pm_currency = parse_currency(pm_currency)
+                payment_methods.append(PaymentMethod(pm.find("th").text, pm_price, pm_currency, i))
+        
+        price = float(result.get("price", "0") or "0")
+        
+        calc_result = CalcResult(types.SubCategoryTypes.COMMON, category_id, payment_methods,
+                                 price, None, types.Currency.UNKNOWN, currency)
+        
+        field_labels = {}
+        field_options = {}                                           
+        
+        for form_group in bs.find_all("div", class_="form-group"):
+            label_tag = form_group.find("label")
+            if not label_tag:
+                continue
+            label_text = label_tag.get_text(strip=True)
+            
+            input_tag = form_group.find(["input", "select", "textarea"])
+            if input_tag and input_tag.get("name"):
+                field_name = input_tag["name"]
+                                             
+                if field_name.startswith("fields[") and field_name not in [
+                    "fields[summary][ru]", "fields[summary][en]",
+                    "fields[desc][ru]", "fields[desc][en]",
+                    "fields[payment_msg][ru]", "fields[payment_msg][en]",
+                    "fields[images]"
+                ]:
+                    field_labels[field_name] = label_text
+                    
+                    if input_tag.name == "select":
+                        options = []
+                        for option in input_tag.find_all("option"):
+                            option_value = option.get("value", "")
+                            option_text = option.get_text(strip=True)
+                            if option_value:                              
+                                options.append((option_value, option_text))
+                        if options:
+                            field_options[field_name] = options
+        
+        return types.LotFields(0, result, subcategory, currency, calc_result, field_labels, field_options)
 
     def get_chip_fields(self, subcategory_id: int) -> types.ChipFields:
         if not self.is_initiated:

@@ -13,12 +13,18 @@ from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B, 
 from locales.localizer import Localizer
 
 import logging
+import random
+import json
+import os
 
 logger = logging.getLogger("TGBot")
 localizer = Localizer()
 _ = localizer.translate
 
 _lot_fields_cache: dict[int, object] = {}
+_lot_templates: dict[str, dict] = {}
+_lot_selection: dict[int, set] = {}
+TEMPLATES_FILE = "storage/lot_templates.json"
 
 def init_lot_editor_cp(crd: Cardinal, *args):
                                                      
@@ -105,30 +111,79 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         desc = lot.description if lot.description else "—"
         return desc
 
+    def load_templates():
+        global _lot_templates
+        try:
+            if os.path.exists(TEMPLATES_FILE):
+                with open(TEMPLATES_FILE, "r", encoding="utf-8") as f:
+                    _lot_templates = json.load(f)
+        except:
+            _lot_templates = {}
+    
+    def save_templates():
+        try:
+            os.makedirs(os.path.dirname(TEMPLATES_FILE), exist_ok=True)
+            with open(TEMPLATES_FILE, "w", encoding="utf-8") as f:
+                json.dump(_lot_templates, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Ошибка сохранения шаблонов: {e}")
+    
+    load_templates()
+
+    def validate_lot_fields(lot_fields) -> tuple[bool, str]:
+        errors = []
+        
+        title_ru = lot_fields.title_ru or ""
+        if not title_ru.strip():
+            errors.append("❌ <b>Название (RU)</b> — обязательное поле")
+        elif len(title_ru) > 100:
+            errors.append(f"❌ <b>Название (RU)</b> — максимум 100 символов (сейчас {len(title_ru)})")
+        
+        price = lot_fields.price
+        if not price or price <= 0:
+            errors.append("❌ <b>Цена</b> — укажи цену больше 0")
+        
+        if hasattr(lot_fields, 'field_labels') and lot_fields.field_labels:
+            for field_key, field_name in lot_fields.field_labels.items():
+                value = lot_fields.fields.get(field_key, "")
+                if not value or value.strip() == "":
+                    errors.append(f"❌ <b>{escape_html(field_name)}</b> — обязательное поле")
+        
+        desc_ru = lot_fields.description_ru or ""
+        if len(desc_ru) > 5000:
+            errors.append(f"❌ <b>Описание (RU)</b> — максимум 5000 символов (сейчас {len(desc_ru)})")
+        if desc_ru.count("\n") > 50:
+            errors.append(f"❌ <b>Описание (RU)</b> — максимум 50 строк (сейчас {desc_ru.count(chr(10))})")
+        
+        payment_ru = lot_fields.payment_msg_ru or ""
+        if len(payment_ru) > 2000:
+            errors.append(f"❌ <b>Автоответ (RU)</b> — максимум 2000 символов (сейчас {len(payment_ru)})")
+        
+        if errors:
+            return False, "\n".join(errors)
+        return True, ""
+
     def generate_lot_edit_text(lot_fields) -> str:
         nv = get_no_value()
         
         game_name = nv
         category_name = nv
+        category_id = ""
         if lot_fields.subcategory:
             category_name = escape_html(lot_fields.subcategory.name or nv)
+            category_id = lot_fields.subcategory.id or ""
             if lot_fields.subcategory.category:
                 game_name = escape_html(lot_fields.subcategory.category.name or nv)
         
-        title_ru = escape_html(lot_fields.title_ru or nv)
-        title_en = escape_html(lot_fields.title_en or nv)
-        desc_ru = escape_html(lot_fields.description_ru or nv)
-        desc_en = escape_html(lot_fields.description_en or nv)
-        payment_ru = escape_html(lot_fields.payment_msg_ru or nv)
-        payment_en = escape_html(lot_fields.payment_msg_en or nv)
+        title_ru = lot_fields.title_ru or nv
+        desc_ru = lot_fields.description_ru or nv
+        payment_ru = lot_fields.payment_msg_ru or nv
         
         price = lot_fields.price if lot_fields.price else nv
         amount = lot_fields.amount if lot_fields.amount else "∞"
-        secrets_count = len(lot_fields.secrets) if lot_fields.secrets else 0
         
-        status = _("le_active") if lot_fields.active else _("le_inactive")
-        deactivate = _("le_enabled") if lot_fields.deactivate_after_sale else _("le_disabled")
-        auto_delivery = _("le_enabled") if lot_fields.auto_delivery else _("le_disabled")
+        status = "✅" if lot_fields.active else "❌"
+        deactivate = "✅" if lot_fields.deactivate_after_sale else "❌"
         
         category_params_text = ""
         standard_keys = [
@@ -146,17 +201,33 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                 else:
                     field_name = key.replace("fields[", "").rstrip("]").replace("][", " > ")
                 display_value = escape_html(str(value)) if value else nv
-                category_params_text += f"\n<b>⚙️ {escape_html(field_name)}:</b> <code>{display_value}</code>"
+                category_params_text += f"\n⚙️ <b>{escape_html(field_name)}:</b> <code>{display_value}</code>"
         
-        return _("desc_le_edit_compact",
-                 lot_fields.lot_id,
-                 game_name, category_name,
-                 title_ru, title_en,
-                 desc_ru, desc_en,
-                 payment_ru, payment_en,
-                 price, lot_fields.currency, amount, secrets_count,
-                 status, deactivate, auto_delivery,
-                 category_params_text)
+        if lot_fields.lot_id < 0:
+            header = _("le_create_title", category_name)
+        else:
+            header = f"✏️ <b>Лот #{lot_fields.lot_id}</b>"
+        
+        cat_id_text = f" <code>[ID: {category_id}]</code>" if category_id else ""
+        
+        return f"""{header}
+
+🎮 {game_name} › {category_name}{cat_id_text}
+
+<b>🏷️ Название:</b>
+<code>{escape_html(title_ru)}</code>
+
+<b>📄 Описание:</b>
+<code>{escape_html(desc_ru)}</code>
+
+<b>💬 Автоответ:</b>
+<code>{escape_html(payment_ru)}</code>
+
+<b>💰 {price}{lot_fields.currency}</b> | <b>📦 {amount}</b>
+{status} Активен | {deactivate} Деакт. после продажи{category_params_text}
+
+<i>🌐 Автоперевод EN</i>
+⚠️ <b>Не забудь сохранить!</b>"""
 
     def open_main_menu(c: CallbackQuery):
         offset = 0
@@ -271,9 +342,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         cat_info = lots[0].subcategory
         cat_name = cat_info.name if cat_info else "???"
         game_name = cat_info.category.name if cat_info and cat_info.category else ""
-        full_cat_name = f"{game_name} > {cat_name}" if game_name else cat_name
+        full_cat_name = f"{game_name} › {cat_name}" if game_name else cat_name
         
-        text = _("le_category_view_title", full_cat_name, game_name, len(lots))
+        text = _("le_category_view_title_v2", full_cat_name, category_id, len(lots))
         
         keyboard = K()
         
@@ -281,18 +352,20 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         inactive_count = len(lots) - active_count
         
         keyboard.row(
-            B(f"✅ Вкл все ({inactive_count})", None, f"{CBT.LE_BULK_ACTIVATE}:{category_id}"),
-            B(f"❌ Выкл все ({active_count})", None, f"{CBT.LE_BULK_DEACTIVATE}:{category_id}")
+            B(f"✅ Вкл ({inactive_count})", None, f"{CBT.LE_BULK_ACTIVATE}:{category_id}"),
+            B(f"❌ Выкл ({active_count})", None, f"{CBT.LE_BULK_DEACTIVATE}:{category_id}")
         )
-        keyboard.add(B(f"🗑️ Удалить все ({len(lots)})", None, f"{CBT.LE_BULK_DELETE}:{category_id}"))
-        keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
+        keyboard.row(
+            B(_("le_select_mode"), None, f"le_select_mode:{category_id}:0"),
+            B(_("le_create_lot"), None, f"le_create_lot:{category_id}")
+        )
         
         for lot in lots[:6]:
             status = "✅" if getattr(lot, "active", True) else "❌"
             price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
             desc = get_lot_full_name(lot)
-            btn_text = f"{status} {desc} | {price_str}"
-            keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:0"))
+            btn_text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
+            keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{category_id}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, 0, 6, min(6, len(lots)), len(lots), 
                                                 CBT.LE_CATEGORY_VIEW, [category_id])
@@ -353,9 +426,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         cat_info = lots[0].subcategory
         cat_name = cat_info.name if cat_info else "???"
         game_name = cat_info.category.name if cat_info and cat_info.category else ""
-        full_cat_name = f"{game_name} > {cat_name}" if game_name else cat_name
+        full_cat_name = f"{game_name} › {cat_name}" if game_name else cat_name
         
-        text = _("le_category_view_title", full_cat_name, game_name, len(lots))
+        text = _("le_category_view_title_v2", full_cat_name, category_id, len(lots))
         
         keyboard = K()
         
@@ -363,19 +436,21 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         inactive_count = len(lots) - active_count
         
         keyboard.row(
-            B(f"✅ Вкл все ({inactive_count})", None, f"{CBT.LE_BULK_ACTIVATE}:{category_id}"),
-            B(f"❌ Выкл все ({active_count})", None, f"{CBT.LE_BULK_DEACTIVATE}:{category_id}")
+            B(f"✅ Вкл ({inactive_count})", None, f"{CBT.LE_BULK_ACTIVATE}:{category_id}"),
+            B(f"❌ Выкл ({active_count})", None, f"{CBT.LE_BULK_DEACTIVATE}:{category_id}")
         )
-        keyboard.add(B(f"🗑️ Удалить все ({len(lots)})", None, f"{CBT.LE_BULK_DELETE}:{category_id}"))
-        keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
+        keyboard.row(
+            B(_("le_select_mode"), None, f"le_select_mode:{category_id}:{offset}"),
+            B(_("le_create_lot"), None, f"le_create_lot:{category_id}")
+        )
         
         lots_slice = lots[offset:offset + 6]
         for lot in lots_slice:
             status = "✅" if getattr(lot, "active", True) else "❌"
             price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
             desc = get_lot_full_name(lot)
-            btn_text = f"{status} {desc} | {price_str}"
-            keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{offset}"))
+            btn_text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
+            keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{category_id}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, offset, 6, len(lots_slice), len(lots), 
                                                 CBT.LE_CATEGORY_VIEW, [category_id])
@@ -576,30 +651,36 @@ def init_lot_editor_cp(crd: Cardinal, *args):
 
     def open_lot_edit(c: CallbackQuery):
         split = c.data.split(":")
-        lot_id, offset = int(split[1]), int(split[2])
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         bot.answer_callback_query(c.id, _("le_loading_lot"))
         
         try:
             lot_fields = get_cached_lot_fields(lot_id)
             if not lot_fields:
+                back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
                 bot.edit_message_text(
                     _("le_lot_not_found"),
                     c.message.chat.id, c.message.id,
-                    reply_markup=K().add(B(_("gl_back"), callback_data=f"{CBT.LE_SEARCH_MENU}:0"))
+                    reply_markup=K().add(B(_("gl_back"), callback_data=back_cb))
                 )
                 return
+            
+            if not category_id and lot_fields.subcategory:
+                category_id = lot_fields.subcategory.id
             
             text = generate_lot_edit_text(lot_fields)
             
             bot.edit_message_text(text, c.message.chat.id, c.message.id,
-                                 reply_markup=kb.edit_funpay_lot(lot_fields, offset))
+                                 reply_markup=kb.edit_funpay_lot(lot_fields, category_id))
         except Exception as e:
             logger.error(f"Ошибка при открытии лота #{lot_id}: {e}", exc_info=True)
+            back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
             bot.edit_message_text(
                 _("le_lot_not_found") + f"\n\n<code>{e}</code>",
                 c.message.chat.id, c.message.id,
-                reply_markup=K().add(B(_("gl_back"), callback_data=f"{CBT.LE_SEARCH_MENU}:0"))
+                reply_markup=K().add(B(_("gl_back"), callback_data=back_cb))
             )
 
     def act_edit_field(c: CallbackQuery):
@@ -637,14 +718,6 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         elif field_name == "payment_msg_en":
             current = escape_html(lot_fields.payment_msg_en or nv)
             prompt = _("le_enter_payment_msg_en", current)
-        elif field_name == "secrets":
-            secrets_list = lot_fields.secrets if lot_fields.secrets else []
-            secrets_count = len(secrets_list)
-            secrets_preview = "\n".join(secrets_list[:10])
-            if len(secrets_list) > 10:
-                secrets_preview += f"\n... и ещё {len(secrets_list) - 10}"
-            current = escape_html(secrets_preview or nv)
-            prompt = _("le_enter_secrets", secrets_count, current)
         else:
             prompt = f"Введи новое значение для {field_name}:"
         
@@ -713,9 +786,6 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                     if translated:
                         lot_fields.payment_msg_en = translated
                         translated_value = translated
-            elif field_name == "secrets":
-                secrets = [s.strip() for s in new_value.split("\n") if s.strip()]
-                lot_fields.secrets = secrets
             
             _lot_fields_cache[lot_id] = lot_fields
             
@@ -727,7 +797,6 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                 "title_ru": "Название (RU)",
                 "desc_ru": "Описание (RU)",
                 "payment_msg_ru": "Авто-ответ (RU)",
-                "secrets": "Товары автовыдачи",
             }
             
             response_text = _("le_field_updated", field_names.get(field_name, field_name))
@@ -742,7 +811,8 @@ def init_lot_editor_cp(crd: Cardinal, *args):
 
     def toggle_active(c: CallbackQuery):
         split = c.data.split(":")
-        lot_id, offset = int(split[1]), int(split[2])
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         lot_fields = get_cached_lot_fields(lot_id)
         if not lot_fields:
@@ -757,12 +827,13 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         text = generate_lot_edit_text(lot_fields)
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id,
-                             reply_markup=kb.edit_funpay_lot(lot_fields, offset))
+                             reply_markup=kb.edit_funpay_lot(lot_fields, category_id))
         bot.answer_callback_query(c.id)
 
     def toggle_deactivate(c: CallbackQuery):
         split = c.data.split(":")
-        lot_id, offset = int(split[1]), int(split[2])
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         lot_fields = get_cached_lot_fields(lot_id)
         if not lot_fields:
@@ -777,7 +848,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         text = generate_lot_edit_text(lot_fields)
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id,
-                             reply_markup=kb.edit_funpay_lot(lot_fields, offset))
+                             reply_markup=kb.edit_funpay_lot(lot_fields, category_id))
         bot.answer_callback_query(c.id)
 
     def act_edit_category_field(c: CallbackQuery):
@@ -887,7 +958,82 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             logger.error(f"Ошибка при редактировании поля {field_key}: {e}", exc_info=True)
             bot.reply_to(m, f"❌ Ошибка: {e}", reply_markup=keyboard)
 
+    def act_create_lot(c: CallbackQuery):
+        try:
+            category_id = int(c.data.split(":")[1])
+            bot.answer_callback_query(c.id, _("le_creating"))
+            
+            lot_fields = crd.account.get_create_lot_fields(category_id)
+            
+            temp_id = -random.randint(10000, 99999)
+            lot_fields.lot_id = temp_id
+            _lot_fields_cache[temp_id] = lot_fields
+            
+            lot_fields.active = True
+            
+            text = generate_lot_edit_text(lot_fields)
+            bot.edit_message_text(text, c.message.chat.id, c.message.id,
+                                 reply_markup=kb.edit_funpay_lot(lot_fields, category_id))
+                                 
+        except Exception as e:
+            logger.error(f"Error creating lot: {e}", exc_info=True)
+            bot.answer_callback_query(c.id, _("le_create_error", str(e)), show_alert=True)
+
     def save_lot(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
+        
+        lot_fields = get_cached_lot_fields(lot_id)
+        if not lot_fields:
+            bot.answer_callback_query(c.id, _("le_lot_not_found"), show_alert=True)
+            return
+        
+        is_valid, error_msg = validate_lot_fields(lot_fields)
+        if not is_valid:
+            bot.answer_callback_query(c.id, "❌ Есть ошибки", show_alert=False)
+            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}"))
+            bot.send_message(c.message.chat.id, f"⚠️ <b>Не могу сохранить:</b>\n\n{error_msg}", reply_markup=keyboard)
+            return
+        
+        bot.answer_callback_query(c.id, _("le_saving"))
+        
+        try:
+            is_create = lot_id < 0
+            original_lot_id = lot_id
+            if is_create:
+                lot_fields.lot_id = 0
+            
+            crd.account.save_lot(lot_fields)
+            
+            lot_fields.lot_id = original_lot_id
+            
+            if is_create:
+                logger.info(_("log_le_lot_created", c.from_user.username, c.from_user.id, "?"))
+                success_msg = _("le_created", "?")
+            else:
+                logger.info(_("log_le_lot_saved", c.from_user.username, c.from_user.id, lot_id))
+                success_msg = _("le_saved")
+            
+            clear_lot_cache(lot_id)
+            
+            crd.update_lots_and_categories()
+            
+            back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+            keyboard = K().add(B(_("gl_back"), callback_data=back_cb))
+            bot.send_message(c.message.chat.id, success_msg, reply_markup=keyboard)
+            
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении лота #{lot_id}: {e}", exc_info=True)
+            
+            error_text = str(e)
+            if "errors" in error_text.lower() or "заполните" in error_text.lower():
+                error_text = _("le_validation_error", error_text)
+            
+            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}"))
+            bot.send_message(c.message.chat.id, _("le_save_error", error_text), reply_markup=keyboard)
+
+    def save_as_template(c: CallbackQuery):
         split = c.data.split(":")
         lot_id, offset = int(split[1]), int(split[2])
         
@@ -896,28 +1042,156 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             bot.answer_callback_query(c.id, _("le_lot_not_found"), show_alert=True)
             return
         
-        bot.answer_callback_query(c.id, _("le_saving"))
+        result = bot.send_message(c.message.chat.id, _("le_enter_template_name"), reply_markup=CLEAR_STATE_BTN())
+        tg.set_state(c.message.chat.id, result.id, c.from_user.id, "le_save_template",
+                    {"lot_id": lot_id, "offset": offset})
+        bot.answer_callback_query(c.id)
+
+    def save_template_name(m: Message):
+        state = tg.get_state(m.chat.id, m.from_user.id)
+        lot_id = state["data"]["lot_id"]
+        offset = state["data"]["offset"]
+        tg.clear_state(m.chat.id, m.from_user.id, True)
+        
+        lot_fields = get_cached_lot_fields(lot_id)
+        if not lot_fields:
+            bot.reply_to(m, _("le_lot_not_found"))
+            return
+        
+        template_name = m.text.strip()
+        if not template_name or len(template_name) > 50:
+            bot.reply_to(m, _("le_template_name_invalid"),
+                        reply_markup=K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}")))
+            return
+        
+        template_data = {
+            "category_id": lot_fields.subcategory.id if lot_fields.subcategory else 0,
+            "fields": lot_fields.fields.copy(),
+            "active": lot_fields.active,
+            "deactivate_after_sale": lot_fields.deactivate_after_sale,
+        }
+        
+        _lot_templates[template_name] = template_data
+        save_templates()
+        
+        logger.info(f"@{m.from_user.username} (ID: {m.from_user.id}) сохранил шаблон '{template_name}'")
+        
+        keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
+        bot.reply_to(m, _("le_template_saved", template_name), reply_markup=keyboard)
+
+    def view_templates(c: CallbackQuery):
+        split = c.data.split(":")
+        category_id = int(split[1]) if len(split) > 1 else 0
+        
+        if not _lot_templates:
+            bot.answer_callback_query(c.id, _("le_no_templates"), show_alert=True)
+            return
+        
+        text = _("le_templates_list")
+        keyboard = K()
+        
+        for name in list(_lot_templates.keys())[:10]:
+            keyboard.add(B(f"📄 {name}", None, f"le_use_template:{name}:{category_id}"))
+        
+        keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+        bot.answer_callback_query(c.id)
+
+    def use_template(c: CallbackQuery):
+        split = c.data.split(":")
+        template_name = split[1]
+        category_id = int(split[2]) if len(split) > 2 else 0
+        
+        if template_name not in _lot_templates:
+            bot.answer_callback_query(c.id, _("le_template_not_found"), show_alert=True)
+            return
+        
+        template = _lot_templates[template_name]
+        target_category = category_id or template.get("category_id", 0)
+        
+        if not target_category:
+            bot.answer_callback_query(c.id, "Не указана категория", show_alert=True)
+            return
+        
+        bot.answer_callback_query(c.id, _("le_creating"))
         
         try:
-            crd.account.save_lot(lot_fields)
+            lot_fields = crd.account.get_create_lot_fields(target_category)
             
-            logger.info(_("log_le_lot_saved", c.from_user.username, c.from_user.id, lot_id))
+            for key, value in template.get("fields", {}).items():
+                if key in lot_fields.fields:
+                    lot_fields.fields[key] = value
             
-            clear_lot_cache(lot_id)
+            lot_fields.active = template.get("active", True)
+            lot_fields.deactivate_after_sale = template.get("deactivate_after_sale", False)
             
-            crd.update_lots_and_categories()
+            temp_id = -random.randint(10000, 99999)
+            lot_fields.lot_id = temp_id
+            _lot_fields_cache[temp_id] = lot_fields
             
-            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.LE_SEARCH_MENU}:0"))
-            bot.send_message(c.message.chat.id, _("le_saved"), reply_markup=keyboard)
-            
+            text = generate_lot_edit_text(lot_fields)
+            bot.edit_message_text(text, c.message.chat.id, c.message.id,
+                                 reply_markup=kb.edit_funpay_lot(lot_fields, 0))
         except Exception as e:
-            logger.error(f"Ошибка при сохранении лота #{lot_id}: {e}", exc_info=True)
+            logger.error(f"Ошибка при загрузке шаблона: {e}", exc_info=True)
+            bot.answer_callback_query(c.id, _("le_create_error", str(e)), show_alert=True)
+
+    def delete_template(c: CallbackQuery):
+        split = c.data.split(":")
+        template_name = split[1]
+        
+        if template_name in _lot_templates:
+            del _lot_templates[template_name]
+            save_templates()
+            bot.answer_callback_query(c.id, _("le_template_deleted", template_name))
+        else:
+            bot.answer_callback_query(c.id, _("le_template_not_found"), show_alert=True)
+
+    def duplicate_lot(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id, offset = int(split[1]), int(split[2])
+        
+        lot_fields = get_cached_lot_fields(lot_id)
+        if not lot_fields:
+            bot.answer_callback_query(c.id, _("le_lot_not_found"), show_alert=True)
+            return
+        
+        bot.answer_callback_query(c.id, _("le_duplicating"))
+        
+        try:
+            category_id = lot_fields.subcategory.id if lot_fields.subcategory else 0
+            if not category_id:
+                bot.answer_callback_query(c.id, "Не удалось определить категорию", show_alert=True)
+                return
+            
+            new_lot_fields = crd.account.get_create_lot_fields(category_id)
+            
+            for key, value in lot_fields.fields.items():
+                if key in new_lot_fields.fields and key not in ["offer_id", "csrf_token"]:
+                    new_lot_fields.fields[key] = value
+            
+            new_lot_fields.active = lot_fields.active
+            new_lot_fields.deactivate_after_sale = lot_fields.deactivate_after_sale
+            
+            temp_id = -random.randint(10000, 99999)
+            new_lot_fields.lot_id = temp_id
+            _lot_fields_cache[temp_id] = new_lot_fields
+            
+            logger.info(f"@{c.from_user.username} (ID: {c.from_user.id}) дублировал лот #{lot_id}")
+            
+            text = generate_lot_edit_text(new_lot_fields)
+            bot.edit_message_text(text, c.message.chat.id, c.message.id,
+                                 reply_markup=kb.edit_funpay_lot(new_lot_fields, 0))
+        except Exception as e:
+            logger.error(f"Ошибка при дублировании лота: {e}", exc_info=True)
             keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
-            bot.send_message(c.message.chat.id, _("le_save_error", str(e)), reply_markup=keyboard)
+            bot.send_message(c.message.chat.id, _("le_duplicate_error", str(e)), reply_markup=keyboard)
 
     def delete_lot_ask(c: CallbackQuery):
         split = c.data.split(":")
-        lot_id, offset = int(split[1]), int(split[2])
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         lot_fields = get_cached_lot_fields(lot_id)
         if not lot_fields:
@@ -930,12 +1204,13 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         text = _("desc_le_delete_confirm", title, price, lot_fields.currency)
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id,
-                             reply_markup=kb.edit_funpay_lot(lot_fields, offset, confirm_delete=True))
+                             reply_markup=kb.edit_funpay_lot(lot_fields, category_id, confirm_delete=True))
         bot.answer_callback_query(c.id)
 
     def delete_lot_confirm(c: CallbackQuery):
         split = c.data.split(":")
-        lot_id, offset = int(split[1]), int(split[2])
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         lot_fields = get_cached_lot_fields(lot_id)
         if not lot_fields:
@@ -953,13 +1228,217 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             
             crd.update_lots_and_categories()
             
-            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.LE_SEARCH_MENU}:0"))
+            back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+            keyboard = K().add(B(_("gl_back"), callback_data=back_cb))
             bot.send_message(c.message.chat.id, _("le_deleted"), reply_markup=keyboard)
             
         except Exception as e:
             logger.error(f"Ошибка при удалении лота #{lot_id}: {e}", exc_info=True)
-            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
+            keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}"))
             bot.send_message(c.message.chat.id, _("le_delete_error", str(e)), reply_markup=keyboard)
+
+    def enter_select_mode(c: CallbackQuery):
+        split = c.data.split(":")
+        category_id = int(split[1])
+        offset = int(split[2]) if len(split) > 2 else 0
+        
+        user_id = c.from_user.id
+        if user_id not in _lot_selection:
+            _lot_selection[user_id] = set()
+        else:
+            _lot_selection[user_id].clear()
+        
+        lots = get_lots_by_category(category_id)
+        if not lots:
+            bot.answer_callback_query(c.id, _("le_category_not_found"), show_alert=True)
+            return
+        
+        cat_info = lots[0].subcategory
+        cat_name = cat_info.name if cat_info else "???"
+        game_name = cat_info.category.name if cat_info and cat_info.category else ""
+        full_cat_name = f"{game_name} › {cat_name}" if game_name else cat_name
+        
+        text = _("le_select_mode_title", full_cat_name, len(lots), 0)
+        
+        keyboard = K()
+        keyboard.row(
+            B(_("le_select_all"), None, f"le_select_all:{category_id}:{offset}"),
+            B(_("le_deselect_all"), None, f"le_deselect_all:{category_id}:{offset}")
+        )
+        keyboard.row(
+            B(_("le_action_deactivate"), None, f"le_selection_action:deactivate:{category_id}"),
+            B(_("le_action_delete"), None, f"le_selection_action:delete:{category_id}")
+        )
+        
+        lots_slice = lots[offset:offset + 8]
+        for lot in lots_slice:
+            selected = lot.id in _lot_selection.get(user_id, set())
+            check = "☑️" if selected else "⬜"
+            status = "✅" if getattr(lot, "active", True) else "❌"
+            desc = get_lot_full_name(lot)
+            btn_text = f"{check} {status} {desc[:25]}{'...' if len(desc) > 25 else ''}"
+            keyboard.add(B(btn_text, None, f"le_toggle_select:{category_id}:{lot.id}:{offset}"))
+        
+        keyboard = utils.add_navigation_buttons(keyboard, offset, 8, len(lots_slice), len(lots), 
+                                                "le_select_mode", [category_id])
+        keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+        bot.answer_callback_query(c.id)
+
+    def toggle_select_lot(c: CallbackQuery):
+        split = c.data.split(":")
+        category_id = int(split[1])
+        lot_id = int(split[2])
+        offset = int(split[3]) if len(split) > 3 else 0
+        
+        user_id = c.from_user.id
+        if user_id not in _lot_selection:
+            _lot_selection[user_id] = set()
+        
+        if lot_id in _lot_selection[user_id]:
+            _lot_selection[user_id].remove(lot_id)
+        else:
+            _lot_selection[user_id].add(lot_id)
+        
+        lots = get_lots_by_category(category_id)
+        if not lots:
+            bot.answer_callback_query(c.id, _("le_category_not_found"), show_alert=True)
+            return
+        
+        cat_info = lots[0].subcategory
+        cat_name = cat_info.name if cat_info else "???"
+        game_name = cat_info.category.name if cat_info and cat_info.category else ""
+        full_cat_name = f"{game_name} › {cat_name}" if game_name else cat_name
+        
+        selected_count = len(_lot_selection.get(user_id, set()))
+        text = _("le_select_mode_title", full_cat_name, len(lots), selected_count)
+        
+        keyboard = K()
+        keyboard.row(
+            B(_("le_select_all"), None, f"le_select_all:{category_id}:{offset}"),
+            B(_("le_deselect_all"), None, f"le_deselect_all:{category_id}:{offset}")
+        )
+        keyboard.row(
+            B(_("le_action_deactivate"), None, f"le_selection_action:deactivate:{category_id}"),
+            B(_("le_action_delete"), None, f"le_selection_action:delete:{category_id}")
+        )
+        
+        lots_slice = lots[offset:offset + 8]
+        for lot in lots_slice:
+            selected = lot.id in _lot_selection.get(user_id, set())
+            check = "☑️" if selected else "⬜"
+            status = "✅" if getattr(lot, "active", True) else "❌"
+            desc = get_lot_full_name(lot)
+            btn_text = f"{check} {status} {desc[:25]}{'...' if len(desc) > 25 else ''}"
+            keyboard.add(B(btn_text, None, f"le_toggle_select:{category_id}:{lot.id}:{offset}"))
+        
+        keyboard = utils.add_navigation_buttons(keyboard, offset, 8, len(lots_slice), len(lots), 
+                                                "le_select_mode", [category_id])
+        keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+        bot.answer_callback_query(c.id, f"Выбрано: {selected_count}")
+
+    def select_all_lots(c: CallbackQuery):
+        split = c.data.split(":")
+        category_id = int(split[1])
+        offset = int(split[2]) if len(split) > 2 else 0
+        
+        user_id = c.from_user.id
+        lots = get_lots_by_category(category_id)
+        
+        if user_id not in _lot_selection:
+            _lot_selection[user_id] = set()
+        
+        for lot in lots:
+            _lot_selection[user_id].add(lot.id)
+        
+        c.data = f"le_select_mode:{category_id}:{offset}"
+        enter_select_mode(c)
+
+    def deselect_all_lots(c: CallbackQuery):
+        split = c.data.split(":")
+        category_id = int(split[1])
+        offset = int(split[2]) if len(split) > 2 else 0
+        
+        user_id = c.from_user.id
+        if user_id in _lot_selection:
+            _lot_selection[user_id].clear()
+        
+        c.data = f"le_select_mode:{category_id}:{offset}"
+        enter_select_mode(c)
+
+    def selection_action(c: CallbackQuery):
+        split = c.data.split(":")
+        action = split[1]
+        category_id = int(split[2])
+        
+        user_id = c.from_user.id
+        selected_ids = _lot_selection.get(user_id, set())
+        
+        if not selected_ids:
+            bot.answer_callback_query(c.id, _("le_nothing_selected"), show_alert=True)
+            return
+        
+        text = _("le_selection_confirm", action, len(selected_ids))
+        
+        keyboard = K()
+        keyboard.row(
+            B(_("gl_yes"), None, f"le_selection_confirm:{action}:{category_id}"),
+            B(_("gl_no"), None, f"le_select_mode:{category_id}:0")
+        )
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+        bot.answer_callback_query(c.id)
+
+    def selection_confirm(c: CallbackQuery):
+        split = c.data.split(":")
+        action = split[1]
+        category_id = int(split[2])
+        
+        user_id = c.from_user.id
+        selected_ids = _lot_selection.get(user_id, set()).copy()
+        
+        if not selected_ids:
+            bot.answer_callback_query(c.id, _("le_nothing_selected"), show_alert=True)
+            return
+        
+        bot.answer_callback_query(c.id, _("le_bulk_processing"))
+        
+        success = 0
+        errors = 0
+        
+        for lot_id in selected_ids:
+            try:
+                if action == "deactivate":
+                    lot_fields = get_cached_lot_fields(lot_id)
+                    if lot_fields:
+                        lot_fields.active = False
+                        crd.account.save_lot(lot_fields)
+                        clear_lot_cache(lot_id)
+                        success += 1
+                elif action == "delete":
+                    crd.account.delete_lot(lot_id)
+                    clear_lot_cache(lot_id)
+                    success += 1
+            except Exception as e:
+                logger.error(f"Selection action {action} error lot #{lot_id}: {e}")
+                errors += 1
+        
+        _lot_selection[user_id].clear()
+        crd.update_lots_and_categories()
+        
+        if action == "deactivate":
+            result_text = _("le_bulk_done_deactivate", success)
+        else:
+            result_text = _("le_bulk_done_delete", success)
+        
+        if errors > 0:
+            result_text += f"\n{_('le_bulk_error', errors)}"
+        
+        keyboard = K().add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"))
+        bot.edit_message_text(result_text, c.message.chat.id, c.message.id, reply_markup=keyboard)
 
     def cmd_lots(m: Message):
         lots = get_all_lots()
@@ -1022,10 +1501,25 @@ def init_lot_editor_cp(crd: Cardinal, *args):
     tg.cbq_handler(select_option, lambda c: c.data.startswith(f"{CBT.FP_LOT_SELECT_OPTION}:"))
     tg.msg_handler(edit_category_field, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, CBT.FP_LOT_EDIT_CATEGORY_FIELD))
     
+    tg.cbq_handler(act_create_lot, lambda c: c.data.startswith("le_create_lot:"))
     tg.cbq_handler(save_lot, lambda c: c.data.startswith(f"{CBT.FP_LOT_SAVE}:"))
+    
+    tg.cbq_handler(save_as_template, lambda c: c.data.startswith("le_save_template:"))
+    tg.msg_handler(save_template_name, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, "le_save_template"))
+    tg.cbq_handler(view_templates, lambda c: c.data.startswith("le_templates:"))
+    tg.cbq_handler(use_template, lambda c: c.data.startswith("le_use_template:"))
+    tg.cbq_handler(delete_template, lambda c: c.data.startswith("le_delete_template:"))
+    tg.cbq_handler(duplicate_lot, lambda c: c.data.startswith("le_duplicate:"))
     
     tg.cbq_handler(delete_lot_ask, lambda c: c.data.startswith(f"{CBT.FP_LOT_DELETE}:"))
     tg.cbq_handler(delete_lot_confirm, lambda c: c.data.startswith(f"{CBT.FP_LOT_CONFIRM_DELETE}:"))
+    
+    tg.cbq_handler(enter_select_mode, lambda c: c.data.startswith("le_select_mode:"))
+    tg.cbq_handler(toggle_select_lot, lambda c: c.data.startswith("le_toggle_select:"))
+    tg.cbq_handler(select_all_lots, lambda c: c.data.startswith("le_select_all:"))
+    tg.cbq_handler(deselect_all_lots, lambda c: c.data.startswith("le_deselect_all:"))
+    tg.cbq_handler(selection_action, lambda c: c.data.startswith("le_selection_action:"))
+    tg.cbq_handler(selection_confirm, lambda c: c.data.startswith("le_selection_confirm:"))
     
     tg.msg_handler(cmd_lots, commands=["lots"])
 

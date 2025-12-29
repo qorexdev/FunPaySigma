@@ -432,9 +432,6 @@ class TGBot:
         uptime_seconds = activity_tracker.get_instance_uptime()
         uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
         
-        active_count = activity_tracker.get_active_count()
-        active_str = str(active_count) if active_count is not None else "?"
-        
         stats = activity_tracker.get_project_stats()
         
         if stats.get("error") and stats.get("stars") is None:
@@ -450,7 +447,7 @@ class TGBot:
         
         self.bot.send_message(
             m.chat.id, 
-            _("activity_info", uptime_str, active_str, stars, forks, watchers),
+            _("activity_info", uptime_str, stars, forks, watchers),
             disable_web_page_preview=True,
             reply_markup=kb
         )
@@ -460,9 +457,6 @@ class TGBot:
         
         uptime_seconds = activity_tracker.get_instance_uptime()
         uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
-        
-        active_count = activity_tracker.get_active_count()
-        active_str = str(active_count) if active_count is not None else "?"
         
         stats = activity_tracker.get_project_stats()
         
@@ -474,7 +468,7 @@ class TGBot:
         kb.add(B(_("gl_refresh"), callback_data=CBT.ACTIVITY_REFRESH))
         
         self.bot.edit_message_text(
-            _("activity_info", uptime_str, active_str, stars, forks, watchers),
+            _("activity_info", uptime_str, stars, forks, watchers),
             c.message.chat.id,
             c.message.id,
             disable_web_page_preview=True,
@@ -883,6 +877,210 @@ class TGBot:
             progress_msg.id,
             reply_markup=keyboard
         )
+
+    def show_category_reminders_list(self, c: CallbackQuery):
+        keyboard = kb.category_reminders_list(self.cardinal)
+        self.bot.edit_message_text(
+            _("desc_or_category_list"),
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def act_add_category_reminder(self, c: CallbackQuery):
+        text = _("desc_or_category_add")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.OR_CATEGORY_ADD)
+        self.bot.answer_callback_query(c.id)
+
+    def add_category_reminder(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            cat_id = str(int(m.text.strip()))
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        
+        result = self.bot.send_message(m.chat.id, _("v_edit_or_cat_name"), reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(m.chat.id, result.id, m.from_user.id, "or_cat_set_name", {"cat_id": cat_id})
+
+    def set_category_name(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        name = m.text.strip()
+        default_timeout = int(self.cardinal.MAIN_CFG["OrderReminders"]["timeout"])
+        default_interval = int(self.cardinal.MAIN_CFG["OrderReminders"]["interval"])
+        default_repeat = int(self.cardinal.MAIN_CFG["OrderReminders"]["repeatCount"])
+        default_template = self.cardinal.MAIN_CFG["OrderReminders"]["template"]
+        
+        self.cardinal.category_reminders[cat_id] = {
+            "name": name,
+            "enabled": True,
+            "timeout": default_timeout,
+            "interval": default_interval,
+            "repeat_count": default_repeat,
+            "template": default_template
+        }
+        self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("or_cat_added", name), reply_markup=keyboard)
+
+    def show_category_reminder_edit(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id not in self.cardinal.category_reminders:
+            self.bot.answer_callback_query(c.id, _("or_cat_not_found"), show_alert=True)
+            return
+        
+        settings = self.cardinal.category_reminders[cat_id]
+        name = settings.get("name", f"ID {cat_id}")
+        timeout = settings.get("timeout", 60)
+        repeat_count = settings.get("repeat_count", 3)
+        interval = settings.get("interval", 30)
+        template = settings.get("template", "—")
+        
+        text = _("desc_or_category_edit", name, cat_id, timeout, repeat_count, interval, template[:200])
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        
+        self.bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def toggle_category_reminder(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id not in self.cardinal.category_reminders:
+            self.bot.answer_callback_query(c.id, _("or_cat_not_found"), show_alert=True)
+            return
+        
+        current = self.cardinal.category_reminders[cat_id].get("enabled", True)
+        self.cardinal.category_reminders[cat_id]["enabled"] = not current
+        self.cardinal.save_category_reminders()
+        
+        self.show_category_reminder_edit(c)
+
+    def delete_category_reminder(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id in self.cardinal.category_reminders:
+            del self.cardinal.category_reminders[cat_id]
+            self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminders_list(self.cardinal)
+        self.bot.edit_message_text(
+            _("or_cat_deleted") + "\n\n" + _("desc_or_category_list"),
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def act_edit_category_timeout(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        text = _("v_edit_or_cat_timeout")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.OR_CATEGORY_EDIT_TIMEOUT, {"cat_id": cat_id})
+        self.bot.answer_callback_query(c.id)
+
+    def edit_category_timeout(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        try:
+            timeout = int(m.text)
+            if timeout <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        
+        if cat_id in self.cardinal.category_reminders:
+            self.cardinal.category_reminders[cat_id]["timeout"] = timeout
+            self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("or_cat_timeout_set", timeout), reply_markup=keyboard)
+
+    def act_edit_category_template(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
+                     "v_order_id", "v_order_link", "v_order_title", "v_game", "v_category", "v_category_fullname"]
+        text = f"{_('v_edit_or_cat_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.OR_CATEGORY_EDIT_TEMPLATE, {"cat_id": cat_id})
+        self.bot.answer_callback_query(c.id)
+
+    def edit_category_template(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        if cat_id in self.cardinal.category_reminders:
+            self.cardinal.category_reminders[cat_id]["template"] = m.text
+            self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("or_cat_template_set"), reply_markup=keyboard)
+
+    def act_edit_category_repeat_count(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        text = _("v_edit_or_cat_repeat")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.OR_CATEGORY_EDIT_REPEAT_COUNT, {"cat_id": cat_id})
+        self.bot.answer_callback_query(c.id)
+
+    def edit_category_repeat_count(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        try:
+            repeat_count = int(m.text)
+            if repeat_count < 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        
+        if cat_id in self.cardinal.category_reminders:
+            self.cardinal.category_reminders[cat_id]["repeat_count"] = repeat_count
+            self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("or_cat_repeat_set", repeat_count), reply_markup=keyboard)
+
+    def act_edit_category_interval(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        text = _("v_edit_or_cat_interval")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.OR_CATEGORY_EDIT_INTERVAL, {"cat_id": cat_id})
+        self.bot.answer_callback_query(c.id)
+
+    def edit_category_interval(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        try:
+            interval = int(m.text)
+            if interval <= 0:
+                raise ValueError
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        
+        if cat_id in self.cardinal.category_reminders:
+            self.cardinal.category_reminders[cat_id]["interval"] = interval
+            self.cardinal.save_category_reminders()
+        
+        keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("or_cat_interval_set", interval), reply_markup=keyboard)
 
     def act_edit_review_reminders_timeout(self, c: CallbackQuery):
         text = _("v_edit_review_reminders_timeout")
@@ -1462,6 +1660,27 @@ class TGBot:
         self.msg_handler(self.edit_order_reminders_interval,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_ORDER_REMINDERS_INTERVAL))
         self.cbq_handler(self.send_all_reminders, lambda c: c.data == CBT.SEND_ALL_REMINDERS)
+        self.cbq_handler(self.show_category_reminders_list, lambda c: c.data == CBT.OR_CATEGORY_LIST)
+        self.cbq_handler(self.act_add_category_reminder, lambda c: c.data == CBT.OR_CATEGORY_ADD)
+        self.msg_handler(self.add_category_reminder,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_ADD))
+        self.msg_handler(self.set_category_name,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, "or_cat_set_name"))
+        self.cbq_handler(self.show_category_reminder_edit, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT}:"))
+        self.cbq_handler(self.toggle_category_reminder, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_TOGGLE}:"))
+        self.cbq_handler(self.delete_category_reminder, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_DELETE}:"))
+        self.cbq_handler(self.act_edit_category_timeout, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT_TIMEOUT}:"))
+        self.msg_handler(self.edit_category_timeout,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_EDIT_TIMEOUT))
+        self.cbq_handler(self.act_edit_category_template, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT_TEMPLATE}:"))
+        self.msg_handler(self.edit_category_template,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_EDIT_TEMPLATE))
+        self.cbq_handler(self.act_edit_category_repeat_count, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT_REPEAT_COUNT}:"))
+        self.msg_handler(self.edit_category_repeat_count,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_EDIT_REPEAT_COUNT))
+        self.cbq_handler(self.act_edit_category_interval, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT_INTERVAL}:"))
+        self.msg_handler(self.edit_category_interval,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_EDIT_INTERVAL))
         self.cbq_handler(self.act_edit_review_reminders_timeout, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_TIMEOUT)
         self.msg_handler(self.edit_review_reminders_timeout,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TIMEOUT))

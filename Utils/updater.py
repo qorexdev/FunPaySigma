@@ -47,30 +47,40 @@ def compare_versions(version1: str, version2: str) -> int:
     else:
         return 0
 
-def get_releases(from_tag: str) -> list[Release] | None:
+def get_releases(from_tag: str, max_retries: int = 3) -> list[Release] | None:
            
-    try:
-        response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases", headers=HEADERS)
-        response.raise_for_status()
-        releases_data = response.json()
-        releases = []
-        
-        for release in releases_data:
-            tag = release["tag_name"]
-            if compare_versions(tag, from_tag) <= 0:
-                continue
-            releases.append(Release(
-                release["tag_name"], 
-                release["body"], 
-                release["zipball_url"],
-                release["tag_name"]
-            ))
-        
-        releases.sort(key=lambda r: parse_version(r.tag_name), reverse=True)
-        return releases
-    except:
-        logger.debug("TRACEBACK", exc_info=True)
-        return None
+    for attempt in range(max_retries):
+        try:
+            response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases", 
+                                    headers=HEADERS, timeout=15)
+            response.raise_for_status()
+            releases_data = response.json()
+            releases = []
+            
+            for release in releases_data:
+                tag = release["tag_name"]
+                if compare_versions(tag, from_tag) <= 0:
+                    continue
+                releases.append(Release(
+                    release["tag_name"], 
+                    release["body"], 
+                    release["zipball_url"],
+                    release["tag_name"]
+                ))
+            
+            releases.sort(key=lambda r: parse_version(r.tag_name), reverse=True)
+            return releases
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Попытка {attempt + 1} получить релизы не удалась: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            else:
+                logger.error("Не удалось получить релизы с GitHub после нескольких попыток.")
+                logger.debug("TRACEBACK", exc_info=True)
+                return None
+        except Exception:
+            logger.debug("TRACEBACK", exc_info=True)
+            return None
 
 def get_new_releases(current_tag: str) -> int | list[Release]:
            
@@ -92,18 +102,24 @@ def format_version_info(current_version: str, releases: list[Release]) -> dict:
         "total_available": len(releases)
     }
 
-def download_zip(url: str) -> int:
+def download_zip(url: str, max_retries: int = 3) -> int:
            
-    try:
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open("storage/cache/update.zip", 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-        return 0
-    except:
-        logger.debug("TRACEBACK", exc_info=True)
-        return 1
+    for attempt in range(max_retries):
+        try:
+            with requests.get(url, stream=True, timeout=30) as r:
+                r.raise_for_status()
+                with open("storage/cache/update.zip", 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            return 0
+        except Exception as e:
+            logger.warning(f"Попытка {attempt + 1} скачать обновление не удалась: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            else:
+                logger.error("Не удалось скачать обновление с GitHub.")
+                logger.debug("TRACEBACK", exc_info=True)
+                return 1
 
 def extract_update_archive() -> str | int:
            
