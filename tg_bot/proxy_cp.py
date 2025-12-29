@@ -43,13 +43,14 @@ def init_proxy_cp(crd: Cardinal, *args):
             pass
 
     def check_proxies():
+        time.sleep(60)
         while True:
             if crd.MAIN_CFG["Proxy"].getboolean("enable") and crd.MAIN_CFG["Proxy"].getboolean("check"):
                 for proxy in crd.proxy_dict.values():
                     check_one_proxy(proxy)
                 time.sleep(3600)
             else:
-                time.sleep(10)
+                time.sleep(60)
 
     Thread(target=check_proxies, daemon=True).start()
     

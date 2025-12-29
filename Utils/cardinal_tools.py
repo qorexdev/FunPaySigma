@@ -69,7 +69,7 @@ def load_blacklist() -> list[str]:
 
 def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
            
-    original_socket = socket.socket
+    original_socket = socket._original_socket if hasattr(socket, '_original_socket') else socket.socket
     last_error = ""
     
     for attempt in range(max_retries):
@@ -80,16 +80,15 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
             logger.info(_("crd_checking_proxy"))
 
         try:
-                                                  
+            socket.socket = original_socket
+            socks.set_default_proxy()
+            
             if any("socks5" in proxy.get(key, "") for key in proxy.keys()):
-                                                                   
                 proxy_url = proxy.get("http") or proxy.get("https")
                 if proxy_url and "socks5" in proxy_url:
-                                                    
                     from urllib.parse import urlparse
                     parsed = urlparse(proxy_url)
                     if parsed.hostname and parsed.port:
-                                                    
                         socks.set_default_proxy(socks.SOCKS5, parsed.hostname, parsed.port,
                                                 username=parsed.username, password=parsed.password)
                         socket.socket = socks.socksocket
@@ -102,17 +101,20 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
                         logger.info(_("crd_proxy_success", response.content.decode()))
                         return True
             else:
-                                                                   
                 response = requests.get("https://api.ipify.org/", proxies=proxy, timeout=10)
                 logger.info(_("crd_proxy_success", response.content.decode()))
                 return True
         except Exception as e:
             last_error = str(e)
             logger.warning(f"Попытка {attempt + 1} не удалась: {last_error}")
+            try:
+                socket.socket = original_socket
+                socks.set_default_proxy()
+            except:
+                pass
             
     logger.error(_("crd_proxy_err"))
     logger.debug("TRACEBACK", exc_info=True)
-                                                           
     try:
         socket.socket = original_socket
         socks.set_default_proxy()
