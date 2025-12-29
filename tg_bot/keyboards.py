@@ -120,17 +120,37 @@ def order_confirm_reply_settings(c: Cardinal):
     return kb
 
 def order_reminders_settings(c: Cardinal):
-           
     enabled = bool_to_text(int(c.MAIN_CFG['OrderReminders']['enabled']))
     timeout = c.MAIN_CFG['OrderReminders']['timeout']
     repeat_count = c.MAIN_CFG['OrderReminders']['repeatCount']
     interval = c.MAIN_CFG['OrderReminders']['interval']
+    cat_count = len(c.category_reminders)
 
-    kb = K()        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled"))        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL))        .add(B(_("or_send_all"), None, CBT.SEND_ALL_REMINDERS))        .add(B(_("gl_back"), None, CBT.MAIN2))
+    kb = K()        .add(B(_("or_enabled", enabled), None, f"{CBT.SWITCH}:OrderReminders:enabled"))        .add(B(_("or_timeout").format(timeout), None, CBT.EDIT_ORDER_REMINDERS_TIMEOUT))        .add(B(_("or_template"), None, CBT.EDIT_ORDER_REMINDERS_TEMPLATE))        .add(B(_("or_repeat_count").format(repeat_count), None, CBT.EDIT_ORDER_REMINDERS_REPEAT_COUNT))        .add(B(_("or_interval").format(interval), None, CBT.EDIT_ORDER_REMINDERS_INTERVAL))        .add(B(_("or_category_settings", cat_count), None, CBT.OR_CATEGORY_LIST))        .add(B(_("or_send_all"), None, CBT.SEND_ALL_REMINDERS))        .add(B(_("gl_back"), None, CBT.MAIN2))
+    return kb
+
+def category_reminders_list(c: Cardinal):
+    kb = K()
+    for cat_id, settings in c.category_reminders.items():
+        enabled = settings.get("enabled", True)
+        name = settings.get("name", f"ID {cat_id}")
+        status = "✅" if enabled else "❌"
+        kb.add(B(f"{status} {name}", None, f"{CBT.OR_CATEGORY_EDIT}:{cat_id}"))
+    kb.add(B(_("or_add_category"), None, CBT.OR_CATEGORY_ADD))
+    kb.add(B(_("gl_back"), None, f"{CBT.CATEGORY}:or"))
+    return kb
+
+def category_reminder_edit(c: Cardinal, cat_id: str):
+    settings = c.category_reminders.get(cat_id, {})
+    enabled = bool_to_text(int(settings.get("enabled", True)))
+    timeout = settings.get("timeout", 60)
+    repeat_count = settings.get("repeat_count", 3)
+    interval = settings.get("interval", 30)
+    
+    kb = K()        .add(B(_("or_cat_toggle", enabled), None, f"{CBT.OR_CATEGORY_TOGGLE}:{cat_id}"))        .add(B(_("or_timeout").format(timeout), None, f"{CBT.OR_CATEGORY_EDIT_TIMEOUT}:{cat_id}"))        .add(B(_("or_cat_template"), None, f"{CBT.OR_CATEGORY_EDIT_TEMPLATE}:{cat_id}"))        .add(B(_("or_repeat_count").format(repeat_count), None, f"{CBT.OR_CATEGORY_EDIT_REPEAT_COUNT}:{cat_id}"))        .add(B(_("or_interval").format(interval), None, f"{CBT.OR_CATEGORY_EDIT_INTERVAL}:{cat_id}"))        .row(B(_("gl_delete"), None, f"{CBT.OR_CATEGORY_DELETE}:{cat_id}"), B(_("gl_back"), None, CBT.OR_CATEGORY_LIST))
     return kb
 
 def review_reminders_settings(c: Cardinal):
-           
     enabled = bool_to_text(int(c.MAIN_CFG['ReviewReminders']['enabled']))
     timeout = c.MAIN_CFG['ReviewReminders']['timeout']
     repeat_count = c.MAIN_CFG['ReviewReminders']['repeatCount']
@@ -555,63 +575,63 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
     kb.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
     return kb
 
-def edit_funpay_lot(lot_fields, offset: int, confirm_delete: bool = False) -> K:
+def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = False) -> K:
            
     lot_id = lot_fields.lot_id
+    is_create = lot_id < 0
     kb = K()
     
-    if confirm_delete:
+    if not category_id and lot_fields.subcategory:
+        category_id = lot_fields.subcategory.id
+    
+    if confirm_delete and not is_create:
         kb.row(
-            B(_("le_confirm_delete"), None, f"{CBT.FP_LOT_CONFIRM_DELETE}:{lot_id}:{offset}"),
-            B(_("le_cancel_delete"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}")
+            B(_("le_confirm_delete"), None, f"{CBT.FP_LOT_CONFIRM_DELETE}:{lot_id}:{category_id}"),
+            B(_("le_cancel_delete"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}")
         )
         return kb
     
     active_icon = "✅" if lot_fields.active else "❌"
-    kb.add(B(_("le_toggle_active", active_icon), None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{offset}"))
+    kb.add(B(_("le_toggle_active", active_icon), None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{category_id}"))
     
     price_str = str(lot_fields.price) if lot_fields.price else "—"
     amount_str = str(lot_fields.amount) if lot_fields.amount else "∞"
     kb.row(
-        B(_("le_edit_price", price_str, lot_fields.currency), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{offset}"),
-        B(_("le_edit_amount", amount_str), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:amount:{offset}")
+        B(_("le_edit_price", price_str, lot_fields.currency), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{category_id}"),
+        B(_("le_edit_amount", amount_str), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:amount:{category_id}")
     )
     
     category_fields = _get_category_fields(lot_fields)
     if category_fields:
         for key, (name, value) in category_fields.items():
             display_value = str(value)[:15] + "..." if len(str(value)) > 15 else str(value)
-            kb.add(B(f"⚙️ {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{offset}"))
+            kb.add(B(f"⚙️ {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{category_id}"))
     
-    kb.row(
-        B(_("le_edit_title_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{offset}"),
-        B(_("le_edit_title_en_auto"), None, CBT.EMPTY)                      
-    )
-    
-    kb.row(
-        B(_("le_edit_desc_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{offset}"),
-        B(_("le_edit_desc_en_auto"), None, CBT.EMPTY)                      
-    )
-    
-    kb.row(
-        B(_("le_edit_payment_msg_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{offset}"),
-        B(_("le_edit_payment_msg_en_auto"), None, CBT.EMPTY)                      
-    )
-    
-    secrets_count = len(lot_fields.secrets) if lot_fields.secrets else 0
-    kb.add(B(f"{_('le_edit_secrets')} ({secrets_count})", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:secrets:{offset}"))
+    kb.add(B(_("le_edit_title_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
+    kb.add(B(_("le_edit_desc_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
+    kb.add(B(_("le_edit_payment_msg_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
     
     deact_icon = "✅" if lot_fields.deactivate_after_sale else "❌"
-    kb.add(B(_("le_toggle_deactivate", deact_icon), None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{offset}"))
+    kb.add(B(_("le_toggle_deactivate", deact_icon), None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{category_id}"))
     
-    kb.row(
-        B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{offset}"),
-        B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{offset}")
-    )
+    if is_create:
+        kb.row(
+            B(_("le_create_btn"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"),
+            B(_("le_save_as_template"), None, f"le_save_template:{lot_id}:{category_id}")
+        )
+    else:
+        kb.row(
+            B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"),
+            B(_("le_duplicate"), None, f"le_duplicate:{lot_id}:{category_id}")
+        )
+        kb.row(
+            B(_("le_save_as_template"), None, f"le_save_template:{lot_id}:{category_id}"),
+            B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{category_id}")
+        )
+        kb.add(B(_("le_open_fp"), url=lot_fields.public_link))
     
-    kb.add(B(_("le_open_fp"), url=lot_fields.public_link))
-    
-    kb.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
+    back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+    kb.add(B(_("gl_back"), None, back_cb))
     
     return kb
 
@@ -656,6 +676,11 @@ def category_fields_keyboard(lot_fields, offset: int) -> K:
     kb.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
     return kb
 
-def LINKS_KB(language: None | str = None) -> K:
-                                               
-    return K()
+def LINKS_KB(language: str = "ru") -> K:
+    kb = K()
+    btns = [
+        B(_("lnk_github", language=language), url="https://github.com/qorexdev/FunPaySigma"),
+        B(_("lnk_chat", language=language), url="https://t.me/FunPaySigmaChat")
+    ]
+    kb.add(*btns)
+    return kb

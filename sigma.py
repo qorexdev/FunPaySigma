@@ -176,6 +176,12 @@ class Cardinal(object):
         self.confirmed_orders_file = "storage/confirmed_orders.json"
         self.confirmed_orders = self.load_confirmed_orders()
 
+        self.raise_time_file = "storage/cache/raise_time.json"
+        self.raise_time = self.load_raise_time()
+
+        self.category_reminders_file = "storage/category_reminders.json"
+        self.category_reminders = self.load_category_reminders()
+
         self.pre_init_handlers = []
         self.post_init_handlers = []
         self.pre_start_handlers = []
@@ -299,6 +305,24 @@ class Cardinal(object):
         except Exception as e:
             logger.error(f"Не удалось сохранить данные о заказах в {self.pending_orders_file}: {e}")
 
+    def load_raise_time(self) -> dict:
+        try:
+            if os.path.exists(self.raise_time_file):
+                with open(self.raise_time_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return {int(k): v for k, v in data.items() if v > int(time.time())}
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить данные о времени поднятия: {e}")
+        return {}
+
+    def save_raise_time(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.raise_time_file), exist_ok=True)
+            with open(self.raise_time_file, 'w', encoding='utf-8') as f:
+                json.dump(self.raise_time, f)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить данные о времени поднятия: {e}")
+
     def sync_pending_orders(self) -> int:
         try:
             logger.info("Синхронизация неподтверждённых заказов с FunPay...")
@@ -312,7 +336,7 @@ class Cardinal(object):
                     order_id = order.id
                     if order_id not in self.pending_orders:
                         self.pending_orders[order_id] = {
-                            "created_time": current_time,
+                            "created_time": int(order.date.timestamp()),
                             "reminder_count": 0,
                             "last_reminder": 0
                         }
@@ -369,6 +393,32 @@ class Cardinal(object):
             self.save_confirmed_orders()
             self._cleanup_confirmed_orders()
 
+    def load_category_reminders(self) -> dict:
+        try:
+            if os.path.exists(self.category_reminders_file):
+                with open(self.category_reminders_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return {str(k): v for k, v in data.items()}
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить кастомные напоминания: {e}")
+        return {}
+
+    def save_category_reminders(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.category_reminders_file), exist_ok=True)
+            with open(self.category_reminders_file, 'w', encoding='utf-8') as f:
+                json.dump(self.category_reminders, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить кастомные напоминания: {e}")
+
+    def get_reminder_settings_for_category(self, category_id: int | str) -> dict | None:
+        category_id = str(category_id)
+        if category_id in self.category_reminders:
+            settings = self.category_reminders[category_id]
+            if settings.get("enabled", True):
+                return settings
+        return None
+
     def __init_account(self) -> None:
                    
         while True:
@@ -379,7 +429,6 @@ class Cardinal(object):
                 cardinal_tools.set_console_title(f"FunPay Sigma - {self.account.username} ({self.account.id})")
                 for line in greeting_text.split("\n"):
                     logger.info(line)
-                activity_tracker.start_tracking(self.account.id, self.account.username)
                 break
             except TimeoutError:
                 logger.error(_("crd_acc_get_timeout_err"))
@@ -483,25 +532,30 @@ class Cardinal(object):
                 last_time = self.raised_time.get(subcat.category.id)
                 self.raised_time[subcat.category.id] = new_time = int(time.time())
                 last_interval = (new_time - last_time) if last_time else None
-                time.sleep(1)
-                self.account.raise_lots(subcat.category.id)
+                
+                wait_time = 7200
+                next_time = new_time + wait_time
+                self.raise_time[subcat.category.id] = next_time
+                self.save_raise_time()
+                next_call = next_time if next_time < next_call else next_call
             except FunPayAPI.exceptions.RaiseError as e:
                 if e.wait_time is not None:
                     wait_time = e.wait_time
-
                     next_time = int(time.time()) + e.wait_time
                 else:
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
                     time.sleep(10)
                     next_time = int(time.time()) + 1
+                
                 self.raise_time[subcat.category.id] = next_time
+                self.save_raise_time()
                 next_call = next_time if next_time < next_call else next_call
+                
                 if not raise_ok:
                     continue
             except Exception as e:
                 t = 10
                 if isinstance(e, FunPayAPI.exceptions.RequestFailedError) and e.status_code in (503, 403, 429):
-
                     t = 60
                 else:
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
@@ -511,6 +565,7 @@ class Cardinal(object):
                 next_call = next_time if next_time < next_call else next_call
                 if not raise_ok:
                     continue
+            
             raise_info = {"wait_time": wait_time, "last_interval": last_interval}
             self.run_handlers(self.post_lots_raise_handlers, (self, subcat.category, raise_info))
         return next_call if next_call < float("inf") else 10
@@ -585,12 +640,12 @@ class Cardinal(object):
                 entities.extend(self.split_text(text))
         return entities
 
-    def send_order_reminder(self, order: types.OrderShortcut) -> None:
-                   
+    def send_order_reminder(self, order: types.OrderShortcut, template: str = None) -> None:
         if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
             return
 
-        template = self.MAIN_CFG["OrderReminders"]["template"]
+        if template is None:
+            template = self.MAIN_CFG["OrderReminders"]["template"]
         if not template:
             return
 
@@ -609,47 +664,59 @@ class Cardinal(object):
             logger.warning(f"Не удалось отправить напоминание о подтверждении заказа {order.id}")
 
     def check_order_reminders(self) -> None:
-                   
         if not self.MAIN_CFG["OrderReminders"].getboolean("enabled"):
             return
 
         current_time = int(time.time())
-        timeout = int(self.MAIN_CFG["OrderReminders"]["timeout"]) * 60              
-        interval = int(self.MAIN_CFG["OrderReminders"]["interval"]) * 60              
-        max_reminders = int(self.MAIN_CFG["OrderReminders"]["repeatCount"])
+        default_timeout = int(self.MAIN_CFG["OrderReminders"]["timeout"]) * 60
+        default_interval = int(self.MAIN_CFG["OrderReminders"]["interval"]) * 60
+        default_max_reminders = int(self.MAIN_CFG["OrderReminders"]["repeatCount"])
+        default_template = self.MAIN_CFG["OrderReminders"]["template"]
 
         orders_to_remove = []
+        anything_changed = False
 
         for order_id, order_data in self.pending_orders.items():
             created_time = order_data["created_time"]
             reminder_count = order_data["reminder_count"]
             last_reminder = order_data.get("last_reminder", 0)
+            category_id = order_data.get("category_id")
+
+            timeout = default_timeout
+            interval = default_interval
+            max_reminders = default_max_reminders
+            template = default_template
+
+            if category_id:
+                cat_settings = self.get_reminder_settings_for_category(category_id)
+                if cat_settings:
+                    timeout = int(cat_settings.get("timeout", default_timeout // 60)) * 60
+                    interval = int(cat_settings.get("interval", default_interval // 60)) * 60
+                    max_reminders = int(cat_settings.get("repeat_count", default_max_reminders))
+                    template = cat_settings.get("template", default_template)
 
             if current_time - created_time >= timeout:
-                                                             
                 if reminder_count < max_reminders:
-                                                                             
                     if current_time - last_reminder >= interval:
-                                                      
                         try:
                             order = self.account.get_order_shortcut(order_id)
-                            if order.status == types.OrderStatuses.PAID:                            
-                                self.send_order_reminder(order)
+                            if order.status == types.OrderStatuses.PAID:
+                                self.send_order_reminder(order, template)
                                 order_data["reminder_count"] += 1
                                 order_data["last_reminder"] = current_time
-                                self.save_pending_orders()
+                                anything_changed = True
                             else:
-                                                                   
                                 orders_to_remove.append(order_id)
                         except:
                             logger.warning(f"Не удалось получить информацию о заказе {order_id} для напоминания")
                             orders_to_remove.append(order_id)
-                else:
-                                                                
-                    orders_to_remove.append(order_id)
 
         for order_id in orders_to_remove:
             del self.pending_orders[order_id]
+            anything_changed = True
+
+        if anything_changed:
+            self.save_pending_orders()
 
     def send_review_reminder(self, order_id: str, buyer_username: str) -> bool:
         if not self.MAIN_CFG["ReviewReminders"].getboolean("enabled"):

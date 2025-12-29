@@ -746,16 +746,22 @@ def update_lots_state_handler(cardinal: Cardinal, event: NewOrderEvent, *args):
     Thread(target=update_lots_states, args=(cardinal, event), daemon=True).start()
 
 def add_order_to_reminders_handler(c: Cardinal, e: NewOrderEvent, *args):
-           
     if not c.MAIN_CFG["OrderReminders"].getboolean("enabled"):
         return
 
     order_id = e.order.id
     if order_id not in c.pending_orders:
+        category_id = None
+        if e.order.subcategory:
+            category_id = e.order.subcategory.id
+        elif hasattr(e.order, 'category') and e.order.category:
+            category_id = e.order.category.id
+        
         c.pending_orders[order_id] = {
-            "created_time": int(time.time()),
+            "created_time": int(e.order.date.timestamp()),
             "reminder_count": 0,
-            "last_reminder": 0
+            "last_reminder": 0,
+            "category_id": category_id
         }
         c.save_pending_orders()
         logger.info(f"Заказ {order_id} добавлен в список для напоминаний о подтверждении")

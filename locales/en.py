@@ -504,7 +504,6 @@ activity_info = """📊 <b>FunPay Sigma — Status</b>
 
 ⚡ <b>Your Sigma:</b> <code>Running</code>
 ⏱️ <b>Uptime:</b> <code>{}</code>
-👥 <b>Sigmas online:</b> <code>{}</code>
 
 🌐 <b>Project on GitHub:</b>
 ⭐ <b>Stars:</b> <code>{}</code>
@@ -1020,3 +1019,106 @@ le_enter_payment_msg_en = """✍️ <b>Auto-reply (EN):</b>
 
 <b>💬 Current:</b>
 <code>{}</code>"""
+
+le_create_lot = "➕ Create Lot"
+le_creating = "✨ Creating..."
+le_created = "✅ Lot created! ID: #{}"
+le_create_error = "❌ Failed to create: {}"
+le_create_title = "✨ <b>Create Lot</b>\n\nCategory: <b>{}</b>"
+le_create_btn = "✨ Create"
+log_le_lot_created = "$MAGENTA@{} (ID: {})$RESET: created lot $CYAN#{}$RESET."
+
+le_duplicate = "📋 Duplicate"
+le_save_as_template = "📄 As Template"
+le_duplicating = "📋 Duplicating..."
+le_duplicate_error = "❌ Failed to duplicate: {}"
+
+le_enter_template_name = """📄 <b>Enter template name</b>
+
+Choose a short name (up to 50 characters)."""
+le_template_saved = "✅ Template «{}» saved!"
+le_template_name_invalid = "❌ Name must be 1-50 characters."
+le_no_templates = "📭 No saved templates."
+le_templates_list = """📄 <b>Lot Templates</b>
+
+Choose a template to create a new lot:"""
+le_template_not_found = "❌ Template not found."
+le_template_deleted = "✅ Template «{}» deleted."
+
+le_validation_error = "❌ FunPay returned an error:\n{}"
+le_from_template = "📄 From Template"
+
+or_category_settings = "📂 By Categories ({})"
+or_add_category = "➕ Add Category"
+or_cat_toggle = "{} Active"
+or_cat_template = "✏️ Category Template"
+or_cat_name = "🏷️ Name: {}"
+
+desc_or_category_list = """🏠 Menu > ⏰ Reminders > 📂 <b>By Categories</b>
+
+You can set custom timeouts and templates for different product categories.
+
+If a category is added — custom settings are used.
+If not — global settings are used."""
+
+desc_or_category_add = """➕ <b>Add Category</b>
+
+Enter FunPay category ID (number).
+You can find the ID in the category URL on FunPay.
+
+Example: <code>123</code>"""
+
+desc_or_category_edit = """📂 <b>Category Settings</b>
+
+<b>🏷️ Name:</b> <code>{}</code>
+<b>🆔 ID:</b> <code>{}</code>
+
+<b>Parameters:</b>
+⏱️ <b>Timeout:</b> <code>{}</code> min.
+🔄 <b>Repeats:</b> <code>{}</code>
+⏰ <b>Interval:</b> <code>{}</code> min.
+
+<b>Template:</b>
+<code>{}</code>"""
+
+or_cat_added = "✅ Category {} added!"
+or_cat_deleted = "✅ Category deleted."
+or_cat_not_found = "❌ Category not found."
+or_cat_timeout_set = "✅ Category timeout: <b>{}</b> min."
+or_cat_template_set = "✅ Category template changed!"
+or_cat_repeat_set = "✅ Category repeats: <b>{}</b>"
+or_cat_interval_set = "✅ Category interval: <b>{}</b> min."
+or_cat_toggled = "✅ Category status changed."
+
+v_edit_or_cat_name = "✍️ <b>Enter category name</b> (for convenience)"
+v_edit_or_cat_timeout = "⏱️ <b>Enter timeout (min.)</b> for this category:"
+v_edit_or_cat_template = "✍️ <b>Enter reminder template</b> for this category:"
+v_edit_or_cat_repeat = "🔄 <b>How many repeats</b> for this category?"
+v_edit_or_cat_interval = "⏰ <b>Interval (min.)</b> between repeats for category:"
+
+desc_order_reminders = "🏠 Menu > ⏰ <b>Order Reminders</b>\n\nRemind buyers to confirm orders:"
+
+le_category_view_title_v2 = """📁 <b>{}</b> <code>[ID: {}]</code>
+
+📦 <b>Lots:</b> {}"""
+
+le_select_mode = "☑️ Select"
+le_select_mode_title = """☑️ <b>Selection Mode</b>
+
+📁 {}
+📦 Total: {} | Selected: {}
+
+Check lots and choose action:"""
+
+le_select_all = "✅ Select All"
+le_deselect_all = "❌ Clear All"
+le_action_deactivate = "⏹️ Deactivate"
+le_action_delete = "🗑️ Delete"
+le_nothing_selected = "⚠️ Nothing selected"
+
+le_selection_confirm = """⚠️ <b>Confirm</b>
+
+Action: <b>{}</b>
+Lots: <b>{}</b>
+
+Proceed?"""
