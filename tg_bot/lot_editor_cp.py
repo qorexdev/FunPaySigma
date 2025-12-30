@@ -37,8 +37,8 @@ def init_lot_editor_cp(crd: Cardinal, *args):
     tg = crd.telegram
     bot = tg.bot
 
-    def get_cached_lot_fields(lot_id: int):
-        if lot_id in _lot_fields_cache:
+    def get_cached_lot_fields(lot_id: int, force_refresh: bool = False):
+        if lot_id in _lot_fields_cache and not force_refresh:
             return _lot_fields_cache[lot_id]
         
         try:
@@ -188,11 +188,14 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         if not price or price <= 0:
             errors.append("❌ <b>Цена</b> — укажи цену больше 0")
         
-        if hasattr(lot_fields, 'field_labels') and lot_fields.field_labels:
-            for field_key, field_name in lot_fields.field_labels.items():
-                value = lot_fields.fields.get(field_key, "")
-                if not value or value.strip() == "":
-                    errors.append(f"❌ <b>{escape_html(field_name)}</b> — обязательное поле")
+        required = getattr(lot_fields, 'required_fields', set())
+        labels = getattr(lot_fields, 'field_labels', {})
+        
+        for field_key in required:
+            value = lot_fields.fields.get(field_key, "")
+            if not value or str(value).strip() == "":
+                field_name = labels.get(field_key, field_key)
+                errors.append(f"❌ <b>{escape_html(field_name)}</b> — обязательное поле")
         
         desc_ru = lot_fields.description_ru or ""
         if len(desc_ru) > 5000:
@@ -722,7 +725,8 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         bot.answer_callback_query(c.id, _("le_loading_lot"))
         
         try:
-            lot_fields = get_cached_lot_fields(lot_id)
+            already_cached = lot_id in _lot_fields_cache
+            lot_fields = get_cached_lot_fields(lot_id, force_refresh=not already_cached)
             if not lot_fields:
                 back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
                 keyboard = K().add(B(_("gl_back"), callback_data=back_cb))

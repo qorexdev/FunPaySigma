@@ -45,7 +45,9 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
             key = "2day_" + curr
         canWithdraw[key] = canWithdraw.get(key, 0) + ORDER_CONFIRMED[order]["price"]
 
-    cardinal.balance = cardinal.get_balance()
+    new_balance = cardinal.get_balance()
+    if new_balance is not None:
+        cardinal.balance = new_balance
 
     next_order_id, all_sales, locale, subcs = account.get_sales()
     c = 1

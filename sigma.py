@@ -424,7 +424,9 @@ class Cardinal(object):
         while True:
             try:
                 self.account.get()
-                self.balance = self.get_balance()
+                new_balance = self.get_balance()
+                if new_balance is not None:
+                    self.balance = new_balance
                 greeting_text = cardinal_tools.create_greeting_text(self)
                 cardinal_tools.set_console_title(f"FunPay Sigma - {self.account.username} ({self.account.id})")
                 for line in greeting_text.split("\n"):
@@ -495,18 +497,28 @@ class Cardinal(object):
             self.telegram = None
             self.MAIN_CFG["Telegram"]["enabled"] = "0"
 
-    def get_balance(self, attempts: int = 3) -> FunPayAPI.types.Balance:
-        subcategories = self.account.get_sorted_subcategories()[FunPayAPI.enums.SubCategoryTypes.COMMON]
-        lots = []
-        while not lots and attempts:
-            attempts -= 1
-            subcat_id = random.choice(list(subcategories.keys()))
-            lots = self.account.get_subcategory_public_lots(FunPayAPI.enums.SubCategoryTypes.COMMON, subcat_id)
-            break
-        else:
-            raise Exception(...)
-        balance = self.account.get_balance(random.choice(lots).id)
-        return balance
+    def get_balance(self, attempts: int = 3) -> FunPayAPI.types.Balance | None:
+        try:
+            subcategories = self.account.get_sorted_subcategories()[FunPayAPI.enums.SubCategoryTypes.COMMON]
+            if not subcategories:
+                return self.balance
+            
+            lots = []
+            while not lots and attempts > 0:
+                attempts -= 1
+                subcat_id = random.choice(list(subcategories.keys()))
+                lots = self.account.get_subcategory_public_lots(FunPayAPI.enums.SubCategoryTypes.COMMON, subcat_id)
+                if lots:
+                    break
+            
+            if not lots:
+                return self.balance
+            
+            balance = self.account.get_balance(random.choice(lots).id)
+            return balance
+        except Exception as e:
+            logger.warning(f"Ошибка получения баланса: {e}")
+            return self.balance
 
     def raise_lots(self) -> int:
                    

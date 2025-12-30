@@ -1424,11 +1424,19 @@ class Account:
         result.update(
             {field["name"]: field.get("value") or "" for field in bs.find_all("input") if field["name"] != "query"})
         result.update({field["name"]: field.text or "" for field in bs.find_all("textarea")})
-        result.update({
-            field["name"]: field.find("option", selected=True)["value"]
-            for field in bs.find_all("select") if
-            "hidden" not in field.find_parent(class_="form-group").get("class", [])
-        })
+        for field in bs.find_all("select"):
+            parent = field.find_parent(class_="form-group")
+            if parent and "hidden" in parent.get("class", []):
+                continue
+            selected_option = field.find("option", selected=True)
+            if selected_option:
+                result[field["name"]] = selected_option["value"]
+            else:
+                first_option = field.find("option")
+                if first_option and first_option.get("value"):
+                    result[field["name"]] = first_option["value"]
+                else:
+                    result[field["name"]] = ""
         result.update({field["name"]: "on" for field in bs.find_all("input", {"type": "checkbox"}, checked=True)})
         subcategory = self.get_subcategory(enums.SubCategoryTypes.COMMON, int(result.get("node_id", 0)))
         self.csrf_token = result.get("csrf_token") or self.csrf_token
@@ -1446,7 +1454,8 @@ class Account:
                                  float(result["price"]), None, types.Currency.UNKNOWN, currency)
         
         field_labels = {}
-        field_options = {}                                           
+        field_options = {}
+        required_fields = set()
         
         for form_group in bs.find_all("div", class_="form-group"):
             label_tag = form_group.find("label")
@@ -1454,9 +1463,18 @@ class Account:
                 continue
             label_text = label_tag.get_text(strip=True)
             
+            is_required = False
+            if form_group.get("class") and "required" in form_group.get("class", []):
+                is_required = True
+            if label_tag.find("span", class_="text-danger") or "*" in label_text:
+                is_required = True
+            
             input_tag = form_group.find(["input", "select", "textarea"])
             if input_tag and input_tag.get("name"):
                 field_name = input_tag["name"]
+                
+                if input_tag.get("required"):
+                    is_required = True
                                              
                 if field_name.startswith("fields[") and field_name not in [
                     "fields[summary][ru]", "fields[summary][en]",
@@ -1464,19 +1482,22 @@ class Account:
                     "fields[payment_msg][ru]", "fields[payment_msg][en]",
                     "fields[images]"
                 ]:
-                    field_labels[field_name] = label_text
+                    field_labels[field_name] = label_text.rstrip("*").strip()
+                    
+                    if is_required:
+                        required_fields.add(field_name)
                     
                     if input_tag.name == "select":
                         options = []
                         for option in input_tag.find_all("option"):
                             option_value = option.get("value", "")
                             option_text = option.get_text(strip=True)
-                            if option_value:                              
+                            if option_value:                             
                                 options.append((option_value, option_text))
                         if options:
                             field_options[field_name] = options
         
-        return types.LotFields(lot_id, result, subcategory, currency, calc_result, field_labels, field_options)
+        return types.LotFields(lot_id, result, subcategory, currency, calc_result, field_labels, field_options, required_fields)
 
     def get_create_lot_fields(self, category_id: int) -> types.LotFields:
                                                                            
@@ -1533,7 +1554,8 @@ class Account:
                                  price, None, types.Currency.UNKNOWN, currency)
         
         field_labels = {}
-        field_options = {}                                           
+        field_options = {}
+        required_fields = set()
         
         for form_group in bs.find_all("div", class_="form-group"):
             label_tag = form_group.find("label")
@@ -1541,9 +1563,18 @@ class Account:
                 continue
             label_text = label_tag.get_text(strip=True)
             
+            is_required = False
+            if form_group.get("class") and "required" in form_group.get("class", []):
+                is_required = True
+            if label_tag.find("span", class_="text-danger") or "*" in label_text:
+                is_required = True
+            
             input_tag = form_group.find(["input", "select", "textarea"])
             if input_tag and input_tag.get("name"):
                 field_name = input_tag["name"]
+                
+                if input_tag.get("required"):
+                    is_required = True
                                              
                 if field_name.startswith("fields[") and field_name not in [
                     "fields[summary][ru]", "fields[summary][en]",
@@ -1551,7 +1582,10 @@ class Account:
                     "fields[payment_msg][ru]", "fields[payment_msg][en]",
                     "fields[images]"
                 ]:
-                    field_labels[field_name] = label_text
+                    field_labels[field_name] = label_text.rstrip("*").strip()
+                    
+                    if is_required:
+                        required_fields.add(field_name)
                     
                     if input_tag.name == "select":
                         options = []
@@ -1563,7 +1597,7 @@ class Account:
                         if options:
                             field_options[field_name] = options
         
-        return types.LotFields(0, result, subcategory, currency, calc_result, field_labels, field_options)
+        return types.LotFields(0, result, subcategory, currency, calc_result, field_labels, field_options, required_fields)
 
     def get_chip_fields(self, subcategory_id: int) -> types.ChipFields:
         if not self.is_initiated:

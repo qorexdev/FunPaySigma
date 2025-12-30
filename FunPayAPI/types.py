@@ -388,7 +388,8 @@ class LotFields:
     def __init__(self, lot_id: int, fields: dict, subcategory: SubCategory | None = None,
                  currency: Currency = Currency.UNKNOWN, calc_result: CalcResult | None = None,
                  field_labels: dict[str, str] | None = None,
-                 field_options: dict[str, list[tuple[str, str]]] | None = None):
+                 field_options: dict[str, list[tuple[str, str]]] | None = None,
+                 required_fields: set[str] | None = None):
         self.lot_id: int = lot_id
                       
         self.__fields: dict = fields
@@ -396,6 +397,8 @@ class LotFields:
         self.__field_labels: dict[str, str] = field_labels or {}
                                                           
         self.__field_options: dict[str, list[tuple[str, str]]] = field_options or {}
+        
+        self.__required_fields: set[str] = required_fields or set()
                                                                                             
         self.title_ru: str = self.__fields.get("fields[summary][ru]", "")
                                                        
@@ -444,6 +447,10 @@ class LotFields:
     def field_options(self) -> dict[str, list[tuple[str, str]]]:
                    
         return self.__field_options
+
+    @property
+    def required_fields(self) -> set[str]:
+        return self.__required_fields
 
     @property
     def fields(self) -> dict[str, str]:
