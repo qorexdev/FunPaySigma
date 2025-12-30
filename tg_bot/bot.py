@@ -286,7 +286,9 @@ class TGBot:
         new_msg = self.bot.send_message(c.message.chat.id, _("updating_profile"))
         try:
             self.cardinal.account.get()
-            self.cardinal.balance = self.cardinal.get_balance()
+            new_balance = self.cardinal.get_balance()
+            if new_balance is not None:
+                self.cardinal.balance = new_balance
         except:
             self.bot.edit_message_text(_("profile_updating_error"), new_msg.chat.id, new_msg.id)
             logger.debug("TRACEBACK", exc_info=True)
