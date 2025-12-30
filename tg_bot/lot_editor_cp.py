@@ -16,6 +16,7 @@ import logging
 import random
 import json
 import os
+import difflib
 
 logger = logging.getLogger("TGBot")
 localizer = Localizer()
@@ -23,8 +24,13 @@ _ = localizer.translate
 
 _lot_fields_cache: dict[int, object] = {}
 _lot_templates: dict[str, dict] = {}
+_lot_drafts: dict[int, dict] = {}
+_lot_history: dict[int, list] = {}
 _lot_selection: dict[int, set] = {}
+
 TEMPLATES_FILE = "storage/lot_templates.json"
+DRAFTS_FILE = "storage/lot_drafts.json"
+HISTORY_FILE = "storage/lot_history.json"
 
 def init_lot_editor_cp(crd: Cardinal, *args):
                                                      
@@ -127,8 +133,47 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                 json.dump(_lot_templates, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"Ошибка сохранения шаблонов: {e}")
-    
+
+    def load_drafts():
+        global _lot_drafts
+        try:
+            if os.path.exists(DRAFTS_FILE):
+                with open(DRAFTS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                                                                      
+                    _lot_drafts = {int(k): v for k, v in data.items()}
+        except:
+            _lot_drafts = {}
+
+    def save_drafts():
+        try:
+            os.makedirs(os.path.dirname(DRAFTS_FILE), exist_ok=True)
+            with open(DRAFTS_FILE, "w", encoding="utf-8") as f:
+                json.dump(_lot_drafts, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Ошибка сохранения черновиков: {e}")
+
+    def load_history():
+        global _lot_history
+        try:
+            if os.path.exists(HISTORY_FILE):
+                with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    _lot_history = {int(k): v for k, v in data.items()}
+        except:
+            _lot_history = {}
+
+    def save_history():
+        try:
+            os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+                json.dump(_lot_history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Ошибка сохранения истории: {e}")
+
     load_templates()
+    load_drafts()
+    load_history()
 
     def validate_lot_fields(lot_fields) -> tuple[bool, str]:
         errors = []
@@ -175,9 +220,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             if lot_fields.subcategory.category:
                 game_name = escape_html(lot_fields.subcategory.category.name or nv)
         
-        title_ru = lot_fields.title_ru or nv
-        desc_ru = lot_fields.description_ru or nv
-        payment_ru = lot_fields.payment_msg_ru or nv
+        title_ru = escape_html(lot_fields.title_ru or nv)
+        desc_ru = escape_html(lot_fields.description_ru or nv)
+        payment_ru = escape_html(lot_fields.payment_msg_ru or nv)
         
         price = lot_fields.price if lot_fields.price else nv
         amount = lot_fields.amount if lot_fields.amount else "∞"
@@ -194,39 +239,46 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             "fields[payment_msg][ru]", "fields[payment_msg][en]",
             "fields[images]"
         ]
+        
+        def fmt_val(v):
+            return escape_html(str(v)) if v else nv
+
         for key, value in lot_fields.fields.items():
             if key not in standard_keys and key.startswith("fields["):
                 if hasattr(lot_fields, 'field_labels') and key in lot_fields.field_labels:
                     field_name = lot_fields.field_labels[key]
                 else:
                     field_name = key.replace("fields[", "").rstrip("]").replace("][", " > ")
-                display_value = escape_html(str(value)) if value else nv
+                display_value = fmt_val(value)
                 category_params_text += f"\n⚙️ <b>{escape_html(field_name)}:</b> <code>{display_value}</code>"
         
         if lot_fields.lot_id < 0:
-            header = _("le_create_title", category_name)
+            if lot_fields.lot_id in _lot_drafts:
+                header = f"📝 <b>ЧЕРНОВИК</b>"
+            else:
+                header = _("le_create_title", category_name)
         else:
-            header = f"✏️ <b>Лот #{lot_fields.lot_id}</b>"
+            header = f"✏️ <b>Лот</b> <code>#{lot_fields.lot_id}</code>"
         
-        cat_id_text = f" <code>[ID: {category_id}]</code>" if category_id else ""
+        cat_id_text = f" <code>[{category_id}]</code>" if category_id else ""
         
         return f"""{header}
 
 🎮 {game_name} › {category_name}{cat_id_text}
 
 <b>🏷️ Название:</b>
-<code>{escape_html(title_ru)}</code>
+<code>{title_ru}</code>
 
 <b>📄 Описание:</b>
-<code>{escape_html(desc_ru)}</code>
+<code>{desc_ru}</code>
 
 <b>💬 Автоответ:</b>
-<code>{escape_html(payment_ru)}</code>
+<code>{payment_ru}</code>
 
-<b>💰 {price}{lot_fields.currency}</b> | <b>📦 {amount}</b>
+<b>💰</b> <code>{price}{lot_fields.currency}</code> | <b>📦</b> <code>{amount}</code>
 {status} Активен | {deactivate} Деакт. после продажи{category_params_text}
 
-<i>🌐 Автоперевод EN</i>
+<i>🌐 EN авто-перевод</i>
 ⚠️ <b>Не забудь сохранить!</b>"""
 
     def open_main_menu(c: CallbackQuery):
@@ -428,6 +480,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         game_name = cat_info.category.name if cat_info and cat_info.category else ""
         full_cat_name = f"{game_name} › {cat_name}" if game_name else cat_name
         
+        cat_drafts = [d for did, d in _lot_drafts.items() if d.get("subcategory_id") == category_id]
+        cat_templates = [name for name, t in _lot_templates.items() if t.get("category_id") == category_id]
+        
         text = _("le_category_view_title_v2", full_cat_name, category_id, len(lots))
         
         keyboard = K()
@@ -444,12 +499,22 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             B(_("le_create_lot"), None, f"le_create_lot:{category_id}")
         )
         
+        if cat_drafts or cat_templates:
+            draft_btn = B(f"📝 Черновики ({len(cat_drafts)})", None, f"le_view_drafts:0:{category_id}") if cat_drafts else None
+            tmpl_btn = B(f"📄 Шаблоны ({len(cat_templates)})", None, f"le_templates:{category_id}") if cat_templates else None
+            if draft_btn and tmpl_btn:
+                keyboard.row(draft_btn, tmpl_btn)
+            elif draft_btn:
+                keyboard.add(draft_btn)
+            elif tmpl_btn:
+                keyboard.add(tmpl_btn)
+        
         lots_slice = lots[offset:offset + 6]
         for lot in lots_slice:
             status = "✅" if getattr(lot, "active", True) else "❌"
             price_str = f"{lot.price}{lot.currency}" if lot.price else "?"
             desc = get_lot_full_name(lot)
-            btn_text = f"{status} {desc[:30]}{'...' if len(desc) > 30 else ''} | {price_str}"
+            btn_text = f"{status} {desc} | {price_str}"
             keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{category_id}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, offset, 6, len(lots_slice), len(lots), 
@@ -660,13 +725,47 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             lot_fields = get_cached_lot_fields(lot_id)
             if not lot_fields:
                 back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+                keyboard = K().add(B(_("gl_back"), callback_data=back_cb))
                 bot.edit_message_text(
                     _("le_lot_not_found"),
                     c.message.chat.id, c.message.id,
-                    reply_markup=K().add(B(_("gl_back"), callback_data=back_cb))
+                    reply_markup=keyboard
                 )
                 return
             
+            if lot_id > 0:
+                try:
+                    def get_snapshot(lf):
+                        return {
+                            "title_ru": lf.title_ru, "title_en": lf.title_en,
+                            "desc_ru": lf.description_ru, "desc_en": lf.description_en,
+                            "price": lf.price, "amount": lf.amount, "active": lf.active,
+                            "payment_ru": lf.payment_msg_ru, "payment_en": lf.payment_msg_en
+                        }
+                    
+                    if lot_id not in _lot_history:
+                        _lot_history[lot_id] = []
+                    
+                    new_snapshot = get_snapshot(lot_fields)
+                    last_snapshot = _lot_history[lot_id][-1] if _lot_history[lot_id] else None
+                    
+                    diff = True
+                    if last_snapshot:
+                        diff = False
+                        for k in ["title_ru", "price", "amount", "active", "desc_ru"]:
+                            if last_snapshot.get(k) != new_snapshot.get(k):
+                                diff = True
+                                break
+                    
+                    if diff:
+                        new_snapshot["date"] = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+                        _lot_history[lot_id].append(new_snapshot)
+                        if len(_lot_history[lot_id]) > 20:
+                            _lot_history[lot_id].pop(0)
+                        save_history()
+                except Exception as e:
+                    logger.error(f"Error updating history in open: {e}")
+
             if not category_id and lot_fields.subcategory:
                 category_id = lot_fields.subcategory.id
             
@@ -1001,23 +1100,82 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         try:
             is_create = lot_id < 0
             original_lot_id = lot_id
-            if is_create:
+            
+            def get_snapshot(lf):
+                return {
+                    "title_ru": lf.title_ru, "title_en": lf.title_en,
+                    "desc_ru": lf.description_ru, "desc_en": lf.description_en,
+                    "price": lf.price, "amount": lf.amount, "active": lf.active,
+                    "payment_ru": lf.payment_msg_ru, "payment_en": lf.payment_msg_en
+                }
+            
+            if is_create and lot_id not in _lot_drafts:
+                lot_fields.lot_id = 0
+            elif is_create and lot_id in _lot_drafts:
+                                                                     
                 lot_fields.lot_id = 0
             
             crd.account.save_lot(lot_fields)
             
-            lot_fields.lot_id = original_lot_id
-            
+            real_id = 0
             if is_create:
-                logger.info(_("log_le_lot_created", c.from_user.username, c.from_user.id, "?"))
-                success_msg = _("le_created", "?")
+                try:
+                    crd.update_lots_and_categories()
+                    cat_id = lot_fields.subcategory.id if lot_fields.subcategory else category_id
+                    if cat_id:
+                        new_lots = crd.account.get_my_subcategory_lots(cat_id)
+                        for new_lot in new_lots:
+                            if new_lot.description == lot_fields.title_ru:
+                                real_id = new_lot.id
+                                break
+                        if not real_id and new_lots:
+                            real_id = max(l.id for l in new_lots if isinstance(l.id, int))
+                except Exception as e:
+                    logger.warning(f"Не удалось получить ID нового лота: {e}")
+            else:
+                real_id = original_lot_id
+            
+            new_date = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            new_snapshot = get_snapshot(lot_fields)
+            new_snapshot["date"] = new_date
+            
+            if real_id not in _lot_history:
+                _lot_history[real_id] = []
+                
+            last_snapshot = _lot_history[real_id][-1] if _lot_history[real_id] else None
+            
+            diff_detected = True
+            if last_snapshot:
+                                                     
+                 diff_detected = False
+                 for k in ["title_ru", "price", "amount", "active", "desc_ru", "payment_ru"]:
+                     if last_snapshot.get(k) != new_snapshot.get(k):
+                         diff_detected = True
+                         break
+            
+            if diff_detected:
+                _lot_history[real_id].append(new_snapshot)
+                                      
+                if len(_lot_history[real_id]) > 20:
+                    _lot_history[real_id].pop(0)
+                save_history()
+
+            if is_create:
+                if original_lot_id in _lot_drafts:
+                    del _lot_drafts[original_lot_id]
+                    save_drafts()
+                
+                logger.info(_("log_le_lot_created", c.from_user.username, c.from_user.id, real_id))
+                if real_id:
+                    success_msg = f"✅ Лот создан! ID: <code>#{real_id}</code>"
+                else:
+                    success_msg = _("le_created", "?")
+                clear_lot_cache(original_lot_id)
+                lot_id = real_id if real_id else original_lot_id
             else:
                 logger.info(_("log_le_lot_saved", c.from_user.username, c.from_user.id, lot_id))
                 success_msg = _("le_saved")
-            
-            clear_lot_cache(lot_id)
-            
-            crd.update_lots_and_categories()
+                crd.update_lots_and_categories()
             
             back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
             keyboard = K().add(B(_("gl_back"), callback_data=back_cb))
@@ -1025,6 +1183,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             
         except Exception as e:
             logger.error(f"Ошибка при сохранении лота #{lot_id}: {e}", exc_info=True)
+            
+            if is_create: 
+                lot_fields.lot_id = original_lot_id                           
             
             error_text = str(e)
             if "errors" in error_text.lower() or "заполните" in error_text.lower():
@@ -1065,10 +1226,19 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             return
         
         template_data = {
-            "category_id": lot_fields.subcategory.id if lot_fields.subcategory else 0,
+            "category_id": int(lot_fields.subcategory.id) if lot_fields.subcategory else 0,
             "fields": lot_fields.fields.copy(),
             "active": lot_fields.active,
             "deactivate_after_sale": lot_fields.deactivate_after_sale,
+            "title_ru": lot_fields.title_ru,
+            "title_en": lot_fields.title_en,
+            "description_ru": lot_fields.description_ru,
+            "description_en": lot_fields.description_en,
+            "payment_msg_ru": lot_fields.payment_msg_ru,
+            "payment_msg_en": lot_fields.payment_msg_en,
+            "price": lot_fields.price,
+            "amount": lot_fields.amount,
+            "currency": lot_fields.currency,
         }
         
         _lot_templates[template_name] = template_data
@@ -1081,22 +1251,48 @@ def init_lot_editor_cp(crd: Cardinal, *args):
 
     def view_templates(c: CallbackQuery):
         split = c.data.split(":")
-        category_id = int(split[1]) if len(split) > 1 else 0
+        category_id = int(split[1]) if len(split) > 1 and split[1].isdigit() else 0
         
-        if not _lot_templates:
+        if category_id:
+            templates_filtered = {n: t for n, t in _lot_templates.items() if t.get("category_id") == category_id}
+        else:
+            templates_filtered = _lot_templates
+        
+        if not templates_filtered:
             bot.answer_callback_query(c.id, _("le_no_templates"), show_alert=True)
             return
         
         text = _("le_templates_list")
         keyboard = K()
         
-        for name in list(_lot_templates.keys())[:10]:
-            keyboard.add(B(f"📄 {name}", None, f"le_use_template:{name}:{category_id}"))
+        for name, tmpl in list(templates_filtered.items())[:10]:
+            title = tmpl.get("title_ru", "") or name
+            price = tmpl.get("price", 0)
+            currency = tmpl.get("currency", "₽")
+            keyboard.add(B(f"📄 {title} | {price}{currency}", None, f"le_tmpl_actions:{name}:{category_id}"))
         
         keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"))
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
         bot.answer_callback_query(c.id)
+
+    def template_actions(c: CallbackQuery):
+        split = c.data.split(":")
+        template_name = split[1]
+        category_id = int(split[2]) if len(split) > 2 else 0
+        
+        if template_name not in _lot_templates:
+            bot.answer_callback_query(c.id, _("le_template_not_found"), show_alert=True)
+            view_templates(c)
+            return
+            
+        text = _("le_template_actions", template_name)
+        keyboard = K()
+        keyboard.add(B(_("le_btn_use_template"), None, f"le_use_template:{template_name}:{category_id}"))
+        keyboard.add(B(_("le_btn_delete_template"), None, f"le_delete_template:{template_name}:{category_id}"))
+        keyboard.add(B(_("gl_back"), None, f"le_templates:{category_id}"))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
 
     def use_template(c: CallbackQuery):
         split = c.data.split(":")
@@ -1119,12 +1315,27 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         try:
             lot_fields = crd.account.get_create_lot_fields(target_category)
             
-            for key, value in template.get("fields", {}).items():
-                if key in lot_fields.fields:
-                    lot_fields.fields[key] = value
+            lot_fields.edit_fields(template.get("fields", {}))
             
             lot_fields.active = template.get("active", True)
             lot_fields.deactivate_after_sale = template.get("deactivate_after_sale", False)
+            
+            if template.get("title_ru"):
+                lot_fields.title_ru = template["title_ru"]
+            if template.get("title_en"):
+                lot_fields.title_en = template["title_en"]
+            if template.get("description_ru"):
+                lot_fields.description_ru = template["description_ru"]
+            if template.get("description_en"):
+                lot_fields.description_en = template["description_en"]
+            if template.get("payment_msg_ru"):
+                lot_fields.payment_msg_ru = template["payment_msg_ru"]
+            if template.get("payment_msg_en"):
+                lot_fields.payment_msg_en = template["payment_msg_en"]
+            if template.get("price") is not None:
+                lot_fields.price = template["price"]
+            if template.get("amount") is not None:
+                lot_fields.amount = template["amount"]
             
             temp_id = -random.randint(10000, 99999)
             lot_fields.lot_id = temp_id
@@ -1132,7 +1343,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             
             text = generate_lot_edit_text(lot_fields)
             bot.edit_message_text(text, c.message.chat.id, c.message.id,
-                                 reply_markup=kb.edit_funpay_lot(lot_fields, 0))
+                                 reply_markup=kb.edit_funpay_lot(lot_fields, target_category))
         except Exception as e:
             logger.error(f"Ошибка при загрузке шаблона: {e}", exc_info=True)
             bot.answer_callback_query(c.id, _("le_create_error", str(e)), show_alert=True)
@@ -1140,11 +1351,28 @@ def init_lot_editor_cp(crd: Cardinal, *args):
     def delete_template(c: CallbackQuery):
         split = c.data.split(":")
         template_name = split[1]
+        category_id = int(split[2]) if len(split) > 2 and split[2].isdigit() else 0
         
         if template_name in _lot_templates:
             del _lot_templates[template_name]
             save_templates()
-            bot.answer_callback_query(c.id, _("le_template_deleted", template_name))
+            
+            remaining = {n: t for n, t in _lot_templates.items() if t.get("category_id") == category_id} if category_id else _lot_templates
+            
+            if remaining:
+                text = f"✅ Шаблон <b>{escape_html(template_name)}</b> удалён!\n\n" + _("le_templates_list")
+                keyboard = K()
+                for name, tmpl in list(remaining.items())[:10]:
+                    title = tmpl.get("title_ru", "") or name
+                    price = tmpl.get("price", 0)
+                    currency = tmpl.get("currency", "₽")
+                    keyboard.add(B(f"📄 {title} | {price}{currency}", None, f"le_tmpl_actions:{name}:{category_id}"))
+                keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"))
+                bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+            else:
+                text = f"✅ Шаблон <b>{escape_html(template_name)}</b> удалён!\n\nШаблонов больше нет."
+                keyboard = K().add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"))
+                bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
         else:
             bot.answer_callback_query(c.id, _("le_template_not_found"), show_alert=True)
 
@@ -1167,12 +1395,23 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             
             new_lot_fields = crd.account.get_create_lot_fields(category_id)
             
+            forbidden_keys = ["offer_id", "csrf_token"]
+            
             for key, value in lot_fields.fields.items():
-                if key in new_lot_fields.fields and key not in ["offer_id", "csrf_token"]:
+                if key not in forbidden_keys:
                     new_lot_fields.fields[key] = value
             
+            new_lot_fields.title_ru = lot_fields.title_ru
+            new_lot_fields.title_en = lot_fields.title_en
+            new_lot_fields.description_ru = lot_fields.description_ru
+            new_lot_fields.description_en = lot_fields.description_en
+            new_lot_fields.payment_msg_ru = lot_fields.payment_msg_ru
+            new_lot_fields.payment_msg_en = lot_fields.payment_msg_en
+            new_lot_fields.price = lot_fields.price
+            new_lot_fields.amount = lot_fields.amount
             new_lot_fields.active = lot_fields.active
             new_lot_fields.deactivate_after_sale = lot_fields.deactivate_after_sale
+            new_lot_fields.currency = lot_fields.currency
             
             temp_id = -random.randint(10000, 99999)
             new_lot_fields.lot_id = temp_id
@@ -1461,7 +1700,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             B(_("le_search_by_text"), None, CBT.LE_SEARCH_BY_TEXT)
         )
         keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
-        
+
         for cat in cats[:8]:
             btn_text = f"📁 {cat['full_name']} ({cat['count']})"
             keyboard.add(B(btn_text, None, f"{CBT.LE_CATEGORY_VIEW}:{cat['id']}:0"))
@@ -1471,6 +1710,289 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         keyboard.add(B(_("gl_back"), None, CBT.MAIN))
         
         bot.send_message(m.chat.id, text, reply_markup=keyboard)
+
+    def save_draft(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 else 0
+
+        lot_fields = get_cached_lot_fields(lot_id)
+        if not lot_fields:
+            bot.answer_callback_query(c.id, _("le_lot_not_found"), show_alert=True)
+            return
+        
+        draft_data = {
+            "fields": lot_fields.fields.copy(),
+            "active": lot_fields.active,
+            "deactivate_after_sale": lot_fields.deactivate_after_sale,
+            "subcategory_id": int(lot_fields.subcategory.id) if lot_fields.subcategory else category_id,
+            "updated_at": datetime.datetime.now().isoformat(),
+            "title_ru": lot_fields.title_ru,
+            "title_en": lot_fields.title_en,
+            "description_ru": lot_fields.description_ru,
+            "description_en": lot_fields.description_en,
+            "payment_msg_ru": lot_fields.payment_msg_ru,
+            "payment_msg_en": lot_fields.payment_msg_en,
+            "price": lot_fields.price,
+            "amount": lot_fields.amount,
+            "currency": lot_fields.currency,
+        }
+        
+        save_id = lot_id
+        if lot_id > 0:
+                                                                                     
+            save_id = -random.randint(100000, 999999)
+            
+        if lot_id in _lot_drafts:
+            save_id = lot_id
+
+        _lot_drafts[save_id] = draft_data
+        save_drafts()
+        
+        bot.answer_callback_query(c.id, _("le_draft_saved"), show_alert=True)
+
+    def to_draft_ask(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 else 0
+        
+        text = _("le_draft_confirm_conversion")
+        kb_confirm = K().row(
+            B(_("gl_yes"), None, f"le_to_draft_confirm:{lot_id}:{category_id}"),
+            B(_("gl_no"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}")
+        )
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=kb_confirm)
+
+    def to_draft_confirm(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 else 0
+        
+        lot_fields = get_cached_lot_fields(lot_id)
+        if not lot_fields or lot_id < 0:
+            bot.answer_callback_query(c.id, _("le_lot_not_found"), show_alert=True)
+            return
+            
+        try:
+            draft_id = -random.randint(100000, 999999)
+            draft_data = {
+                "fields": lot_fields.fields.copy(),
+                "active": lot_fields.active,
+                "deactivate_after_sale": lot_fields.deactivate_after_sale,
+                "subcategory_id": int(lot_fields.subcategory.id) if lot_fields.subcategory else category_id,
+                "updated_at": datetime.datetime.now().isoformat(),
+                "original_id": lot_id,
+                "title_ru": lot_fields.title_ru,
+                "title_en": lot_fields.title_en,
+                "description_ru": lot_fields.description_ru,
+                "description_en": lot_fields.description_en,
+                "payment_msg_ru": lot_fields.payment_msg_ru,
+                "payment_msg_en": lot_fields.payment_msg_en,
+                "price": lot_fields.price,
+                "amount": lot_fields.amount,
+                "currency": lot_fields.currency,
+            }
+            _lot_drafts[draft_id] = draft_data
+            save_drafts()
+            
+            crd.account.delete_lot(lot_id)
+            clear_lot_cache(lot_id)
+            crd.update_lots_and_categories()
+            
+            back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"
+            bot.edit_message_text(_("le_draft_converted"), c.message.chat.id, c.message.id, 
+                                 reply_markup=K().add(B(_("gl_back"), callback_data=back_cb)))
+            
+        except Exception as e:
+            logger.error(f"Error converting to draft: {e}")
+            bot.answer_callback_query(c.id, f"Error: {e}", show_alert=True)
+
+    def view_drafts(c: CallbackQuery):
+        split = c.data.split(":")
+        offset = int(split[1])
+        filter_cat_id = int(split[2]) if len(split) > 2 else 0
+        
+        drafts_list = []
+        if filter_cat_id:
+            drafts_list = [d for d in _lot_drafts.items() if d[1].get("subcategory_id") == filter_cat_id]
+        else:
+            drafts_list = list(_lot_drafts.items())
+            
+        if not drafts_list:
+            bot.answer_callback_query(c.id, "Черновиков нет", show_alert=True)
+            return
+
+        text = "📁 <b>Ваши черновики</b>"
+        if filter_cat_id:
+             text += f" (Категория {filter_cat_id})"
+             
+        keyboard = K()
+        
+        drafts_list.sort(key=lambda x: x[1].get("updated_at", ""), reverse=True)
+        
+        page_items = drafts_list[offset:offset+8]
+        
+        for did, draft in page_items:
+            title = draft.get("title_ru") or draft.get("fields", {}).get("fields[summary][ru]") or "Без названия"
+            price = draft.get("price", 0)
+            currency = draft.get("currency", "₽")
+            keyboard.add(B(f"📝 {title} | {price}{currency}", None, f"le_open_draft:{did}"))
+            
+        keyboard = utils.add_navigation_buttons(keyboard, offset, 8, len(page_items), len(drafts_list), f"le_view_drafts:{filter_cat_id}" if filter_cat_id else "le_view_drafts")
+        
+        back_cb = f"{CBT.LE_CATEGORY_VIEW}:{filter_cat_id}:0" if filter_cat_id else f"{CBT.LE_SEARCH_MENU}:0"
+        keyboard.add(B(_("gl_back"), None, back_cb))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+
+    def open_draft(c: CallbackQuery):
+        draft_id = int(c.data.split(":")[1])
+        if draft_id not in _lot_drafts:
+             bot.answer_callback_query(c.id, "Черновик удален", show_alert=True)
+             return
+             
+        draft = _lot_drafts[draft_id]
+        cat_id = draft.get("subcategory_id", 0)
+        
+        try:
+            lot_fields = crd.account.get_create_lot_fields(cat_id)
+            lot_fields.lot_id = draft_id
+            
+            lot_fields.edit_fields(draft.get("fields", {}))
+            
+            lot_fields.active = draft.get("active", True)
+            lot_fields.deactivate_after_sale = draft.get("deactivate_after_sale", False)
+            
+            if draft.get("title_ru"):
+                lot_fields.title_ru = draft["title_ru"]
+            if draft.get("title_en"):
+                lot_fields.title_en = draft["title_en"]
+            if draft.get("description_ru"):
+                lot_fields.description_ru = draft["description_ru"]
+            if draft.get("description_en"):
+                lot_fields.description_en = draft["description_en"]
+            if draft.get("payment_msg_ru"):
+                lot_fields.payment_msg_ru = draft["payment_msg_ru"]
+            if draft.get("payment_msg_en"):
+                lot_fields.payment_msg_en = draft["payment_msg_en"]
+            if draft.get("price") is not None:
+                lot_fields.price = draft["price"]
+            if draft.get("amount") is not None:
+                lot_fields.amount = draft["amount"]
+
+            _lot_fields_cache[draft_id] = lot_fields
+            
+            text = generate_lot_edit_text(lot_fields)
+            bot.edit_message_text(text, c.message.chat.id, c.message.id,
+                                 reply_markup=kb.edit_funpay_lot(lot_fields, cat_id))
+        except Exception as e:
+            logger.error(f"Error opening draft: {e}", exc_info=True)
+            bot.answer_callback_query(c.id, f"Ошибка: {e}", show_alert=True)
+
+    def history_view(c: CallbackQuery):
+        split = c.data.split(":")
+        lot_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 else 0
+        page = int(split[3]) if len(split) > 3 else 0
+        
+        if lot_id not in _lot_history or not _lot_history[lot_id]:
+            bot.answer_callback_query(c.id, _("le_history_empty"), show_alert=True)
+            return
+
+        history = _lot_history[lot_id]
+        history = list(reversed(history))
+        
+        if page >= len(history):
+            page = 0
+            
+        entry = history[page]
+        prev_entry = history[page+1] if page + 1 < len(history) else None
+        
+        diff_lines = []
+        if not prev_entry:
+            diff_lines.append(_("le_diff_new"))
+        else:
+            fields_map = {
+                "title_ru": "Название",
+                "desc_ru": "Описание",
+                "payment_ru": "Автоответ",
+                "price": "Цена",
+                "amount": "Кол-во",
+                "active": "Статус"
+            }
+            
+            for k, label in fields_map.items():
+                v1 = str(prev_entry.get(k, "") or "")
+                v2 = str(entry.get(k, "") or "")
+                
+                if v1 != v2:
+                    if k in ("title_ru", "desc_ru", "payment_ru") and v1 and v2:
+                        sm = difflib.SequenceMatcher(None, v1, v2)
+                        changes = []
+                        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+                            if tag == 'delete':
+                                changes.append(f"<s>{escape_html(v1[i1:i2])}</s>")
+                            elif tag == 'insert':
+                                changes.append(f"<u>{escape_html(v2[j1:j2])}</u>")
+                            elif tag == 'replace':
+                                changes.append(f"<s>{escape_html(v1[i1:i2])}</s><u>{escape_html(v2[j1:j2])}</u>")
+                            elif tag == 'equal':
+                                eq_text = v1[i1:i2]
+                                if len(eq_text) > 15:
+                                    eq_text = eq_text[:7] + "..." + eq_text[-5:]
+                                changes.append(escape_html(eq_text))
+                        diff_lines.append(f"✏️ <b>{label}:</b>\n{''.join(changes)}")
+                    else:
+                        old_val = escape_html(v1[:50]) if v1 else "—"
+                        new_val = escape_html(v2[:50]) if v2 else "—"
+                        diff_lines.append(f"✏️ <b>{label}:</b> <s>{old_val}</s> → <b>{new_val}</b>")
+        
+        if not diff_lines:
+            diff_lines.append("Нет изменений")
+            
+        diff_text = "\n".join(diff_lines)
+        text = f"📜 <b>История лота #{lot_id}</b>\n\n🗓 <b>{entry.get('date', '?')}</b>\n\n{diff_text}"
+        
+        keyboard = K()
+        
+        btns = []
+        if page < len(history) - 1:
+            btns.append(B("⬅️ Раньше", None, f"le_history:{lot_id}:{category_id}:{page+1}"))
+        if page > 0:
+            btns.append(B("Позже ➡️", None, f"le_history:{lot_id}:{category_id}:{page-1}"))
+        if btns:
+            keyboard.row(*btns)
+        
+        keyboard.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}"))
+        
+        bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+
+    def delete_draft(c: CallbackQuery):
+        split = c.data.split(":")
+        draft_id = int(split[1])
+        category_id = int(split[2]) if len(split) > 2 and split[2].lstrip("-").isdigit() else 0
+        
+        if draft_id in _lot_drafts:
+            draft_title = _lot_drafts[draft_id].get("title_ru", "Черновик")
+            del _lot_drafts[draft_id]
+            save_drafts()
+            clear_lot_cache(draft_id)
+            
+            text = f"✅ Черновик <b>{escape_html(draft_title[:30])}</b> удалён!"
+            keyboard = K().add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"))
+            bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
+        else:
+            bot.answer_callback_query(c.id, "Черновик не найден", show_alert=True)
+
+    tg.cbq_handler(delete_draft, lambda c: c.data.startswith("le_delete_draft:"))
+    tg.cbq_handler(save_draft, lambda c: c.data.startswith("le_save_draft:"))
+    tg.cbq_handler(to_draft_ask, lambda c: c.data.startswith("le_to_draft:"))
+    tg.cbq_handler(to_draft_confirm, lambda c: c.data.startswith("le_to_draft_confirm:"))
+    tg.cbq_handler(view_drafts, lambda c: c.data.startswith("le_view_drafts:"))
+    tg.cbq_handler(open_draft, lambda c: c.data.startswith("le_open_draft:"))
+    tg.cbq_handler(history_view, lambda c: c.data.startswith("le_history:"))
+    
+    tg.cbq_handler(template_actions, lambda c: c.data.startswith("le_tmpl_actions:"))
 
     tg.cbq_handler(open_main_menu, lambda c: c.data.startswith(CBT.LE_SEARCH_MENU))
     
