@@ -368,7 +368,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{category_id}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, 0, 6, min(6, len(lots)), len(lots), 
-                                                CBT.LE_CATEGORY_VIEW, [category_id])
+                                                f"{CBT.LE_CATEGORY_VIEW}:{category_id}")
         
         keyboard.add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0"))
         
@@ -453,7 +453,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             keyboard.add(B(btn_text, None, f"{CBT.FP_LOT_EDIT}:{lot.id}:{category_id}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, offset, 6, len(lots_slice), len(lots), 
-                                                CBT.LE_CATEGORY_VIEW, [category_id])
+                                                f"{CBT.LE_CATEGORY_VIEW}:{category_id}")
         
         keyboard.add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0"))
         
@@ -1280,7 +1280,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             keyboard.add(B(btn_text, None, f"le_toggle_select:{category_id}:{lot.id}:{offset}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, offset, 8, len(lots_slice), len(lots), 
-                                                "le_select_mode", [category_id])
+                                                f"le_select_mode:{category_id}")
         keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"))
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
@@ -1334,7 +1334,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             keyboard.add(B(btn_text, None, f"le_toggle_select:{category_id}:{lot.id}:{offset}"))
         
         keyboard = utils.add_navigation_buttons(keyboard, offset, 8, len(lots_slice), len(lots), 
-                                                "le_select_mode", [category_id])
+                                                f"le_select_mode:{category_id}")
         keyboard.add(B(_("gl_back"), None, f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0"))
         
         bot.edit_message_text(text, c.message.chat.id, c.message.id, reply_markup=keyboard)
