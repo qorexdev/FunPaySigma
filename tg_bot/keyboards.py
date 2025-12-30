@@ -576,14 +576,13 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
     return kb
 
 def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = False) -> K:
-           
     lot_id = lot_fields.lot_id
     is_create = lot_id < 0
     kb = K()
     
     if not category_id and lot_fields.subcategory:
         category_id = lot_fields.subcategory.id
-    
+
     if confirm_delete and not is_create:
         kb.row(
             B(_("le_confirm_delete"), None, f"{CBT.FP_LOT_CONFIRM_DELETE}:{lot_id}:{category_id}"),
@@ -592,7 +591,8 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
         return kb
     
     active_icon = "✅" if lot_fields.active else "❌"
-    kb.add(B(_("le_toggle_active", active_icon), None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{category_id}"))
+    active_text = _("le_status_active") if lot_fields.active else _("le_status_inactive")
+    kb.add(B(f"{active_icon} {active_text}", None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{category_id}"))
     
     price_str = str(lot_fields.price) if lot_fields.price else "—"
     amount_str = str(lot_fields.amount) if lot_fields.amount else "∞"
@@ -604,31 +604,52 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
     category_fields = _get_category_fields(lot_fields)
     if category_fields:
         for key, (name, value) in category_fields.items():
-            display_value = str(value)[:15] + "..." if len(str(value)) > 15 else str(value)
+            display_value = str(value)[:20] + "..." if len(str(value)) > 20 else str(value)
             kb.add(B(f"⚙️ {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{category_id}"))
     
-    kb.add(B(_("le_edit_title_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
-    kb.add(B(_("le_edit_desc_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
-    kb.add(B(_("le_edit_payment_msg_ru"), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
+    t_ru = lot_fields.title_ru or ""
+    t_ru_short = t_ru[:20] + "..." if len(t_ru) > 20 else t_ru if t_ru else _("le_empty")
+    kb.add(B(_("le_btn_title_ru", t_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
+    
+    d_ru = lot_fields.description_ru or ""
+    d_ru_short = _("le_filled") if d_ru else _("le_empty")
+    kb.add(B(_("le_btn_desc_ru", d_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
+    
+    p_ru = lot_fields.payment_msg_ru or ""
+    p_ru_short = _("le_filled") if p_ru else _("le_empty")
+    kb.add(B(_("le_btn_payment_msg_ru", p_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
     
     deact_icon = "✅" if lot_fields.deactivate_after_sale else "❌"
-    kb.add(B(_("le_toggle_deactivate", deact_icon), None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{category_id}"))
+    deact_text = _("le_deact_after_sale")
+    kb.add(B(f"{deact_icon} {deact_text}", None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{category_id}"))
+    
+    if is_create:
+        kb.add(B(_("le_create_btn"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
+    else:
+        kb.add(B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
     
     if is_create:
         kb.row(
-            B(_("le_create_btn"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"),
-            B(_("le_save_as_template"), None, f"le_save_template:{lot_id}:{category_id}")
-        )
-    else:
-        kb.row(
-            B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"),
-            B(_("le_duplicate"), None, f"le_duplicate:{lot_id}:{category_id}")
+            B(_("le_save_draft"), None, f"le_save_draft:{lot_id}:{category_id}"),
+            B(_("le_btn_templates"), None, f"le_templates:{category_id}")
         )
         kb.row(
             B(_("le_save_as_template"), None, f"le_save_template:{lot_id}:{category_id}"),
-            B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{category_id}")
+            B(_("le_delete_draft"), None, f"le_delete_draft:{lot_id}:{category_id}")
         )
-        kb.add(B(_("le_open_fp"), url=lot_fields.public_link))
+    else:
+        kb.row(
+            B(_("le_duplicate"), None, f"le_duplicate:{lot_id}:{category_id}"),
+            B(_("le_history"), None, f"le_history:{lot_id}:{category_id}:0")
+        )
+        kb.row(
+            B(_("le_to_draft"), None, f"le_to_draft:{lot_id}:{category_id}"),
+            B(_("le_save_as_template"), None, f"le_save_template:{lot_id}:{category_id}")
+        )
+        kb.row(
+            B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{category_id}"),
+            B(_("le_open_fp"), url=lot_fields.public_link)
+        )
     
     back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
     kb.add(B(_("gl_back"), None, back_cb))
