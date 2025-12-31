@@ -159,18 +159,27 @@ def greetings_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEv
     greeting_text = c.MAIN_CFG["Greetings"]["greetingsText"]
     
     if not c.old_mode_enabled and hasattr(obj, 'buyer_viewing') and obj.buyer_viewing and obj.buyer_viewing.link:
-        import re
         link = obj.buyer_viewing.link
-        lot_match = re.search(r'[?&]id=(\d+)', link)
-        if lot_match and c.profile:
-            lot_id = int(lot_match.group(1))
-            lot = c.profile.get_lot(lot_id)
-            if lot and lot.subcategory:
-                category_id = str(lot.subcategory.id)
-                custom_greeting = c.get_greeting_for_category(category_id)
-                if custom_greeting:
-                    greeting_text = custom_greeting
-                    logger.debug(f"Using category {category_id} greeting for chat {chat_id} (lot {lot_id})")
+        category_id = None
+        
+        category_match = re.search(r'/lots/(\d+)/?', link)
+        if category_match:
+            category_id = category_match.group(1)
+            logger.debug(f"Found category {category_id} from lots page link")
+        else:
+            lot_match = re.search(r'[?&]id=(\d+)', link)
+            if lot_match and c.profile:
+                lot_id = int(lot_match.group(1))
+                lot = c.profile.get_lot(lot_id)
+                if lot and lot.subcategory:
+                    category_id = str(lot.subcategory.id)
+                    logger.debug(f"Found category {category_id} from lot {lot_id}")
+        
+        if category_id:
+            custom_greeting = c.get_greeting_for_category(category_id)
+            if custom_greeting:
+                greeting_text = custom_greeting
+                logger.debug(f"Using category {category_id} greeting for chat {chat_id}")
 
     logger.info(_("log_sending_greetings", chat_name, chat_id))
     text = cardinal_tools.format_msg_text(greeting_text, obj)
