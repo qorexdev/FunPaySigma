@@ -1084,6 +1084,134 @@ class TGBot:
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_interval_set", interval), reply_markup=keyboard)
 
+    def show_category_greetings_list(self, c: CallbackQuery):
+        keyboard = kb.category_greetings_list(self.cardinal)
+        self.bot.edit_message_text(
+            _("desc_gr_category_list"),
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def act_add_category_greeting(self, c: CallbackQuery):
+        text = _("desc_gr_category_add")
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.GR_CATEGORY_ADD)
+        self.bot.answer_callback_query(c.id)
+
+    def add_category_greeting(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        try:
+            cat_id = str(int(m.text.strip()))
+        except ValueError:
+            self.bot.reply_to(m, _("gl_error_try_again"))
+            return
+        
+        result = self.bot.send_message(m.chat.id, _("v_edit_gr_cat_name"), reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(m.chat.id, result.id, m.from_user.id, "gr_cat_set_name", {"cat_id": cat_id})
+
+    def set_category_greeting_name(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        name = m.text.strip()
+        default_template = self.cardinal.MAIN_CFG["Greetings"]["greetingsText"]
+        
+        self.cardinal.category_greetings[cat_id] = {
+            "name": name,
+            "enabled": True,
+            "template": default_template
+        }
+        self.cardinal.save_category_greetings()
+        
+        keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("gr_cat_added", name), reply_markup=keyboard)
+
+    def show_category_greeting_edit(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id not in self.cardinal.category_greetings:
+            self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
+            return
+        
+        settings = self.cardinal.category_greetings[cat_id]
+        name = settings.get("name", f"ID {cat_id}")
+        template = settings.get("template", "—")
+        enabled = "✅" if settings.get("enabled", True) else "❌"
+        
+        text = _("desc_gr_category_edit", name, cat_id, enabled, template[:300])
+        keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
+        
+        self.bot.edit_message_text(
+            text,
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def toggle_category_greeting(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id not in self.cardinal.category_greetings:
+            self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
+            return
+        
+        current = self.cardinal.category_greetings[cat_id].get("enabled", True)
+        self.cardinal.category_greetings[cat_id]["enabled"] = not current
+        self.cardinal.save_category_greetings()
+        
+        self.show_category_greeting_edit(c)
+
+    def delete_category_greeting(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id in self.cardinal.category_greetings:
+            del self.cardinal.category_greetings[cat_id]
+            self.cardinal.save_category_greetings()
+        
+        keyboard = kb.category_greetings_list(self.cardinal)
+        self.bot.edit_message_text(
+            _("gr_cat_deleted") + "\n\n" + _("desc_gr_category_list"),
+            c.message.chat.id,
+            c.message.id,
+            reply_markup=keyboard
+        )
+        self.bot.answer_callback_query(c.id)
+
+    def act_edit_category_greeting_template(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
+                     "v_message_text", "v_chat_id", "v_chat_name", "v_photo", "v_sleep"]
+        text = f"{_('v_edit_gr_cat_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)
+        result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.GR_CATEGORY_EDIT_TEMPLATE, {"cat_id": cat_id})
+        self.bot.answer_callback_query(c.id)
+
+    def edit_category_greeting_template(self, m: Message):
+        data = self.get_state(m.chat.id, m.from_user.id)["data"]
+        cat_id = data["cat_id"]
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        
+        if cat_id in self.cardinal.category_greetings:
+            self.cardinal.category_greetings[cat_id]["template"] = m.text
+            self.cardinal.save_category_greetings()
+        
+        keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
+        self.bot.reply_to(m, _("gr_cat_template_set"), reply_markup=keyboard)
+
+    def copy_default_greeting(self, c: CallbackQuery):
+        cat_id = c.data.split(":")[1]
+        if cat_id not in self.cardinal.category_greetings:
+            self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
+            return
+        
+        default_template = self.cardinal.MAIN_CFG["Greetings"]["greetingsText"]
+        self.bot.send_message(
+            c.message.chat.id,
+            _("gr_default_copied") + f"\n\n<code>{utils.escape(default_template)}</code>"
+        )
+        self.bot.answer_callback_query(c.id)
+
     def act_edit_review_reminders_timeout(self, c: CallbackQuery):
         text = _("v_edit_review_reminders_timeout")
         result = self.bot.send_message(c.message.chat.id, text, reply_markup=skb.CLEAR_STATE_BTN())
@@ -1683,6 +1811,21 @@ class TGBot:
         self.cbq_handler(self.act_edit_category_interval, lambda c: c.data.startswith(f"{CBT.OR_CATEGORY_EDIT_INTERVAL}:"))
         self.msg_handler(self.edit_category_interval,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.OR_CATEGORY_EDIT_INTERVAL))
+
+        self.cbq_handler(self.show_category_greetings_list, lambda c: c.data == CBT.GR_CATEGORY_LIST)
+        self.cbq_handler(self.act_add_category_greeting, lambda c: c.data == CBT.GR_CATEGORY_ADD)
+        self.msg_handler(self.add_category_greeting,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.GR_CATEGORY_ADD))
+        self.msg_handler(self.set_category_greeting_name,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, "gr_cat_set_name"))
+        self.cbq_handler(self.show_category_greeting_edit, lambda c: c.data.startswith(f"{CBT.GR_CATEGORY_EDIT}:"))
+        self.cbq_handler(self.toggle_category_greeting, lambda c: c.data.startswith(f"{CBT.GR_CATEGORY_TOGGLE}:"))
+        self.cbq_handler(self.delete_category_greeting, lambda c: c.data.startswith(f"{CBT.GR_CATEGORY_DELETE}:"))
+        self.cbq_handler(self.act_edit_category_greeting_template, lambda c: c.data.startswith(f"{CBT.GR_CATEGORY_EDIT_TEMPLATE}:"))
+        self.msg_handler(self.edit_category_greeting_template,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.GR_CATEGORY_EDIT_TEMPLATE))
+        self.cbq_handler(self.copy_default_greeting, lambda c: c.data.startswith(f"{CBT.GR_COPY_DEFAULT}:"))
+
         self.cbq_handler(self.act_edit_review_reminders_timeout, lambda c: c.data == CBT.EDIT_REVIEW_REMINDERS_TIMEOUT)
         self.msg_handler(self.edit_review_reminders_timeout,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_REVIEW_REMINDERS_TIMEOUT))

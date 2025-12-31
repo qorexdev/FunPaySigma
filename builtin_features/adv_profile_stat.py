@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
+from collections import defaultdict
 
 if TYPE_CHECKING:
     from sigma import Cardinal
@@ -12,16 +13,170 @@ import tg_bot.CBT
 from bs4 import BeautifulSoup as bs
 import telebot
 import time
+from datetime import datetime, timedelta
 from logging import getLogger
 
 LOGGER_PREFIX = "[ADV_PROFILE_STAT]"
 logger = getLogger("FPS.adv_profile_stat")
 
 ADV_PROFILE_CB = "adv_profile_1"
+ADV_PROFILE_PAGE_CB = "adv_profile_page:"
 ORDER_CONFIRMED = {}
 
-def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
-                                                    
+def get_profile_stats(cardinal: Cardinal) -> dict:
+    account = cardinal.account
+    
+    try:
+        response = account.method("get", f"users/{account.id}/", {"accept": "*/*"}, {}, raise_not_200=True)
+        html = response.content.decode()
+        parser = bs(html, "lxml")
+        
+        rating_stars = 0
+        rating_div = parser.find("div", class_="rating-stars")
+        if rating_div:
+            rating_stars = len(rating_div.find_all("i", class_="fas"))
+        if not rating_stars:
+            rating_div = parser.find("div", class_="rating-full-stars")
+            if rating_div:
+                rating_stars = len(rating_div.find_all("i", class_="fas"))
+        
+        reviews_count = 0
+        reviews_div = parser.find("div", class_="media-user-reviews")
+        if reviews_div:
+            reviews_text = reviews_div.text.strip()
+            reviews_count = int("".join([c for c in reviews_text if c.isdigit()]) or "0")
+        if not reviews_count:
+            reviews_div = parser.find("div", class_="rating-count")
+            if reviews_div:
+                reviews_text = reviews_div.text.strip()
+                reviews_count = int("".join([c for c in reviews_text if c.isdigit()]) or "0")
+        
+        reg_date = None
+        reg_date_div = parser.find("div", class_="text-nowrap")
+        if reg_date_div and "На сайте" in reg_date_div.text:
+            reg_date = reg_date_div.text.strip()
+        if not reg_date:
+            reg_date_div = parser.find("div", class_="user-regdate")
+            if reg_date_div:
+                reg_date = reg_date_div.text.strip()
+        
+        lots_count = 0
+        offers = parser.find_all("a", class_="tc-item")
+        lots_count = len(offers)
+        
+        subcategories = {}
+        subcategories_divs = parser.find_all("div", class_="offer-list-title-container")
+        for div in subcategories_divs:
+            title = div.find("h3")
+            if title:
+                cat_name = title.text.strip()
+                offers_in_cat = div.parent.find_all("a", class_="tc-item")
+                subcategories[cat_name] = len(offers_in_cat)
+        
+        return {
+            "rating_stars": rating_stars,
+            "reviews_count": reviews_count,
+            "reg_date": reg_date,
+            "lots_count": lots_count,
+            "subcategories": subcategories
+        }
+    except Exception as e:
+        logger.debug(f"{LOGGER_PREFIX} Ошибка получения статистики профиля: {e}")
+        logger.debug("TRACEBACK", exc_info=True)
+        return {
+            "rating_stars": 0,
+            "reviews_count": 0,
+            "reg_date": None,
+            "lots_count": 0,
+            "subcategories": {}
+        }
+
+def analyze_sales(all_sales: list) -> dict:
+    buyers = defaultdict(lambda: {"count": 0, "total": 0, "currencies": set()})
+    categories = defaultdict(lambda: {"count": 0, "total": 0, "refunds": 0})
+    lots_sold = defaultdict(lambda: {"count": 0, "total": 0, "refunds": 0})
+    
+    sale_times = []
+    
+    for sale in all_sales:
+        try:
+            curr = str(sale.currency)
+        except:
+            curr = "?"
+        
+        buyer_key = sale.buyer_username
+        buyers[buyer_key]["count"] += 1
+        buyers[buyer_key]["currencies"].add(curr)
+        
+        cat_key = sale.subcategory_name if hasattr(sale, 'subcategory_name') else "Неизвестно"
+        lot_key = sale.description if hasattr(sale, 'description') else cat_key
+        
+        if sale.status == OrderStatuses.REFUNDED:
+            categories[cat_key]["refunds"] += 1
+            lots_sold[lot_key]["refunds"] += 1
+        else:
+            categories[cat_key]["count"] += 1
+            categories[cat_key]["total"] += sale.price
+            buyers[buyer_key]["total"] += sale.price
+            lots_sold[lot_key]["count"] += 1
+            lots_sold[lot_key]["total"] += sale.price
+        
+        if hasattr(sale, 'date') and sale.date:
+            sale_times.append(sale.date)
+    
+    sale_times.sort(reverse=True)
+    
+    avg_sale_interval = None
+    if len(sale_times) >= 2:
+        intervals = []
+        for i in range(len(sale_times) - 1):
+            if i >= 50:
+                break
+            delta = sale_times[i] - sale_times[i + 1]
+            intervals.append(delta.total_seconds())
+        if intervals:
+            avg_seconds = sum(intervals) / len(intervals)
+            avg_sale_interval = avg_seconds
+    
+    sales_per_day = {}
+    sales_per_week = {}
+    
+    for t in sale_times[:100]:
+        day_key = t.strftime("%d.%m")
+        week_key = t.strftime("%W")
+        sales_per_day[day_key] = sales_per_day.get(day_key, 0) + 1
+        sales_per_week[week_key] = sales_per_week.get(week_key, 0) + 1
+    
+    repeat_buyers = sum(1 for b in buyers.values() if b["count"] > 1)
+    top_buyers = sorted(buyers.items(), key=lambda x: x[1]["count"], reverse=True)[:5]
+    top_categories = sorted(categories.items(), key=lambda x: x[1]["count"], reverse=True)[:5]
+    top_lots = sorted(lots_sold.items(), key=lambda x: x[1]["count"], reverse=True)[:10]
+    
+    return {
+        "total_buyers": len(buyers),
+        "repeat_buyers": repeat_buyers,
+        "top_buyers": top_buyers,
+        "top_categories": top_categories,
+        "top_lots": top_lots,
+        "lots_sold": dict(lots_sold),
+        "avg_sale_interval": avg_sale_interval,
+        "sales_per_day": sales_per_day,
+        "categories": dict(categories)
+    }
+
+def format_interval(seconds: float) -> str:
+    if seconds < 60:
+        return f"{int(seconds)} сек"
+    elif seconds < 3600:
+        return f"{int(seconds / 60)} мин"
+    elif seconds < 86400:
+        hours = seconds / 3600
+        return f"{hours:.1f} ч"
+    else:
+        days = seconds / 86400
+        return f"{days:.1f} дн"
+
+def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> tuple[str, dict]:
     global logger
     account = cardinal.account
     bot = cardinal.telegram.bot
@@ -48,6 +203,8 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
     new_balance = cardinal.get_balance()
     if new_balance is not None:
         cardinal.balance = new_balance
+
+    profile_stats = get_profile_stats(cardinal)
 
     next_order_id, all_sales, locale, subcs = account.get_sales()
     c = 1
@@ -166,41 +323,137 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> str:
             refundsPrice[s] = "0 ¤"
         if salesPrice[s] == "":
             salesPrice[s] = "0 ¤"
-    logger.debug(f"{LOGGER_PREFIX} salesPrice = {salesPrice}")
-    logger.debug(f"{LOGGER_PREFIX} refundsPrice = {refundsPrice}")
-    logger.debug(f"{LOGGER_PREFIX} canWithdraw = {canWithdraw}")
-    return f"""Статистика аккаунта <b><i>{account.username}</i></b>
 
-<b>ID:</b> <code>{account.id}</code>
-<b>Баланс:</b> <code>{format_number(cardinal.balance.total_rub)} ₽, {format_number(cardinal.balance.total_usd)} $, {format_number(cardinal.balance.total_eur)} €</code>
-<b>Незавершенных заказов:</b> <code>{account.active_sales}</code>
+    sales_analysis = analyze_sales(all_sales)
+    
+    stars_emoji = "⭐" * profile_stats["rating_stars"] if profile_stats["rating_stars"] else "—"
+    
+    avg_interval_text = format_interval(sales_analysis["avg_sale_interval"]) if sales_analysis["avg_sale_interval"] else "—"
+    
+    success_rate = 0
+    if sales["all"] + refunds["all"] > 0:
+        success_rate = round(sales["all"] / (sales["all"] + refunds["all"]) * 100, 1)
 
-<b>Доступно для вывода</b>
-<b>Сейчас:</b> <code>{format_number(cardinal.balance.available_rub)} ₽, {format_number(cardinal.balance.available_usd)} $, {format_number(cardinal.balance.available_eur)} €</code>
-<b>Через час:</b> <code>+{canWithdraw["hour"]}</code>
-<b>Через день:</b> <code>+{canWithdraw["day"]}</code>
-<b>Через 2 дня:</b> <code>+{canWithdraw["2day"]}</code>
+    extra_data = {
+        "sales_analysis": sales_analysis,
+        "profile_stats": profile_stats,
+        "sales": sales,
+        "refunds": refunds
+    }
+    
+    main_text = f"""📊 <b>Статистика профиля</b> — <i>{account.username}</i>
 
-<b>Товаров продано</b>
-<b>За день:</b> <code>{format_number(sales["day"])} ({salesPrice["day"]})</code>
-<b>За неделю:</b> <code>{format_number(sales["week"])} ({salesPrice["week"]})</code>
-<b>За месяц:</b> <code>{format_number(sales["month"])} ({salesPrice["month"]})</code>
-<b>За всё время:</b> <code>{format_number(sales["all"])} ({salesPrice["all"]})</code>
+<b>👤 Профиль</b>
+└ ID: <code>{account.id}</code>
 
-<b>Товаров возвращено</b>
-<b>За день:</b> <code>{format_number(refunds["day"])} ({refundsPrice["day"]})</code>
-<b>За неделю:</b> <code>{format_number(refunds["week"])} ({refundsPrice["week"]})</code>
-<b>За месяц:</b> <code>{format_number(refunds["month"])} ({refundsPrice["month"]})</code>
-<b>За всё время:</b> <code>{format_number(refunds["all"])} ({refundsPrice["all"]})</code>
+<b>💰 Баланс</b>
+├ Всего: <code>{format_number(cardinal.balance.total_rub)}₽ · {format_number(cardinal.balance.total_usd)}$ · {format_number(cardinal.balance.total_eur)}€</code>
+└ Доступно: <code>{format_number(cardinal.balance.available_rub)}₽ · {format_number(cardinal.balance.available_usd)}$ · {format_number(cardinal.balance.available_eur)}€</code>
 
-<i>Обновлено:</i>  <code>{time.strftime('%H:%M:%S', time.localtime(account.last_update))}</code>"""
+<b>⏳ Скоро разблокируется</b>
+├ Через час: <code>+{canWithdraw["hour"]}</code>
+├ Через день: <code>+{canWithdraw["day"]}</code>
+└ Через 2 дня: <code>+{canWithdraw["2day"]}</code>
+
+<b>📦 Продажи</b>
+├ Сегодня: <code>{sales["day"]}</code> ({salesPrice["day"]})
+├ Неделя: <code>{sales["week"]}</code> ({salesPrice["week"]})
+├ Месяц: <code>{sales["month"]}</code> ({salesPrice["month"]})
+└ Всего: <code>{sales["all"]}</code> ({salesPrice["all"]})
+
+<b>↩️ Возвраты</b>
+├ Сегодня: <code>{refunds["day"]}</code> ({refundsPrice["day"]})
+├ Неделя: <code>{refunds["week"]}</code> ({refundsPrice["week"]})
+├ Месяц: <code>{refunds["month"]}</code> ({refundsPrice["month"]})
+└ Всего: <code>{refunds["all"]}</code> ({refundsPrice["all"]})
+
+<b>📈 Аналитика</b>
+├ Успешность: <code>{success_rate}%</code>
+├ В работе: <code>{account.active_sales}</code>
+├ Среднее время между продажами: <code>{avg_interval_text}</code>
+├ Уникальных покупателей: <code>{sales_analysis["total_buyers"]}</code>
+└ Повторных покупок: <code>{sales_analysis["repeat_buyers"]}</code>
+
+<i>🕐 {time.strftime('%H:%M:%S', time.localtime(account.last_update))}</i>"""
+
+    return main_text, extra_data
+
+def generate_buyers_page(extra_data: dict, account_name: str) -> str:
+    sales_analysis = extra_data.get("sales_analysis", {})
+    top_buyers = sales_analysis.get("top_buyers", [])
+    
+    if not top_buyers:
+        return f"📊 <b>Топ покупателей</b> — <i>{account_name}</i>\n\nНет данных о покупателях"
+    
+    text = f"📊 <b>Топ покупателей</b> — <i>{account_name}</i>\n\n"
+    
+    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+    for i, (buyer, data) in enumerate(top_buyers):
+        medal = medals[i] if i < len(medals) else f"{i+1}."
+        currencies = ", ".join(data["currencies"])
+        text += f"{medal} <b>{buyer}</b>\n"
+        text += f"    └ Заказов: <code>{data['count']}</code> · Сумма: <code>{data['total']:.0f} {currencies}</code>\n"
+    
+    return text
+
+def generate_categories_page(extra_data: dict, account_name: str) -> str:
+    sales_analysis = extra_data.get("sales_analysis", {})
+    categories = sales_analysis.get("categories", {})
+    
+    if not categories:
+        return f"📊 <b>Статистика по категориям</b> — <i>{account_name}</i>\n\nНет данных о категориях"
+    
+    text = f"📊 <b>Статистика по категориям</b> — <i>{account_name}</i>\n\n"
+    
+    sorted_cats = sorted(categories.items(), key=lambda x: x[1]["count"], reverse=True)
+    
+    for cat_name, data in sorted_cats[:10]:
+        short_name = cat_name[:35] + "..." if len(cat_name) > 35 else cat_name
+        refund_text = f" · ↩️{data['refunds']}" if data["refunds"] > 0 else ""
+        text += f"📁 <b>{short_name}</b>\n"
+        text += f"    └ Продано: <code>{data['count']}</code>{refund_text}\n"
+    
+    if len(sorted_cats) > 10:
+        text += f"\n<i>...и ещё {len(sorted_cats) - 10} категорий</i>"
+    
+    return text
+
+def generate_lots_page(extra_data: dict, account_name: str) -> str:
+    sales_analysis = extra_data.get("sales_analysis", {})
+    top_lots = sales_analysis.get("top_lots", [])
+    lots_sold = sales_analysis.get("lots_sold", {})
+    
+    if not top_lots:
+        return f"📊 <b>Проданные товары</b> — <i>{account_name}</i>\n\nНет данных о продажах"
+    
+    total_lots = len(lots_sold)
+    total_sold = sum(lot["count"] for lot in lots_sold.values())
+    
+    text = f"📊 <b>Проданные товары</b> — <i>{account_name}</i>\n\n"
+    text += f"Уникальных товаров: <code>{total_lots}</code>\n"
+    text += f"Всего продано: <code>{total_sold}</code>\n\n"
+    text += "<b>Топ по продажам:</b>\n"
+    
+    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+    for i, (lot_name, data) in enumerate(top_lots):
+        medal = medals[i] if i < len(medals) else f"{i+1}."
+        short_name = lot_name[:30] + "..." if len(lot_name) > 30 else lot_name
+        refund_text = f" · ↩️{data['refunds']}" if data["refunds"] > 0 else ""
+        text += f"{medal} <b>{short_name}</b>\n"
+        text += f"    └ Продаж: <code>{data['count']}</code> · <code>{data['total']:.0f}</code>{refund_text}\n"
+    
+    if len(lots_sold) > 10:
+        text += f"\n<i>...и ещё {len(lots_sold) - 10} товаров</i>"
+    
+    return text
 
 def init(cardinal: Cardinal):
-                                                              
     if not cardinal.telegram:
         return
     tg = cardinal.telegram
     bot = tg.bot
+    
+    cached_data = {}
 
     storage_path = "storage/builtin/advProfileStat.json"
     if exists(storage_path):
@@ -212,23 +465,128 @@ def init(cardinal: Cardinal):
                 pass
 
     def profile_handler(call: telebot.types.CallbackQuery):
-                                                       
         new_msg = bot.reply_to(call.message, "Обновляю статистику аккаунта (это может занять некоторое время)...")
 
         try:
-            bot.edit_message_text(generate_adv_profile(cardinal, new_msg.chat.id, new_msg.id), call.message.chat.id,
-                                  call.message.id, reply_markup=telebot.types.InlineKeyboardMarkup().add(
-                    telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=ADV_PROFILE_CB)))
+            main_text, extra_data = generate_adv_profile(cardinal, new_msg.chat.id, new_msg.id)
+            cached_data[call.message.chat.id] = extra_data
+            
+            kb = telebot.types.InlineKeyboardMarkup(row_width=3)
+            kb.add(
+                telebot.types.InlineKeyboardButton("👥 Покупатели", callback_data=f"{ADV_PROFILE_PAGE_CB}buyers"),
+                telebot.types.InlineKeyboardButton("📁 Категории", callback_data=f"{ADV_PROFILE_PAGE_CB}categories"),
+                telebot.types.InlineKeyboardButton("🏷 Товары", callback_data=f"{ADV_PROFILE_PAGE_CB}lots")
+            )
+            kb.add(telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=ADV_PROFILE_CB))
+            
+            bot.edit_message_text(main_text, call.message.chat.id, call.message.id, reply_markup=kb)
         except Exception as ex:
-            bot.edit_message_text(f"❌ Не удалось обновить статистику аккаунта: {ex}", new_msg.chat.id, new_msg.id)
+            bot.edit_message_text(f"❌ Не удалось обновить статистику: {ex}", new_msg.chat.id, new_msg.id)
             logger.debug("TRACEBACK", exc_info=True)
             bot.answer_callback_query(call.id)
             return
 
         bot.delete_message(new_msg.chat.id, new_msg.id)
 
+    def page_handler(call: telebot.types.CallbackQuery):
+        page = call.data.replace(ADV_PROFILE_PAGE_CB, "")
+        extra_data = cached_data.get(call.message.chat.id, {})
+        
+        if not extra_data:
+            bot.answer_callback_query(call.id, "Сначала обнови статистику", show_alert=True)
+            return
+        
+        account_name = cardinal.account.username
+        
+        if page == "buyers":
+            text = generate_buyers_page(extra_data, account_name)
+        elif page == "categories":
+            text = generate_categories_page(extra_data, account_name)
+        elif page == "lots":
+            text = generate_lots_page(extra_data, account_name)
+        else:
+            bot.answer_callback_query(call.id)
+            return
+        
+        kb = telebot.types.InlineKeyboardMarkup(row_width=2)
+        kb.add(telebot.types.InlineKeyboardButton("◀️ Назад", callback_data=f"{ADV_PROFILE_PAGE_CB}main"))
+        
+        try:
+            bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=kb)
+        except:
+            pass
+        bot.answer_callback_query(call.id)
+
+    def back_to_main(call: telebot.types.CallbackQuery):
+        extra_data = cached_data.get(call.message.chat.id, {})
+        
+        if not extra_data:
+            bot.answer_callback_query(call.id, "Сначала обнови статистику", show_alert=True)
+            return
+        
+        sales_analysis = extra_data.get("sales_analysis", {})
+        profile_stats = extra_data.get("profile_stats", {})
+        
+        account = cardinal.account
+        sales = extra_data.get("sales", {})
+        refunds = extra_data.get("refunds", {})
+        
+        def format_number(number):
+            num_str = f"{number:,}".replace(',', ' ')
+            if '.' in num_str:
+                integer_part, decimal_part = num_str.split('.')
+                decimal_part = decimal_part.rstrip("0")
+                decimal_part = f".{decimal_part}" if decimal_part else ""
+            else:
+                integer_part = num_str
+                decimal_part = ""
+            if integer_part.count(' ') == 1 and len(integer_part) == 5:
+                integer_part = integer_part.replace(' ', "")
+            return integer_part + decimal_part
+        
+        stars_emoji = "⭐" * profile_stats.get("rating_stars", 0) if profile_stats.get("rating_stars") else "—"
+        avg_interval_text = format_interval(sales_analysis.get("avg_sale_interval")) if sales_analysis.get("avg_sale_interval") else "—"
+        
+        success_rate = 0
+        if sales.get("all", 0) + refunds.get("all", 0) > 0:
+            success_rate = round(sales["all"] / (sales["all"] + refunds["all"]) * 100, 1)
+        
+        main_text = f"""📊 <b>Статистика профиля</b> — <i>{account.username}</i>
+
+<b>👤 Профиль</b>
+├ ID: <code>{account.id}</code>
+├ Рейтинг: {stars_emoji}
+├ Отзывов: <code>{profile_stats.get("reviews_count", 0)}</code>
+└ Лотов: <code>{profile_stats.get("lots_count", 0)}</code>
+
+<b>💰 Баланс</b>
+├ Всего: <code>{format_number(cardinal.balance.total_rub)}₽ · {format_number(cardinal.balance.total_usd)}$ · {format_number(cardinal.balance.total_eur)}€</code>
+└ Доступно: <code>{format_number(cardinal.balance.available_rub)}₽ · {format_number(cardinal.balance.available_usd)}$ · {format_number(cardinal.balance.available_eur)}€</code>
+
+<b>📈 Аналитика</b>
+├ Успешность: <code>{success_rate}%</code>
+├ В работе: <code>{account.active_sales}</code>
+├ Среднее время между продажами: <code>{avg_interval_text}</code>
+├ Уникальных покупателей: <code>{sales_analysis.get("total_buyers", 0)}</code>
+└ Повторных покупок: <code>{sales_analysis.get("repeat_buyers", 0)}</code>
+
+<i>🕐 {time.strftime('%H:%M:%S', time.localtime(account.last_update))}</i>"""
+        
+        kb = telebot.types.InlineKeyboardMarkup(row_width=3)
+        kb.add(
+            telebot.types.InlineKeyboardButton("👥 Покупатели", callback_data=f"{ADV_PROFILE_PAGE_CB}buyers"),
+            telebot.types.InlineKeyboardButton("📁 Категории", callback_data=f"{ADV_PROFILE_PAGE_CB}categories"),
+            telebot.types.InlineKeyboardButton("🏷 Товары", callback_data=f"{ADV_PROFILE_PAGE_CB}lots")
+        )
+        kb.add(telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=ADV_PROFILE_CB))
+        
+        try:
+            bot.edit_message_text(main_text, call.message.chat.id, call.message.id, reply_markup=kb)
+        except:
+            pass
+        bot.answer_callback_query(call.id)
+
     def refresh_kb():
-                                                                                   
         return telebot.types.InlineKeyboardMarkup().row(
             telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=tg_bot.CBT.UPDATE_PROFILE),
             telebot.types.InlineKeyboardButton("▶️ Еще", callback_data=ADV_PROFILE_CB))
@@ -237,11 +595,12 @@ def init(cardinal: Cardinal):
     tg_bot.static_keyboards.REFRESH_BTN = refresh_kb
     
     tg.cbq_handler(profile_handler, lambda c: c.data == ADV_PROFILE_CB)
+    tg.cbq_handler(page_handler, lambda c: c.data.startswith(ADV_PROFILE_PAGE_CB) and c.data != f"{ADV_PROFILE_PAGE_CB}main")
+    tg.cbq_handler(back_to_main, lambda c: c.data == f"{ADV_PROFILE_PAGE_CB}main")
     
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 def message_hook(cardinal: Cardinal, event: NewMessageEvent):
-                                                                             
     if event.message.type not in [MessageTypes.ORDER_CONFIRMED, MessageTypes.ORDER_CONFIRMED_BY_ADMIN,
                                   MessageTypes.ORDER_REOPENED, MessageTypes.REFUND, MessageTypes.REFUND_BY_ADMIN]:
         return

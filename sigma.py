@@ -182,6 +182,9 @@ class Cardinal(object):
         self.category_reminders_file = "storage/category_reminders.json"
         self.category_reminders = self.load_category_reminders()
 
+        self.category_greetings_file = "storage/category_greetings.json"
+        self.category_greetings = self.load_category_greetings()
+
         self.pre_init_handlers = []
         self.post_init_handlers = []
         self.pre_start_handlers = []
@@ -417,6 +420,32 @@ class Cardinal(object):
             settings = self.category_reminders[category_id]
             if settings.get("enabled", True):
                 return settings
+        return None
+
+    def load_category_greetings(self) -> dict:
+        try:
+            if os.path.exists(self.category_greetings_file):
+                with open(self.category_greetings_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return {str(k): v for k, v in data.items()}
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить приветствия по категориям: {e}")
+        return {}
+
+    def save_category_greetings(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.category_greetings_file), exist_ok=True)
+            with open(self.category_greetings_file, 'w', encoding='utf-8') as f:
+                json.dump(self.category_greetings, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить приветствия по категориям: {e}")
+
+    def get_greeting_for_category(self, category_id: int | str) -> str | None:
+        category_id = str(category_id)
+        if category_id in self.category_greetings:
+            settings = self.category_greetings[category_id]
+            if settings.get("enabled", True):
+                return settings.get("template")
         return None
 
     def __init_account(self) -> None:

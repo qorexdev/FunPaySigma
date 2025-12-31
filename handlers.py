@@ -156,8 +156,24 @@ def greetings_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEv
             (mtype is not MessageTypes.NON_SYSTEM and c.MAIN_CFG["Greetings"].getboolean("ignoreSystemMessages"))]):
         return
 
+    greeting_text = c.MAIN_CFG["Greetings"]["greetingsText"]
+    
+    if not c.old_mode_enabled and hasattr(obj, 'buyer_viewing') and obj.buyer_viewing and obj.buyer_viewing.link:
+        import re
+        link = obj.buyer_viewing.link
+        lot_match = re.search(r'[?&]id=(\d+)', link)
+        if lot_match and c.profile:
+            lot_id = int(lot_match.group(1))
+            lot = c.profile.get_lot(lot_id)
+            if lot and lot.subcategory:
+                category_id = str(lot.subcategory.id)
+                custom_greeting = c.get_greeting_for_category(category_id)
+                if custom_greeting:
+                    greeting_text = custom_greeting
+                    logger.debug(f"Using category {category_id} greeting for chat {chat_id} (lot {lot_id})")
+
     logger.info(_("log_sending_greetings", chat_name, chat_id))
-    text = cardinal_tools.format_msg_text(c.MAIN_CFG["Greetings"]["greetingsText"], obj)
+    text = cardinal_tools.format_msg_text(greeting_text, obj)
     Thread(target=c.send_message, args=(chat_id, text, chat_name), daemon=True).start()
 
 def add_old_user_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):

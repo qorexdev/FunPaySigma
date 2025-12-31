@@ -105,11 +105,30 @@ def greeting_settings(c: Cardinal):
     cd = float(c.MAIN_CFG["Greetings"]["greetingsCooldown"])
     cd = int(cd) if int(cd) == cd else cd
     only_new_chats = c.MAIN_CFG["Greetings"].getboolean("onlyNewChats")
+    cat_count = len(c.category_greetings)
     kb = K()        .add(B(_("gr_greetings", l("sendGreetings")), None, f"{p}:sendGreetings"))        .add(B(_("gr_ignore_sys_msgs", l("ignoreSystemMessages")), None, f"{p}:ignoreSystemMessages"))        .add(B(_("gr_only_new_chats", l("onlyNewChats")), None, f"{p}:onlyNewChats"))        .add(B(_("gr_edit_message"), None, CBT.EDIT_GREETINGS_TEXT))
     if not only_new_chats:
         kb.add(B(_("gr_edit_cooldown").format(cd), None, CBT.EDIT_GREETINGS_COOLDOWN))
-
+    kb.add(B(_("gr_category_settings", cat_count), None, CBT.GR_CATEGORY_LIST))
     kb.add(B(_("gl_back"), None, CBT.MAIN2))
+    return kb
+
+def category_greetings_list(c: Cardinal):
+    kb = K()
+    for cat_id, settings in c.category_greetings.items():
+        enabled = settings.get("enabled", True)
+        name = settings.get("name", f"ID {cat_id}")
+        status = "✅" if enabled else "❌"
+        kb.add(B(f"{status} {name}", None, f"{CBT.GR_CATEGORY_EDIT}:{cat_id}"))
+    kb.add(B(_("gr_add_category"), None, CBT.GR_CATEGORY_ADD))
+    kb.add(B(_("gl_back"), None, f"{CBT.CATEGORY}:gr"))
+    return kb
+
+def category_greeting_edit(c: Cardinal, cat_id: str):
+    settings = c.category_greetings.get(cat_id, {})
+    enabled = bool_to_text(int(settings.get("enabled", True)))
+    
+    kb = K()        .add(B(_("gr_cat_toggle", enabled), None, f"{CBT.GR_CATEGORY_TOGGLE}:{cat_id}"))        .add(B(_("gr_cat_template"), None, f"{CBT.GR_CATEGORY_EDIT_TEMPLATE}:{cat_id}"))        .add(B(_("gr_copy_default"), None, f"{CBT.GR_COPY_DEFAULT}:{cat_id}"))        .row(B(_("gl_delete"), None, f"{CBT.GR_CATEGORY_DELETE}:{cat_id}"), B(_("gl_back"), None, CBT.GR_CATEGORY_LIST))
     return kb
 
 def order_confirm_reply_settings(c: Cardinal):
