@@ -1096,6 +1096,43 @@ v_edit_or_cat_template = "✍️ <b>Enter reminder template</b> for this categor
 v_edit_or_cat_repeat = "🔄 <b>How many repeats</b> for this category?"
 v_edit_or_cat_interval = "⏰ <b>Interval (min.)</b> between repeats for category:"
 
+gr_category_settings = "📂 By Categories ({})"
+gr_add_category = "➕ Add Category"
+gr_cat_toggle = "{} Active"
+gr_cat_template = "✏️ Greeting Template"
+gr_copy_default = "📋 Copy Default"
+
+desc_gr_category_list = """🏠 Menu > 👋 Greeting > 📂 <b>By Categories</b>
+
+Custom greetings for different product categories.
+
+If a category has a custom template — it will be used instead of the global one when greeting buyers with orders from this category."""
+
+desc_gr_category_add = """➕ <b>Add Category</b>
+
+Enter FunPay category ID (number).
+You can find the ID in the category URL on FunPay.
+
+Example: <code>123</code>"""
+
+desc_gr_category_edit = """📂 <b>Greeting Settings</b>
+
+<b>🏷️ Name:</b> <code>{}</code>
+<b>🆔 ID:</b> <code>{}</code>
+<b>📊 Status:</b> {}
+
+<b>Template:</b>
+<code>{}</code>"""
+
+gr_cat_added = "✅ Category {} added!"
+gr_cat_deleted = "✅ Category deleted."
+gr_cat_not_found = "❌ Category not found."
+gr_cat_template_set = "✅ Category greeting template changed!"
+gr_default_copied = "📋 <b>Default template copied!</b>\n\nNow paste it and edit:"
+
+v_edit_gr_cat_name = "✍️ <b>Enter category name</b> (for yourself)"
+v_edit_gr_cat_template = "✍️ <b>Enter greeting template</b> for this category:"
+
 desc_order_reminders = "🏠 Menu > ⏰ <b>Order Reminders</b>\n\nRemind buyers to confirm orders:"
 
 le_category_view_title_v2 = """📁 <b>{}</b> <code>[ID: {}]</code>
