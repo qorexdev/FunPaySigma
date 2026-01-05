@@ -4,8 +4,8 @@ gl_yes = "✅ Yes"
 gl_yep = "✅ yep"
 gl_no = "❌ No"
 gl_cancel = "✖️ Cancel"
-gl_error = "⚠️ The Grinch Stole Data (Error)"
-gl_try_again = "Try again before the snow melts"
+gl_error = "⚠️ Error"
+gl_try_again = "Try again"
 gl_error_try_again = f"{gl_error}. {gl_try_again}."
 gl_refresh = "🔄 Refresh"
 gl_delete = "🗑️ Delete"
@@ -15,20 +15,20 @@ gl_pcs = "pcs."
 gl_last_update = "Last update"
 
 mm_language = "🌐 Language"
-mm_global = "⚡ Main Features 🎄"
-mm_notifications = "🔔 Notifications ❄️"
+mm_global = "⚡ Main Features"
+mm_notifications = "🔔 Notifications"
 mm_autoresponse = "🤖 Autoresponse"
-mm_autodelivery = "🎁 Auto-delivery"
-mm_blacklist = "📜 Naughty List (Blacklist) 🥶"
+mm_autodelivery = "📦 Auto-delivery"
+mm_blacklist = "🚫 Blacklist"
 mm_templates = "📝 Templates"
-mm_greetings = "🎅 Greeting"
+mm_greetings = "👋 Greeting"
 mm_order_confirm = "✅ Order Confirmation"
 mm_review_reply = "⭐ Reviews"
-mm_new_msg_view = "💬 Message View 📨"
+mm_new_msg_view = "💬 Message View"
 mm_plugins = "🧩 Plugins"
 mm_configs = "📁 Configuration"
-mm_authorized_users = "🧝 Elves (Users)"
-mm_proxy = "🦌 Reindeer (Proxy)"
+mm_authorized_users = "👥 Users"
+mm_proxy = "🌐 Proxy"
 
 mm_graphs = "📊 Statistics"
 mm_chat_sync = "🔄 Chat Sync"
@@ -44,15 +44,15 @@ gs_autodisable = "{} Deactivate lots"
 gs_old_msg_mode = "{} Old Message Receiving Mode"
 gs_keep_sent_messages_unread = "{} Keep unread when sending"
 
-ns_new_msg = "{} New message 📨"
+ns_new_msg = "{} New message"
 ns_cmd = "{} Command received"
-ns_new_order = "{} Order under the tree 🎁"
+ns_new_order = "{} New order"
 ns_order_confirmed = "{} Order confirmed"
 ns_lot_activate = "{} Lot reactivated"
 ns_lot_deactivate = "{} Lot deactivated"
-ns_delivery = "{} Sleigh Delivery 🛷"
-ns_raise = "{} Lots raised 🚀"
-ns_new_review = "{} New review ⭐️"
+ns_delivery = "{} Delivery"
+ns_raise = "{} Lots raised"
+ns_new_review = "{} New review"
 ns_bot_start = "{} Bot start"
 ns_other = "{} Other (plugins)"
 
@@ -182,13 +182,12 @@ old_mode_help = """<b>New Message Receiving Mode</b>
 
 ❗ If you click the <code>More</code> button in a new message notification, <i>FPS</i> will "read" the chat and show the last 15 messages, including images. <i>FPS</i> will also be able to determine who the author of the messages is."""
 
-bot_started = """🎅 <b>Ho-ho-ho! Sigma is here! Happy 2026! 🎄</b>\n
-✅ Sleigh is ready, reindeer are set.\n
-❌ <i>FunPay Sigma</i> is not initialized yet (Santa is sleeping).\n
-🔃 As soon as <i>FunPay Sigma</i> wakes up, this message will change.\n
-📋 If <i>FPS</i> is sleeping for too long, check the /logs"""
+bot_started = """🤖 <b>FunPay Sigma starting...</b>\n
+✅ Telegram bot is ready.\n
+⏳ <i>FunPay Sigma</i> is initializing...\n
+📋 If something goes wrong — check /logs"""
 
-fps_init = """✅ <b><u>FPS initialized! Happy New Year 2026! ❄️</u></b>\n
+fps_init = """✅ <b>FunPay Sigma is ready!</b>\n
 ℹ️ <b><i>Version:</i></b> <code>{}</code>
 👑 <b><i>Account:</i></b>  <code>{}</code> | <code>{}</code>
 💰 <b><i>Balance:</i></b> <code>{}₽, {}$, {}€</code>
@@ -226,13 +225,13 @@ sys_info = """<b><u>Data summary</u></b>
     Uptime:  <code>{}</code>
     Chat ID:  <code>{}</code>"""
 
-act_blacklist = """Enter the name of the naughty one."""
-already_blacklisted = "❌ <code>{}</code> already got coal."
-user_blacklisted = "✅ <code>{}</code> is on the Naughty List."
-act_unban = "Enter the name of the one to forgive."
-not_blacklisted = "❌ <code>{}</code> is on the Nice List."
-user_unbanned = "✅ <code>{}</code> is forgiven."
-blacklist_empty = "❌ Everyone was good this year (List is empty)."
+act_blacklist = """Enter the username to add to blacklist."""
+already_blacklisted = "❌ <code>{}</code> is already blacklisted."
+user_blacklisted = "✅ <code>{}</code> added to blacklist."
+act_unban = "Enter the username to remove from blacklist."
+not_blacklisted = "❌ <code>{}</code> is not in the blacklist."
+user_unbanned = "✅ <code>{}</code> removed from blacklist."
+blacklist_empty = "❌ Blacklist is empty."
 
 act_proxy = "Enter the proxy in the format <u>login:password@ip:port</u> or <u>ip:port</u>."
 proxy_already_exists = "❌ The proxy <code>{}</code> already exists."
@@ -252,7 +251,7 @@ logfile_error = "❌ Failed to send log file."
 logfile_deleted = "🗑️ Deleted {} logfile(s)."
 
 update_no_tags = "❌ <b>Update Check Failed</b>\n\nFailed to retrieve release list from GitHub. Try again later."
-update_lasted = "✅ <b>You have the latest version! 🎄</b>\n\n📌 <b>Version:</b> <code>{}</code>"
+update_lasted = "✅ <b>You have the latest version!</b>\n\n📌 <b>Version:</b> <code>{}</code>"
 update_get_error = "❌ <b>Data Error</b>\n\nFailed to get new version information. Try again later."
 
 update_available = """<b>✨ NEW UPDATE AVAILABLE ✨</b>
@@ -474,7 +473,7 @@ desc_pl = "Here you can get information about the plugins, as well as configure 
 desc_au = "Here you can manage the Elves (authorization)."
 desc_proxy = "Here you can harness the Reindeer (proxy)."
 
-cmd_menu = "open settings 🎄"
+cmd_menu = "main menu"
 cmd_language = "change language"
 cmd_profile = "account statistics"
 cmd_lots = "FunPay lots editor"
@@ -638,7 +637,7 @@ crd_session_timeout_err = "Failed to refresh session: timeout exceeded."
 crd_session_unexpected_err = "An unexpected error occurred while refreshing the session."
 crd_session_no_more_attempts_err = "Failed to refresh session: the number of attempts was exceeded."
 crd_session_updated = "Session updated."
-crd_raise_loop_started = "$CYANThe auto-raise loop is running on a sleigh 🛷"
+crd_raise_loop_started = "$CYANAuto-raise loop is running."
 crd_raise_loop_not_started = "$CYANThe auto-raise loop was not started because there are no lots detected on the account."
 crd_session_loop_started = "$CYANThe session refresh loop is running."
 crd_no_plugins_folder = "The plugins folder is not detected."
