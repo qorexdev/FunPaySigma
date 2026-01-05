@@ -1,11 +1,11 @@
 gl_next = "➡️ Дальше"
 gl_back = "🔙 Назад"
-gl_yes = "✅ Ага"
+gl_yes = "✅ Да"
 gl_yep = "👌 Окей"
-gl_no = "❌ Не-а"
+gl_no = "❌ Нет"
 gl_cancel = "🚫 Отмена"
-gl_error = "⚠️ Гринч постарался (Ошибка)"
-gl_try_again = "Попробуем, пока куранты не пробили"
+gl_error = "⚠️ Ошибка"
+gl_try_again = "Попробуй ещё раз"
 gl_error_try_again = f"{gl_error}. {gl_try_again}."
 gl_refresh = "🔄 Обновить"
 gl_delete = "🗑️ Удалить"
@@ -15,22 +15,22 @@ gl_pcs = "шт."
 gl_last_update = "🕒 Обновлено"
 
 mm_language = "🌐 Язык / Language"
-mm_global = "⚡ Главное 🎄"
-mm_notifications = "🔔 Уведомления ❄️"
+mm_global = "⚡ Главное"
+mm_notifications = "🔔 Уведомления"
 mm_autoresponse = "🤖 Автоответчик"
-mm_autodelivery = "🎁 Автовыдача"
-mm_blacklist = "📜 Список непослушных (ЧС) 🥶"
+mm_autodelivery = "📦 Автовыдача"
+mm_blacklist = "🚫 Чёрный список"
 mm_templates = "📝 Шаблоны"
-mm_greetings = "🎅 Приветствие"
+mm_greetings = "👋 Приветствие"
 mm_order_confirm = "✅ Подтверждение"
 mm_order_reminders = "⏰ Напоминания о подтверждении заказов"
 mm_review_reminders = "💬 Напоминания об отзывах"
 mm_review_reply = "⭐ Ответ на отзывы"
-mm_new_msg_view = "👁️ Вид сообщений 📨"
+mm_new_msg_view = "👁️ Вид сообщений"
 mm_plugins = "🧩 Плагины"
 mm_configs = "⚙️ Конфиги"
-mm_authorized_users = "🧝 Эльфы-помощники (Доступ)"
-mm_proxy = "🦌 Олени Санты (Прокси) 🌍"
+mm_authorized_users = "👥 Доступ"
+mm_proxy = "🌐 Прокси"
 mm_lots_editor = "🛍️ Лоты"
 
 mm_graphs = "📊 Статистика"
@@ -47,16 +47,16 @@ gs_autodisable = "{} Деактивация"
 gs_old_msg_mode = "{} Старый режим сообщений"
 gs_keep_sent_messages_unread = "{} Не читать свои СМС"
 
-ns_new_msg = "{} СМС 📨"
+ns_new_msg = "{} Сообщения"
 ns_cmd = "{} Команды"
-ns_new_order = "{} Заказ под ёлку 🎁"
+ns_new_order = "{} Новый заказ"
 ns_order_confirmed = "{} Подтверждения"
 ns_lot_activate = "{} Восстановление"
 ns_lot_deactivate = "{} Деактивация"
-ns_delivery = "{} Доставка на санях (Выдача) 🛷"
-ns_raise = "{} Поднятие лотов 🚀"
-ns_new_review = "{} Отзывы ⭐️"
-ns_bot_start = "{} Бот проснулся от спячки"
+ns_delivery = "{} Выдача товара"
+ns_raise = "{} Поднятие лотов"
+ns_new_review = "{} Отзывы"
+ns_bot_start = "{} Запуск бота"
 ns_other = "{} Прочее"
 
 ar_edit_commands = "✏️ Изменить команды"
@@ -91,7 +91,7 @@ ea_link_another_gf = "🔗 Другой файл"
 
 fl_manual = "✍️ Руками"
 gf_add_goods = "➕ Добавить"
-gf_download = "⬇️ Скачать 🎁"
+gf_download = "⬇️ Скачать"
 gf_create_another = "➕ Создать ещё"
 gf_create_more = "➕ Ещё файл"
 gf_add_more = "➕ Добавить ещё"
@@ -282,7 +282,7 @@ cfg_upload_ad = "⬆️ Загрузить auto_delivery"
 
 tg_block_login = "{} Вход по паролю"
 
-prx_proxy_add = "➕ Добавить прокси 🛡️"
+prx_proxy_add = "➕ Добавить прокси"
 prx_proxy_enabled = "{} Юзать прокси"
 prx_proxy_check = "{} Проверка прокси"
 prx_proxy_type = "🌐 Тип: {}"
@@ -304,13 +304,13 @@ msg_reply2 = "📨 Ещё сообщение"
 msg_templates = "📝 Шаблоны"
 msg_more = "➕ Ещё"
 
-access_denied = "👋 Хо-хо-хо, <b>{}</b>!\n\n❌ <b>Тебя нет в списке послушных детей (Доступ закрыт).</b>\n\n"                "🔑 Назови волшебное слово (secret key из установки), "                "чтобы получить подарок."
+access_denied = "👋 Привет, <b>{}</b>!\n\n❌ <b>Доступ закрыт.</b>\n\n"                "🔑 Введи секретный ключ (secret key из установки), "                "чтобы получить доступ."
 
-access_granted = "🔓 <b>Магия сработала! Ты в системе!</b>\n\n"                 "⚠️ Я пока молчу, как партизан на утреннике.\n"                 "🔔 Включи уведомления в настройках, если ждешь чудес.\n\n"                 "⚙️ Мастерская Санты тут: /menu"
+access_granted = "🔓 <b>Доступ получен!</b>\n\n"                 "⚠️ Уведомления по умолчанию выключены.\n"                 "🔔 Включи их в настройках, если нужно.\n\n"                 "⚙️ Настройки: /menu"
 
-access_granted_notification = "<b>🚨 ОЛЕНИ, ТРЕВОГА! 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 <a href=\"tg://user?id={1}\">{0}</a> "                                                                "<b>(ID: {1}) пробрался в мастерскую (ПУ)!</b>"
+access_granted_notification = "<b>🚨 ВНИМАНИЕ! 🚨\n\n\n</b>" * 3 + "\n\n\n🔐 <a href=\"tg://user?id={1}\">{0}</a> "                                                                "<b>(ID: {1}) получил доступ к панели управления!</b>"
 
-param_disabled = "❌ <b>Эта штука выключена глобально.</b>\n\n"                 "⚙️ Включи её в разделе <i>Глобальные переключатели</i>."
+param_disabled = "❌ <b>Эта функция выключена глобально.</b>\n\n"                 "⚙️ Включи её в разделе <i>Глобальные переключатели</i>."
 
 old_mode_help = """<b>🆕 Новый режим сообщений</b>
 ✅ Вижу всю историю, картинки и кто пишет.
@@ -326,28 +326,28 @@ old_mode_help = """<b>🆕 Новый режим сообщений</b>
 
 ℹ️ Кнопка <code>➕ Ещё</code> в уведомлении всё равно прочитает чат и покажет историю (с картинками)."""
 
-bot_started = """🎅 <b>Хо-хо-хо! Sigma в деле! С Новым 2026! 🎄</b>
+bot_started = """🤖 <b>FunPay Sigma запускается...</b>
 
-✅ Сани смазаны, меню работает.
-⏳ FunPay Sigma загружает подарки...
+✅ Telegram бот готов.
+⏳ Инициализация FunPay...
 
-📋 Если я уснул в сугробе — пни меня через /logs"""
+📋 Если что-то пошло не так — /logs"""
 
-fps_init = """✅ <b>FunPay Sigma готова к Новому 2026 Году! ❄️</b>
+fps_init = """✅ <b>FunPay Sigma готова к работе!</b>
 
 🆔 <b>Версия:</b> <code>{}</code>
 👤 <b>Аккаунт:</b> <code>{}</code> | <code>{}</code>
 💰 <b>Баланс:</b> <code>{}₽, {}$, {}€</code>
 📦 <b>Активных заказов:</b> <code>{}</code>
 
-👨‍💻 <b>Разрабы:</b> @qorexdev, @sidor0912
+👨‍💻 <b>Разработчики:</b> @qorexdev, @sidor0912
 💬 <b>Чат:</b> @FunPaySigmaChat"""
 
 create_test_ad_key = "⌨️ <b>Введи название лота</b>, для которого тестим автовыдачу."
 
-test_ad_key_created = """✅ <b>Ключ готов!</b> (Лот: <code>{}</code>)
+test_ad_key_created = """✅ <b>Ключ создан!</b> (Лот: <code>{}</code>)
 
-Кинь эту команду в чат с покупателем:
+Отправь эту команду в чат с покупателем:
 <code>!автовыдача {}</code>"""
 
 about = """✨ <b>FunPay Sigma</b> <code>v{}</code>
@@ -373,19 +373,19 @@ sys_info = """📊 <b>Что по железу:</b>
 ⏱️ <b>Аптайм:</b> <code>{}</code>
 🆔 <b>Chat ID:</b> <code>{}</code>"""
 
-act_blacklist = """👤 <b>Впиши имя того, кто плохо себя вёл (в ЧС его?).</b>"""
-already_blacklisted = "❌ <code>{}</code> уже получил уголь (в ЧС)."
-user_blacklisted = "✅ <code>{}</code> теперь в списке непослушных (ЧС)."
-act_unban = "👤 <b>Кого прощаем в честь праздника? (никнейм)</b>."
-not_blacklisted = "❌ <code>{}</code> и так паинька (не в ЧС)."
-user_unbanned = "✅ <code>{}</code> прощен и может получать подарки."
-blacklist_empty = "🤷‍♂️ Все вели себя хорошо (ЧС пуст)."
+act_blacklist = """👤 <b>Введи никнейм пользователя для добавления в ЧС.</b>"""
+already_blacklisted = "❌ <code>{}</code> уже в чёрном списке."
+user_blacklisted = "✅ <code>{}</code> добавлен в чёрный список."
+act_unban = "👤 <b>Введи никнейм для удаления из ЧС.</b>"
+not_blacklisted = "❌ <code>{}</code> не в чёрном списке."
+user_unbanned = "✅ <code>{}</code> удалён из чёрного списка."
+blacklist_empty = "🤷‍♂️ Чёрный список пуст."
 
-act_proxy = "🦌 <b>Запрягай оленей (введи прокси)</b>\nФормат: <code>login:password@ip:port</code> или <code>ip:port</code>"
-proxy_already_exists = "❌ Этот олень <code>{}</code> уже в упряжке."
-proxy_added = "✅ Олень <code>{}</code> добавлен в упряжку."
-proxy_format = "❌ <b>Кривой формат!</b>\nНадо так: <code>login:password@ip:port</code> или <code>ip:port</code>."
-proxy_adding_error = "❌ Не смог добавить прокси."
+act_proxy = "🌐 <b>Введи прокси</b>\nФормат: <code>login:password@ip:port</code> или <code>ip:port</code>"
+proxy_already_exists = "❌ Прокси <code>{}</code> уже добавлен."
+proxy_added = "✅ Прокси <code>{}</code> добавлен."
+proxy_format = "❌ <b>Неверный формат!</b>\nНужно: <code>login:password@ip:port</code> или <code>ip:port</code>."
+proxy_adding_error = "❌ Не удалось добавить прокси."
 proxy_undeletable = "❌ Нельзя удалить активный прокси. Сначала выключи или смени."
 
 act_edit_watermark = "<b>Придумай водяной знак.</b> Примеры:\n{}\n"                    "<code>𝓕𝓾𝓷𝓟𝓪𝔂 𝓒𝓪𝓻𝓭𝓲𝓷𝓪𝓵</code>\n"                    "<code>𝔽𝕦𝓷ℙ𝕒𝕪 ℂ𝕒𝕣𝕕𝕚𝕟𝕒𝕝</code>\n<code>ＦｕｎＰａｙ Ｃａｒｄｉｎａｌ</code>\n"                    "<code>ꜰᴜɴᴘᴀʏ ᴄᴀʀᴅɪɴᴀʟ</code>\n<code>🄵🅄🄽🄿🄰🅈 🄲🄰🅁🄳🄸🄽🄰🄻</code>\n"                    "<code>ⒻⓤⓝⓅⓐⓨ Ⓒⓐⓡⓓⓘⓝⓐⓛ</code>\n<code>𝐅𝐮𝐧𝐏𝐚𝐲 𝐂𝐚𝐫𝐝𝐢𝐧𝐚𝐥</code>\n"                    "<code>𝗙𝘂𝗻𝗣𝗮𝘆 𝗖𝗮𝗿𝗱𝗶𝐧𝗮𝗹</code>\n<code>𝘍𝘶𝘯𝘗𝘢𝘺 𝘊𝘢𝘳𝘥𝘪𝘯𝘢𝘭</code>\n"                    "<code>𝙁𝙪𝙣𝙋𝙖𝙮 𝘾𝙖𝙧𝙙𝙞𝐧𝙖𝙡</code>\n<code>𝙵𝚞𝚗𝙿𝚊𝚢 𝙲𝚊𝚛𝚍𝚒𝐧𝙖𝚕</code>\n"                    "<code>ᖴᑌᑎᑭᗩY ᑕᗩᖇᗪIᑎᗩᒪ</code>\n"                    "<code>FunPay Sigma</code>\n<code>[FunPay / Sigma]</code>\n"                    "<code>🤖</code>\n<code>🐦</code>\n\n"                    "💡 Тыкни на пример, чтобы скопировать.\n"                    "🗑️ Отправь <code>-</code>, чтобы удалить."
@@ -399,7 +399,7 @@ logfile_error = "❌ Не смог отправить лог."
 logfile_deleted = "🗑️ Удалил логов: <b>{}</b>."
 
 update_no_tags = "❌ <b>Ошибка</b>\nGitHub молчит, версий не вижу."
-update_lasted = "✅ <b>У тебя самая свежая версия! 🎄</b>\n📌 <b>v{}</b>"
+update_lasted = "✅ <b>У тебя последняя версия!</b>\n📌 <b>v{}</b>"
 update_get_error = "❌ <b>Ошибка</b>\nНе смог проверить обновы."
 update_available = """✨ <b>ЕСТЬ ОБНОВА!</b>
 
@@ -447,19 +447,19 @@ update_ask = "\n\n<b>❓ Ставим прямо щас?</b>"
 send_backup = "📤 <b>Кидай файл бэкапа.</b>\n\n⚠️ Только свой! Чужие не переварю."
 
 restarting = "🔄 Перезагрузка..."
-power_off_0 = """<b>🛑 Гасим ёлку? (Выключение)</b>
+power_off_0 = """<b>🛑 Выключение</b>
 
-Точно? Я сам из сугроба не вылезу, придется ручками включать!"""
+Точно? После этого придётся включать вручную!"""
 power_off_1 = "❓ <b>Точно-точно?</b>"
 power_off_2 = """📝 <b>Напоминаю:</b>
-Включать меня придется через консоль!"""
+Включать придётся через консоль!"""
 power_off_3 = """💡 <b>Совет:</b>
-Если просто туплю — лучше <code>/restart</code>."""
-power_off_4 = "😑 Ты серьезно? Ладно, проверка на бота. Да = Нет, Нет = Да."
+Если просто нужно перезагрузить — лучше <code>/restart</code>."""
+power_off_4 = "😑 Проверка на внимательность: Да = Нет, Нет = Да."
 power_off_5 = "☠️ Последний шанс."
-power_off_6 = "💀 <b>Всё, гашу свет...</b>"
-power_off_cancelled = "✅ <b>Отбой!</b> Живём!"
-power_off_error = "❌ Кнопка сломалась."
+power_off_6 = "💀 <b>Выключаюсь...</b>"
+power_off_cancelled = "✅ <b>Отменено!</b>"
+power_off_error = "❌ Кнопка не активна."
 
 enter_msg_text = "✍️ <b>Пиши письмо (сообщение).</b>"
 msg_sent = "✅ Отправил: <a href=\"https://funpay.com/chat/?node={}\">{}</a>."
@@ -566,23 +566,23 @@ adv_description = """🤖 <b>FunPay Sigma v{} 🎄</b>
 🔄 Работает 24/7
 Telegram ПУ"""
 
-desc_main = """🎄 <b>Главное меню</b>  <i>(1/3)</i>
+desc_main = """💼 <b>Главное меню</b>  <i>(1/3)</i>
 
 ⚡ <b>Автоматизация и продажи</b>
 
 Выбери раздел:"""
 
-desc_main2 = """🎄 <b>Главное меню</b>  <i>(2/3)</i>
+desc_main2 = """💼 <b>Главное меню</b>  <i>(2/3)</i>
 
 💬 <b>Уведомления и общение</b>
 
 Настрой как бот общается:"""
 
-desc_main3 = """🎄 <b>Главное меню</b>  <i>(3/3)</i>
+desc_main3 = """💼 <b>Главное меню</b>  <i>(3/3)</i>
 
 🛠 <b>Инструменты и сервис</b>
 
-Продвинутые штуки:"""
+Продвинутые функции:"""
 
 desc_lang = "🏠 Меню > 🌐 <b>Язык / Language</b>\n\nВыбирай:"
 desc_gs = "🏠 Меню > ⚡ <b>Основные функции</b>\n\nГлавные рубильники:"
@@ -590,7 +590,7 @@ desc_ns = """🏠 Меню > 🔔 <b>Уведомления</b>
 
 ⚙️ Настройки для этого чата:
 <code>{}</code>"""
-desc_bl = "🏠 Меню > ⛔ <b>Список непослушных (ЧС)</b>\n\nРаздача угля тут:"
+desc_bl = "🏠 Меню > 🚫 <b>Чёрный список</b>\n\nУправление заблокированными:"
 desc_ar = "🏠 Меню > 🤖 <b>Автоответчик</b>\n\nКомандуй:"
 desc_ar_list = "🏠 Меню > 🤖 Автоответчик > ⌨️ <b>Команды</b>\n\nЧто правим?"
 
@@ -605,9 +605,9 @@ desc_ad_fp_lot_list = """🏠 Меню > 📦 Автовыдача > 🎯 <b>П�
 desc_gf = "🏠 Меню > 🎁 Автовыдача > 📂 <b>Товарные файлы</b>\n\nВыбери файл:"
 
 desc_mv = "🏠 Меню > 👁️ <b>Вид сообщений</b>\n\nКак показывать уведомления?"
-desc_gr = """🏠 Меню > 👋 <b>Новогоднее приветствие</b>
+desc_gr = """🏠 Меню > 👋 <b>Приветствие</b>
 
-<b>Сейчас так:</b>
+<b>Текущий текст:</b>
 <code>{}</code>"""
 desc_oc = """🏠 Меню > ✅ <b>Подтверждение заказа</b>
 
@@ -621,10 +621,10 @@ desc_tmplt = "🏠 Меню > 📝 <b>Шаблоны</b>\n\nТвои загот�
 desc_pl = """🏠 Меню > 🧩 <b>Плагины</b>
 
 ⚠️ <i>Поменял что-то? Перезагрузись!</i>"""
-desc_au = "🏠 Меню > 👥 <b>Эльфы (Доступ)</b>\n\nКто помогает Санте?"
-desc_proxy = "🏠 Меню > 🛡️ <b>Олени (Прокси)</b>\n\nМаскируемся под сугробы:"
+desc_au = "🏠 Меню > 👥 <b>Доступ</b>\n\nУправление пользователями:"
+desc_proxy = "🏠 Меню > 🌐 <b>Прокси</b>\n\nНастройка прокси:"
 
-cmd_menu = "Главное меню 🎄"
+cmd_menu = "Главное меню"
 cmd_language = "Сменить язык"
 cmd_profile = "Мой профиль"
 cmd_lots = "Редактор лотов"
@@ -665,7 +665,7 @@ activity_info = """📊 <b>FunPay Sigma — Status</b>
 
 activity_error = "❌ Не удалось получить статистику проекта."
 
-v_edit_greeting_text = "✍️ <b>Пиши праздничное приветствие.</b>"
+v_edit_greeting_text = "✍️ <b>Введи текст приветствия.</b>"
 v_edit_greeting_cooldown = "⏱️ <b>Вводи кулдаун (дней).</b>"
 v_edit_order_confirm_text = "✍️ <b>Пиши текст подтверждения.</b>"
 v_edit_order_reminders_timeout = "⏱️ <b>Вводи таймаут (мин).</b>"
@@ -797,7 +797,7 @@ crd_session_timeout_err = "Таймаут сессии."
 crd_session_unexpected_err = "Ошибка сессии."
 crd_session_no_more_attempts_err = "Не обновил сессию."
 crd_session_updated = "Сессия норм."
-crd_raise_loop_started = "$CYANАвтоподнятие на санях 🛷"
+crd_raise_loop_started = "$CYANАвтоподнятие запущено."
 crd_raise_loop_not_started = "$CYANНечего поднимать."
 crd_session_loop_started = "$CYANЦикл сессии старт."
 crd_order_reminders_loop_started = "$CYANЦикл напоминаний старт."

@@ -25,3 +25,5 @@ venv/
 dist/
 /cardinal
 /locales copy old
+/starvellsigma
+/starvellbot

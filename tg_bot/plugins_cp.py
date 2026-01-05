@@ -49,7 +49,8 @@ def init_plugins_cp(cardinal: Cardinal, *args):
             return
 
         plugin_data = cardinal.plugins[uuid]
-        text = f"""<b><i>{utils.escape(plugin_data.name)} v{utils.escape(plugin_data.version)}</i></b>
+        v = "v" if not plugin_data.version.lower().startswith("v") else ""
+        text = f"""<b><i>{utils.escape(plugin_data.name)} {v}{utils.escape(plugin_data.version)}</i></b>
         
 {utils.escape(plugin_data.description)}
 

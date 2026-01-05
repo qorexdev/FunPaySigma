@@ -594,7 +594,7 @@ def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
     kb.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
     return kb
 
-def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = False) -> K:
+def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = False, back_to_main: bool = False) -> K:
     lot_id = lot_fields.lot_id
     is_create = lot_id < 0
     kb = K()
@@ -670,7 +670,11 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
             B(_("le_open_fp"), url=lot_fields.public_link)
         )
     
-    back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+    if back_to_main:
+        back_cb = f"{CBT.LE_SEARCH_MENU}:0"
+    else:
+        back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
+    
     kb.add(B(_("gl_back"), None, back_cb))
     
     return kb

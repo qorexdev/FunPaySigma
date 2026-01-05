@@ -310,6 +310,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             B(_("le_search_by_category_id"), None, CBT.LE_SEARCH_BY_CATEGORY),
             B(_("le_search_by_text"), None, CBT.LE_SEARCH_BY_TEXT)
         )
+        keyboard.add(B("➕ Создать лот (по ID)", None, "le_ask_create_id"))
         keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
         
         cats_slice = cats[offset:offset + 8]
@@ -466,6 +467,44 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         keyboard.add(B(_("gl_back"), None, CBT.LE_SEARCH_MENU))
         
         bot.send_message(m.chat.id, text, reply_markup=keyboard)
+
+    def act_ask_create_id(c: CallbackQuery):
+        result = bot.send_message(c.message.chat.id, "🆔 Введи ID категории для создания лота:", reply_markup=CLEAR_STATE_BTN())
+        tg.set_state(c.message.chat.id, result.id, c.from_user.id, "le_create_ask_id", {})
+        bot.answer_callback_query(c.id)
+
+    def process_create_id(m: Message):
+        tg.clear_state(m.chat.id, m.from_user.id, True)
+        
+        text = m.text.strip()
+        if not text.isdigit():
+            bot.reply_to(m, _("le_category_id_invalid"), 
+                        reply_markup=K().add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0")))
+            return
+        
+        category_id = int(text)
+        
+        msg = bot.reply_to(m, "⏳ Открываю редактор...")
+        
+        try:
+            lot_fields = crd.account.get_create_lot_fields(category_id)
+            
+            temp_id = -random.randint(10000, 99999)
+            lot_fields.lot_id = temp_id
+            _lot_fields_cache[temp_id] = lot_fields
+            
+            lot_fields.active = True
+            
+            bot.delete_message(msg.chat.id, msg.id)
+            
+            text_out = generate_lot_edit_text(lot_fields)
+            bot.send_message(m.chat.id, text_out, reply_markup=kb.edit_funpay_lot(lot_fields, category_id, back_to_main=True))
+            
+        except Exception as e:
+            logger.error(f"Error creating lot by ID {category_id}: {e}")
+            bot.edit_message_text(f"❌ Не удалось открыть категорию {category_id}. Возможно, ID неверен или категория недоступна.\n\nОшибка: {e}", 
+                                  msg.chat.id, msg.id,
+                                  reply_markup=K().add(B(_("gl_back"), None, f"{CBT.LE_SEARCH_MENU}:0")))
 
     def view_category(c: CallbackQuery):
         split = c.data.split(":")
@@ -699,9 +738,10 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             
             keyboard = K()
             keyboard.row(
-                B(_("le_search_by_lot_id"), None, CBT.LE_SEARCH_BY_LOT_ID),
+                B(_("le_search_by_category_id"), None, CBT.LE_SEARCH_BY_CATEGORY),
                 B(_("le_search_by_text"), None, CBT.LE_SEARCH_BY_TEXT)
             )
+            keyboard.add(B("➕ Создать лот (по ID)", None, "le_ask_create_id"))
             keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
             
             for cat in cats[:8]:
@@ -1703,6 +1743,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             B(_("le_search_by_category_id"), None, CBT.LE_SEARCH_BY_CATEGORY),
             B(_("le_search_by_text"), None, CBT.LE_SEARCH_BY_TEXT)
         )
+        keyboard.add(B("➕ Создать лот (по ID)", None, "le_ask_create_id"))
         keyboard.add(B("━━━━━━━━━━━━", None, CBT.EMPTY))
 
         for cat in cats[:8]:
@@ -2005,6 +2046,9 @@ def init_lot_editor_cp(crd: Cardinal, *args):
     
     tg.cbq_handler(act_search_by_text, lambda c: c.data == CBT.LE_SEARCH_BY_TEXT)
     tg.msg_handler(search_by_text, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, CBT.LE_SEARCH_BY_TEXT))
+
+    tg.cbq_handler(act_ask_create_id, lambda c: c.data == "le_ask_create_id")
+    tg.msg_handler(process_create_id, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, "le_create_ask_id"))
     
     tg.cbq_handler(view_category, lambda c: c.data.startswith(f"{CBT.LE_CATEGORY_VIEW}:"))
     

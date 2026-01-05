@@ -30,11 +30,12 @@ def parse_version(version_str: str) -> tuple:
     
     if '.' in version_str:
         parts = version_str.split('.')
-        major_minor = int(parts[0])
-        patch_build = int(parts[1]) if len(parts) > 1 else 0
-        return (major_minor, patch_build)
+        major = int(parts[0])
+        minor = int(parts[1]) if len(parts) > 1 else 0
+        patch = int(parts[2]) if len(parts) > 2 else 0
+        return (major, minor, patch)
     else:
-        return (int(version_str), 0)
+        return (int(version_str), 0, 0)
 
 def compare_versions(version1: str, version2: str) -> int:
     v1 = parse_version(version1)
