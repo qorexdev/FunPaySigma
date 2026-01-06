@@ -25,58 +25,48 @@ class Release:
         self.sources_link = sources_link
         self.tag_name = tag_name
 
-def parse_version(version_str: str) -> tuple:
+def parse_semver(version_str: str) -> tuple | None:
     version_str = version_str.lstrip('v')
-    
-    if '.' in version_str:
-        parts = version_str.split('.')
-        major = int(parts[0])
-        minor = int(parts[1]) if len(parts) > 1 else 0
-        patch = int(parts[2]) if len(parts) > 2 else 0
-        return (major, minor, patch)
-    else:
-        return (int(version_str), 0, 0)
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)', version_str)
+    if match:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    return None
 
-def compare_versions(version1: str, version2: str) -> int:
-    v1 = parse_version(version1)
-    v2 = parse_version(version2)
+def is_semver(version_str: str) -> bool:
+    return parse_semver(version_str) is not None
+
+def compare_semver(version1: str, version2: str) -> int:
+    v1 = parse_semver(version1)
+    v2 = parse_semver(version2)
+    
+    if v1 is None or v2 is None:
+        return 0
     
     if v1 > v2:
         return 1
     elif v1 < v2:
         return -1
-    else:
-        return 0
+    return 0
 
-def get_releases(from_tag: str, max_retries: int = 3) -> list[Release] | None:
-           
+def get_latest_release(max_retries: int = 3) -> Release | None:
     for attempt in range(max_retries):
         try:
-            response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases", 
+            response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases/latest", 
                                     headers=HEADERS, timeout=15)
             response.raise_for_status()
-            releases_data = response.json()
-            releases = []
-            
-            for release in releases_data:
-                tag = release["tag_name"]
-                if compare_versions(tag, from_tag) <= 0:
-                    continue
-                releases.append(Release(
-                    release["tag_name"], 
-                    release["body"], 
-                    release["zipball_url"],
-                    release["tag_name"]
-                ))
-            
-            releases.sort(key=lambda r: parse_version(r.tag_name), reverse=True)
-            return releases
+            release = response.json()
+            return Release(
+                release["tag_name"], 
+                release["body"], 
+                release["zipball_url"],
+                release["tag_name"]
+            )
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Попытка {attempt + 1} получить релизы не удалась: {e}")
+            logger.warning(f"Попытка {attempt + 1} получить последний релиз не удалась: {e}")
             if attempt < max_retries - 1:
                 time.sleep(5)
             else:
-                logger.error("Не удалось получить релизы с GitHub после нескольких попыток.")
+                logger.error("Не удалось получить последний релиз с GitHub.")
                 logger.debug("TRACEBACK", exc_info=True)
                 return None
         except Exception:
@@ -84,22 +74,29 @@ def get_releases(from_tag: str, max_retries: int = 3) -> list[Release] | None:
             return None
 
 def get_new_releases(current_tag: str) -> int | list[Release]:
-           
-    releases = get_releases(current_tag)
-    if releases is None:
+    latest = get_latest_release()
+    if latest is None:
         return 3
-    if not releases:
+    
+    if not is_semver(latest.tag_name):
         return 2
-    return releases
+    
+    if not is_semver(current_tag):
+        return [latest]
+    
+    if compare_semver(latest.tag_name, current_tag) > 0:
+        return [latest]
+    
+    return 2
 
 def get_skipped_count(releases: list[Release]) -> int:
-    return len(releases) - 1 if releases else 0
+    return 0
 
 def format_version_info(current_version: str, releases: list[Release]) -> dict:
     return {
         "current": current_version,
         "latest": releases[0].tag_name if releases else current_version,
-        "skipped": get_skipped_count(releases),
+        "skipped": 0,
         "total_available": len(releases)
     }
 
