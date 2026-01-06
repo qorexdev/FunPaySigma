@@ -155,6 +155,17 @@ def zipdir(path, zip_obj, exclude_dirs=None, exclude_extensions=None):
 
 def create_backup() -> int:
     try:
+        cache_cleanup_dirs = ["storage/cache/backup", "storage/cache/update"]
+        cache_cleanup_files = ["storage/cache/backup.zip", "storage/cache/update.zip"]
+        
+        for d in cache_cleanup_dirs:
+            if os.path.exists(d):
+                shutil.rmtree(d, ignore_errors=True)
+        
+        for f in cache_cleanup_files:
+            if os.path.exists(f):
+                os.remove(f)
+        
         with zipfile.ZipFile("backup.zip", "w", zipfile.ZIP_DEFLATED) as zip:
             zipdir("storage", zip)
             zipdir("configs", zip)
