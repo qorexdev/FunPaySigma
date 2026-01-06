@@ -44,7 +44,7 @@ GC_COLLECT_INTERVAL = 60
 
 gc.set_threshold(700, 10, 5)                                   
 
-from builtin_features import adv_profile_stat, review_chat_reply, sras_info
+from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
                                                                                                   
 logger = logging.getLogger("FPS")
 localizer = Localizer()
@@ -1206,6 +1206,11 @@ class Cardinal(object):
             graphs.init(self)
         except Exception as e:
             logger.error(f"Ошибка инициализации graphs: {e}")
+            logger.debug("TRACEBACK", exc_info=True)
+        try:
+            chat_sync.init(self)
+        except Exception as e:
+            logger.error(f"Ошибка инициализации chat_sync: {e}")
             logger.debug("TRACEBACK", exc_info=True)
         logger.info("Встроенные модули инициализированы.")
 
