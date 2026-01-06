@@ -14,4 +14,3 @@ mplcyberpunk>=0.7.6
 numpy>=2.4.0
 PySocks>=1.7.1
 googletrans>=4.0.2
-tgcrypto>=1.2.5

@@ -888,7 +888,7 @@ BIND_TO_POST_DELIVERY = [send_delivery_notification_handler]
 
 BIND_TO_POST_START = [send_bot_started_notification_handler]
 
-from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
+from builtin_features import adv_profile_stat, review_chat_reply, sras_info
 
 def builtin_adv_profile_stat_handler(c: Cardinal, e: NewMessageEvent):
                                                                                 
@@ -911,18 +911,10 @@ def builtin_sras_info_handler(c: Cardinal, e):
     except Exception as ex:
         logger.debug(f"Ошибка в sras_info.message_hook: {ex}", exc_info=True)
 
-def builtin_chat_sync_handler(c: Cardinal, e: NewMessageEvent):
-                                                                      
-    try:
-        chat_sync.message_hook(c, e)
-    except Exception as ex:
-        logger.debug(f"Ошибка в chat_sync.message_hook: {ex}", exc_info=True)
-
 BIND_TO_NEW_MESSAGE.extend([
     builtin_adv_profile_stat_handler,
     builtin_review_chat_reply_handler,
     builtin_sras_info_handler,
-    builtin_chat_sync_handler
 ])
 
 BIND_TO_LAST_CHAT_MESSAGE_CHANGED.extend([

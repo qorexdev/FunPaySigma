@@ -137,11 +137,14 @@ def extract_update_archive() -> str | int:
         logger.debug("TRACEBACK", exc_info=True)
         return 1
 
-def zipdir(path, zip_obj):
+def zipdir(path, zip_obj, exclude_dirs=None):
            
+    if exclude_dirs is None:
+        exclude_dirs = set()
+    
     for root, dirs, files in os.walk(path):
-        if os.path.basename(root) == "__pycache__":
-            continue
+        dirs[:] = [d for d in dirs if d not in exclude_dirs and d != "__pycache__"]
+        
         for file in files:
             zip_obj.write(os.path.join(root, file),
                           os.path.relpath(os.path.join(root, file),
@@ -151,7 +154,7 @@ def create_backup() -> int:
            
     try:
         with zipfile.ZipFile("backup.zip", "w") as zip:
-            zipdir("storage", zip)
+            zipdir("storage", zip, exclude_dirs={"cache"})
             zipdir("configs", zip)
             zipdir("plugins", zip)
         return 0
