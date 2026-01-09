@@ -13,8 +13,12 @@ localizer = Localizer()
 _ = localizer.translate
 
 HEADERS = {
-    "accept": "application/vnd.github+json"
+    "accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
 }
+
+CACHE_FILE = "storage/cache/release_cache.json"
+CACHE_TTL = 3600
 
 class Release:
            
@@ -48,13 +52,59 @@ def compare_semver(version1: str, version2: str) -> int:
         return -1
     return 0
 
+def _load_cache() -> dict | None:
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+                if time.time() - cache.get("timestamp", 0) < CACHE_TTL:
+                    return cache.get("release")
+    except:
+        pass
+    return None
+
+def _save_cache(release_data: dict):
+    try:
+        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"timestamp": time.time(), "release": release_data}, f)
+    except:
+        pass
+
 def get_latest_release(max_retries: int = 3) -> Release | None:
+    cached = _load_cache()
+    if cached:
+        logger.debug("Используем кэшированные данные о релизе")
+        return Release(
+            cached["tag_name"],
+            cached["body"],
+            cached["zipball_url"],
+            cached["tag_name"]
+        )
+    
     for attempt in range(max_retries):
         try:
             response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases/latest", 
                                     headers=HEADERS, timeout=15)
+            
+            if response.status_code == 403:
+                remaining = response.headers.get("X-RateLimit-Remaining", "0")
+                reset_time = response.headers.get("X-RateLimit-Reset")
+                if remaining == "0" and reset_time:
+                    wait_seconds = int(reset_time) - int(time.time()) + 5
+                    if wait_seconds > 0 and wait_seconds < 300:
+                        logger.warning(f"Rate limit. Ждём {wait_seconds} сек...")
+                        time.sleep(wait_seconds)
+                        continue
+                    else:
+                        logger.warning("Rate limit GitHub API. Попробуй позже.")
+                        return None
+            
             response.raise_for_status()
             release = response.json()
+            
+            _save_cache(release)
+            
             return Release(
                 release["tag_name"], 
                 release["body"], 
@@ -64,7 +114,7 @@ def get_latest_release(max_retries: int = 3) -> Release | None:
         except requests.exceptions.RequestException as e:
             logger.warning(f"Попытка {attempt + 1} получить последний релиз не удалась: {e}")
             if attempt < max_retries - 1:
-                time.sleep(5)
+                time.sleep(5 * (attempt + 1))
             else:
                 logger.error("Не удалось получить последний релиз с GitHub.")
                 logger.debug("TRACEBACK", exc_info=True)

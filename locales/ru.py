@@ -767,7 +767,7 @@ ntfc_new_order_ad_disabled = "ℹ️ Автовыдача выключена."
 ntfc_new_order_ad_disabled_for_lot = "ℹ️ Автовыдача выключена для лота."
 ntfc_new_order_user_blocked = "ℹ️ Юзер в ЧС, хрен ему."
 ntfc_new_order_will_be_delivered = "ℹ️ Выдаю товар пулей..."
-ntfc_new_review = "🔮 <b>Прилетел отзыв {}</b> за заказ <code>{}</code>!\n\n💬 <code>{}</code>{}"
+ntfc_new_review = "🔮 <b>Прилетел отзыв {}</b> за заказ <code>{}</code>!\n\n💬 Отзыв: <code>{}</code>{}"
 ntfc_review_reply_text = "\n\n🗨️ <b>Мой ответ:</b> \n<code>{}</code>"
 
 crd_proxy_detected = "Вижу прокси."
