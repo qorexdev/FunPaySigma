@@ -613,39 +613,43 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
     active_text = _("le_status_active") if lot_fields.active else _("le_status_inactive")
     kb.add(B(f"{active_icon} {active_text}", None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{category_id}"))
     
+    price_req = "🔴 " if not lot_fields.price or lot_fields.price <= 0 else ""
     price_str = str(lot_fields.price) if lot_fields.price else "—"
     amount_str = str(lot_fields.amount) if lot_fields.amount else "∞"
     kb.row(
-        B(_("le_edit_price", price_str, lot_fields.currency), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{category_id}"),
+        B(f"{price_req}{_('le_edit_price', price_str, lot_fields.currency)}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{category_id}"),
         B(_("le_edit_amount", amount_str), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:amount:{category_id}")
     )
     
+    required_fields = getattr(lot_fields, 'required_fields', set())
     category_fields = _get_category_fields(lot_fields)
     if category_fields:
         for key, (name, value) in category_fields.items():
+            req_mark = "🔴 " if key in required_fields and not value else "⚙️ "
             display_value = str(value)[:20] + "..." if len(str(value)) > 20 else str(value)
-            kb.add(B(f"⚙️ {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{category_id}"))
+            kb.add(B(f"{req_mark}{name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{category_id}"))
     
     t_ru = lot_fields.title_ru or ""
+    t_ru_req = "🔴 " if not t_ru else "📝 "
     t_ru_short = t_ru[:20] + "..." if len(t_ru) > 20 else t_ru if t_ru else _("le_empty")
-    kb.add(B(_("le_btn_title_ru", t_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
+    kb.add(B(f"{t_ru_req}Название: {t_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
     
     d_ru = lot_fields.description_ru or ""
     d_ru_short = _("le_filled") if d_ru else _("le_empty")
-    kb.add(B(_("le_btn_desc_ru", d_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
+    kb.add(B(f"📄 Описание: {d_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
     
     p_ru = lot_fields.payment_msg_ru or ""
     p_ru_short = _("le_filled") if p_ru else _("le_empty")
-    kb.add(B(_("le_btn_payment_msg_ru", p_ru_short), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
+    kb.add(B(f"💬 Автоответ: {p_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
     
     deact_icon = "✅" if lot_fields.deactivate_after_sale else "❌"
     deact_text = _("le_deact_after_sale")
     kb.add(B(f"{deact_icon} {deact_text}", None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{category_id}"))
     
     if is_create:
-        kb.add(B(_("le_create_btn"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
+        kb.add(B(f"🚀 {_('le_create_btn')}", None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
     else:
-        kb.add(B(_("le_save"), None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
+        kb.add(B(f"💾 {_('le_save')}", None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
     
     if is_create:
         kb.row(

@@ -54,7 +54,6 @@ async def _translate_async(text: str) -> str | None:
         return None
 
 def translate_to_english(text: str) -> str | None:
-           
     if not text or not text.strip():
         return text
     
@@ -63,32 +62,35 @@ def translate_to_english(text: str) -> str | None:
         logger.warning("Переводчик недоступен")
         return None
     
-    try:
-                                                                  
+    for attempt in range(3):
         try:
-            result = translator.translate(text, src='ru', dest='en')
-            if hasattr(result, '__await__'):
-                                                           
-                result = _run_async(_translate_async(text))
-                if result:
-                    logger.debug(f"Перевод (async): '{text[:30]}...' → '{result[:30]}...'")
-                    return result
-                return None
-            elif result and result.text:
-                logger.debug(f"Перевод: '{text[:30]}...' → '{result.text[:30]}...'")
-                return result.text
-            return None
-        except TypeError as e:
-                                                         
-            if 'await' in str(e) or 'coroutine' in str(e):
-                result = _run_async(_translate_async(text))
-                if result:
-                    logger.debug(f"Перевод (async fallback): '{text[:30]}...' → '{result[:30]}...'")
-                    return result
-            raise
-    except Exception as e:
-        logger.error(f"Ошибка перевода: {e}")
-        return None
+            try:
+                result = translator.translate(text, src='ru', dest='en')
+                if hasattr(result, '__await__'):
+                    result = _run_async(_translate_async(text))
+                    if result:
+                        logger.debug(f"Перевод (async): '{text[:30]}...' → '{result[:30]}...'")
+                        return result
+                    raise Exception("Empty async result")
+                elif result and result.text:
+                    logger.debug(f"Перевод: '{text[:30]}...' → '{result.text[:30]}...'")
+                    return result.text
+                raise Exception("Empty result")
+            except TypeError as e:
+                if 'await' in str(e) or 'coroutine' in str(e):
+                    result = _run_async(_translate_async(text))
+                    if result:
+                        logger.debug(f"Перевод (async fallback): '{text[:30]}...' → '{result[:30]}...'")
+                        return result
+                raise
+        except Exception as e:
+            logger.warning(f"Попытка перевода {attempt + 1}/3 не удалась: {e}")
+            if attempt < 2:
+                import time
+                time.sleep(1)
+            else:
+                logger.error(f"Ошибка перевода после 3 попыток: {e}")
+    return None
 
 def translate_batch_to_english(texts: dict[str, str]) -> dict[str, str]:
            
