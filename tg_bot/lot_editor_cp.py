@@ -200,8 +200,12 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         desc_ru = lot_fields.description_ru or ""
         if len(desc_ru) > 5000:
             errors.append(f"❌ <b>Описание (RU)</b> — максимум 5000 символов (сейчас {len(desc_ru)})")
-        if desc_ru.count("\n") > 50:
-            errors.append(f"❌ <b>Описание (RU)</b> — максимум 50 строк (сейчас {desc_ru.count(chr(10))})")
+        
+        # FunPay считает пустые строки тоже. Очищаем от лишних переносов в конце и проверяем.
+        clean_desc = desc_ru.strip()
+        lines_count = clean_desc.count("\n") + 1 if clean_desc else 0
+        if lines_count > 50:
+            errors.append(f"❌ <b>Описание (RU)</b> — максимум 50 строк (сейчас {lines_count})")
         
         payment_ru = lot_fields.payment_msg_ru or ""
         if len(payment_ru) > 2000:
@@ -246,14 +250,20 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         def fmt_val(v):
             return escape_html(str(v)) if v else nv
 
+        required_fields = getattr(lot_fields, 'required_fields', set())
+
         for key, value in lot_fields.fields.items():
             if key not in standard_keys and key.startswith("fields["):
                 if hasattr(lot_fields, 'field_labels') and key in lot_fields.field_labels:
                     field_name = lot_fields.field_labels[key]
                 else:
                     field_name = key.replace("fields[", "").rstrip("]").replace("][", " > ")
+                
+                is_req = key in required_fields
+                req_mark = " 🔴" if is_req and not value else ""
+                
                 display_value = fmt_val(value)
-                category_params_text += f"\n⚙️ <b>{escape_html(field_name)}:</b> <code>{display_value}</code>"
+                category_params_text += f"\n⚙️ <b>{escape_html(field_name)}{req_mark}:</b> <code>{display_value}</code>"
         
         if lot_fields.lot_id < 0:
             if lot_fields.lot_id in _lot_drafts:
@@ -269,7 +279,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
 
 🎮 {game_name} › {category_name}{cat_id_text}
 
-<b>🏷️ Название:</b>
+<b>🏷️ Название:</b>{"" if lot_fields.title_ru else " 🔴"}
 <code>{title_ru}</code>
 
 <b>📄 Описание:</b>
