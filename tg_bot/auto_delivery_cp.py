@@ -30,7 +30,7 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
     filename_re = re.compile(r"[А-Яа-яЁёA-Za-z0-9_\- ]+")
 
     def check_ad_lot_exists(index: int, message_obj: Message, reply_mode: bool = True) -> bool:
-                   
+
         if index > len(crd.AD_CFG.sections()) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.AD_LOTS_LIST}:0"))
             if reply_mode:
@@ -43,7 +43,7 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
 
     def check_products_file_exists(index: int, files_list: list[str],
                                    message_obj: Message, reply_mode: bool = True) -> bool:
-                   
+
         if index > len(files_list) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.PRODUCTS_FILES_LIST}:0"))
             if reply_mode:
@@ -55,28 +55,28 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
         return True
 
     def open_ad_lots_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_ad_list"), c.message.chat.id, c.message.id,
                               reply_markup=kb.lots_list(crd, offset))
         bot.answer_callback_query(c.id)
 
     def open_fp_lots_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_ad_fp_lot_list", crd.last_telegram_lots_update.strftime("%d.%m.%Y %H:%M:%S")),
                               c.message.chat.id, c.message.id, reply_markup=kb.funpay_lots_list(crd, offset))
         bot.answer_callback_query(c.id)
 
     def act_add_lot_manually(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         result = bot.send_message(c.message.chat.id, _("copy_lot_name"), reply_markup=CLEAR_STATE_BTN())
         tg.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.ADD_AD_TO_LOT_MANUALLY, data={"offset": offset})
         bot.answer_callback_query(c.id)
 
     def add_lot_manually(m: Message):
-                   
+
         fp_lots_offset = tg.get_state(m.chat.id, m.from_user.id)["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
         lot = m.text.strip()
@@ -91,7 +91,7 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
         crd.AD_CFG.set(lot, "response", """Спасибо за покупку, $username!
 
 Вот твой товар:
-$product""")        
+$product""")
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
         logger.info(_("log_ad_linked", m.from_user.username, m.from_user.id, lot))
 
@@ -104,20 +104,20 @@ $product""")
         bot.send_message(m.chat.id, _("ad_lot_linked", lot), reply_markup=keyboard)
 
     def open_gf_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_gf"), c.message.chat.id, c.message.id,
                               reply_markup=kb.products_files_list(offset))
         bot.answer_callback_query(c.id)
 
     def act_create_gf(c: CallbackQuery):
-                   
+
         result = bot.send_message(c.message.chat.id, _("act_create_gf"), reply_markup=CLEAR_STATE_BTN())
         tg.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.CREATE_PRODUCTS_FILE)
         bot.answer_callback_query(c.id)
 
     def create_gf(m: Message):
-                   
+
         tg.clear_state(m.chat.id, m.from_user.id, True)
         file_name = m.text.strip()
 
@@ -154,7 +154,7 @@ $product""")
         bot.send_message(m.chat.id, _("gf_created", file_name), reply_markup=keyboard)
 
     def open_edit_lot_cp(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         if not check_ad_lot_exists(lot_index, c.message, reply_mode=False):
@@ -169,7 +169,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def act_edit_delivery_text(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         variables = ["v_date", "v_date_text", "v_full_date_text", "v_time", "v_full_time", "v_username",
@@ -182,7 +182,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def edit_delivery_text(m: Message):
-                   
+
         user_state = tg.get_state(m.chat.id, m.from_user.id)
         lot_index, offset = user_state["data"]["lot_index"], user_state["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -205,7 +205,7 @@ $product""")
         bot.reply_to(m, _("ad_text_changed", utils.escape(lot), utils.escape(new_response)), reply_markup=keyboard)
 
     def act_link_gf(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
         result = bot.send_message(c.message.chat.id, _("ad_link_gf"), reply_markup=CLEAR_STATE_BTN())
@@ -214,7 +214,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def link_gf(m: Message):
-                   
+
         user_state = tg.get_state(m.chat.id, m.from_user.id)
         lot_index, offset = user_state["data"]["lot_index"], user_state["data"]["offset"]
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -270,7 +270,7 @@ $product""")
             bot.reply_to(m, _("ad_gf_created_and_linked", file_name, utils.escape(lot)), reply_markup=keyboard)
 
     def switch_lot_setting(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         param, lot_number, offset = split[1], int(split[2]), int(split[3])
         if not check_ad_lot_exists(lot_number, c.message, reply_mode=False):
@@ -288,7 +288,7 @@ $product""")
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def create_lot_delivery_test(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         lot_index, offset = int(split[1]), int(split[2])
 
@@ -309,7 +309,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def del_lot(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         lot_number, offset = int(split[1]), int(split[2])
 
@@ -361,7 +361,7 @@ $product""")
             return
 
         crd.AD_CFG.add_section(lot.title)
-        crd.AD_CFG.set(lot.title, "response", "Спасибо за покупку, $username!\n\nВот твой товар:\n\n$product")        
+        crd.AD_CFG.set(lot.title, "response", "Спасибо за покупку, $username!\n\nВот твой товар:\n\n$product")
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
 
         ad_lot_index = len(crd.AD_CFG.sections()) - 1
@@ -375,7 +375,7 @@ $product""")
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def open_gf_settings(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -399,7 +399,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def act_add_products_to_file(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         file_index, el_index, offset, prev_page = int(split[1]), int(split[2]), int(split[3]), int(split[4])
         result = bot.send_message(c.message.chat.id, _("gf_send_new_goods"), reply_markup=CLEAR_STATE_BTN())
@@ -409,7 +409,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def add_products_to_file(m: Message):
-                   
+
         state = tg.get_state(m.chat.id, m.from_user.id)["data"]
         file_index, el_index, offset, prev_page = (state["file_index"], state["element_index"],
                                                    state["offset"], state["previous_page"])
@@ -458,7 +458,7 @@ $product""")
         bot.reply_to(m, _("gf_new_goods", len(products), file_name), reply_markup=keyboard)
 
     def send_products_file(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -479,7 +479,7 @@ $product""")
             bot.answer_callback_query(c.id)
 
     def ask_del_products_file(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]
@@ -491,7 +491,7 @@ $product""")
         bot.answer_callback_query(c.id)
 
     def del_products_file(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         file_index, offset = int(split[1]), int(split[2])
         files = [i for i in os.listdir("storage/products") if i.endswith(".txt")]

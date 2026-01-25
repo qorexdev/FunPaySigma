@@ -21,9 +21,9 @@ CACHE_FILE = "storage/cache/release_cache.json"
 CACHE_TTL = 3600
 
 class Release:
-           
+
     def __init__(self, name: str, description: str, sources_link: str, tag_name: str):
-                   
+
         self.name = name
         self.description = description
         self.sources_link = sources_link
@@ -42,10 +42,10 @@ def is_semver(version_str: str) -> bool:
 def compare_semver(version1: str, version2: str) -> int:
     v1 = parse_semver(version1)
     v2 = parse_semver(version2)
-    
+
     if v1 is None or v2 is None:
         return 0
-    
+
     if v1 > v2:
         return 1
     elif v1 < v2:
@@ -81,12 +81,12 @@ def get_latest_release(max_retries: int = 3) -> Release | None:
             cached["zipball_url"],
             cached["tag_name"]
         )
-    
+
     for attempt in range(max_retries):
         try:
-            response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases/latest", 
+            response = requests.get("https://api.github.com/repos/qorexdev/FunPaySigma/releases/latest",
                                     headers=HEADERS, timeout=15)
-            
+
             if response.status_code == 403:
                 remaining = response.headers.get("X-RateLimit-Remaining", "0")
                 reset_time = response.headers.get("X-RateLimit-Reset")
@@ -99,15 +99,15 @@ def get_latest_release(max_retries: int = 3) -> Release | None:
                     else:
                         logger.warning("Rate limit GitHub API. Попробуй позже.")
                         return None
-            
+
             response.raise_for_status()
             release = response.json()
-            
+
             _save_cache(release)
-            
+
             return Release(
-                release["tag_name"], 
-                release["body"], 
+                release["tag_name"],
+                release["body"],
                 release["zipball_url"],
                 release["tag_name"]
             )
@@ -127,16 +127,16 @@ def get_new_releases(current_tag: str) -> int | list[Release]:
     latest = get_latest_release()
     if latest is None:
         return 3
-    
+
     if not is_semver(latest.tag_name):
         return 2
-    
+
     if not is_semver(current_tag):
         return [latest]
-    
+
     if compare_semver(latest.tag_name, current_tag) > 0:
         return [latest]
-    
+
     return 2
 
 def get_skipped_count(releases: list[Release]) -> int:
@@ -151,7 +151,7 @@ def format_version_info(current_version: str, releases: list[Release]) -> dict:
     }
 
 def download_zip(url: str, max_retries: int = 3) -> int:
-           
+
     for attempt in range(max_retries):
         try:
             with requests.get(url, stream=True, timeout=30) as r:
@@ -170,7 +170,7 @@ def download_zip(url: str, max_retries: int = 3) -> int:
                 return 1
 
 def extract_update_archive() -> str | int:
-           
+
     try:
         if os.path.exists("storage/cache/update/"):
             shutil.rmtree("storage/cache/update/", ignore_errors=True)
@@ -189,13 +189,13 @@ def zipdir(path, zip_obj, exclude_dirs=None, exclude_extensions=None):
         exclude_dirs = set()
     if exclude_extensions is None:
         exclude_extensions = set()
-    
+
     exclude_dirs = exclude_dirs | {"__pycache__", "cache", ".git", ".hypothesis", ".pytest_cache"}
     exclude_extensions = exclude_extensions | {".pyc", ".pyo", ".log", ".zip"}
-    
+
     for root, dirs, files in os.walk(path):
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
-        
+
         for file in files:
             if any(file.endswith(ext) for ext in exclude_extensions):
                 continue
@@ -207,15 +207,15 @@ def create_backup() -> int:
     try:
         cache_cleanup_dirs = ["storage/cache/backup", "storage/cache/update"]
         cache_cleanup_files = ["storage/cache/backup.zip", "storage/cache/update.zip"]
-        
+
         for d in cache_cleanup_dirs:
             if os.path.exists(d):
                 shutil.rmtree(d, ignore_errors=True)
-        
+
         for f in cache_cleanup_files:
             if os.path.exists(f):
                 os.remove(f)
-        
+
         with zipfile.ZipFile("backup.zip", "w", zipfile.ZIP_DEFLATED) as zip:
             zipdir("storage", zip)
             zipdir("configs", zip)
@@ -226,7 +226,7 @@ def create_backup() -> int:
         return 1
 
 def extract_backup_archive() -> bool:
-           
+
     try:
         if os.path.exists("storage/cache/backup/"):
             shutil.rmtree("storage/cache/backup/", ignore_errors=True)
@@ -240,7 +240,7 @@ def extract_backup_archive() -> bool:
         return False
 
 def install_release(folder_name: str) -> int:
-           
+
     try:
         release_folder = os.path.join("storage/cache/update", folder_name)
         if not os.path.exists(release_folder):
@@ -278,7 +278,7 @@ def install_release(folder_name: str) -> int:
         return 1
 
 def install_backup() -> bool:
-           
+
     try:
         backup_folder = "storage/cache/backup"
         if not os.path.exists(backup_folder):

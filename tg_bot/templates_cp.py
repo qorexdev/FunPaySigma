@@ -23,7 +23,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
     bot = tg.bot
 
     def check_template_exists(template_index: int, message_obj: Message) -> bool:
-                   
+
         if template_index > len(cardinal.telegram.answer_templates) - 1:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.TMPLT_LIST}:0"))
             bot.edit_message_text(_("tmplt_not_found_err", template_index), message_obj.chat.id, message_obj.id,
@@ -32,14 +32,14 @@ def init_templates_cp(cardinal: Cardinal, *args):
         return True
 
     def open_templates_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_tmplt"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.templates_list(cardinal, offset))
         bot.answer_callback_query(c.id)
 
     def open_templates_list_in_ans_mode(c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         offset, node_id, username, prev_page, extra = int(split[1]), int(split[2]), split[3], int(split[4]), split[5:]
         bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
@@ -61,7 +61,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
         bot.answer_callback_query(c.id)
 
     def act_add_template(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         variables = ["v_username", "v_photo", "v_sleep"]
         text = f"{_('V_new_template')}\n\n{_('v_list')}:\n" + "\n".join(_(i) for i in variables)

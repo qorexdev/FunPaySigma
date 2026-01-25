@@ -13,10 +13,10 @@ from telebot import types
 import logging
 import os
 
-logger = logging.getLogger("TGBot")                        
+logger = logging.getLogger("TGBot")
 
 def check_file(tg: TGBot, msg: types.Message, type_: Literal["py", "cfg", "json", "txt"] | None = None) -> bool:
-           
+
     if not msg.document:
         tg.bot.send_message(msg.chat.id, "❌ Файл не обнаружен.")
         return False
@@ -36,7 +36,7 @@ def check_file(tg: TGBot, msg: types.Message, type_: Literal["py", "cfg", "json"
 
 def download_file(tg: TGBot, msg: types.Message, file_name: str = "temp_file.txt",
                   custom_path: str = "") -> bool:
-           
+
     tg.bot.send_message(msg.chat.id, "⏬ Загружаю файл...")
     try:
         file_info = tg.bot.get_file(msg.document.file_id)
@@ -62,7 +62,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_products_file(m: types.Message):
-                   
+
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="txt"):
             return
@@ -96,7 +96,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_main_config(m: types.Message):
-                   
+
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return
@@ -134,7 +134,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_auto_response_config(m: types.Message):
-                   
+
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return
@@ -173,7 +173,7 @@ def init_uploader(cardinal: Cardinal):
         bot.answer_callback_query(c.id)
 
     def upload_auto_delivery_config(m: types.Message):
-                   
+
         tg.clear_state(m.chat.id, m.from_user.id, True)
         if not check_file(tg, m, type_="cfg"):
             return

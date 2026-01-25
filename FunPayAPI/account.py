@@ -28,70 +28,70 @@ logger = logging.getLogger("FunPayAPI.account")
 PRIVATE_CHAT_ID_RE = re.compile(r"users-\d+-\d+$")
 
 class Account:
-           
+
     def __init__(self, golden_key: str, user_agent: str | None = None,
                  requests_timeout: int | float = 10, proxy: Optional[dict] = None,
                  locale: Literal["ru", "en", "uk"] | None = None):
         self.golden_key: str = golden_key
-                                          
+
         self.user_agent: str | None = user_agent
-                                                                            
+
         self.requests_timeout: int | float = requests_timeout
-                                                  
+
         self.proxy = proxy
-                    
+
         self.html: str | None = None
-                                            
+
         self.app_data: dict | None = None
-                      
+
         self.id: int | None = None
-                          
+
         self.username: str | None = None
-                               
+
         self.active_sales: int | None = None
-                               
+
         self.active_purchases: int | None = None
-                               
+
         self.last_429_err_time: float = 0
-                                                       
+
         self.last_flood_err_time: float = 0
-                                                                                                  
+
         self.last_multiuser_flood_err_time: float = 0
-                                                                                                                       
+
         self.__locale: Literal["ru", "en", "uk"] | None = None
-                                    
+
         self.__default_locale: Literal["ru", "en", "uk"] | None = locale
-                                         
+
         self.__profile_parse_locale: Literal["ru", "en", "uk"] | None = locale
-                                                      
+
         self.__chat_parse_locale: Literal["ru", "en", "uk"] | None = None
-                                                      
+
         """Язык по умолчанию для Account.get_sales()"""
         self.__order_parse_locale: Literal["ru", "en", "uk"] | None = None
-                                                       
+
         self.__lots_parse_locale: Literal["ru", "en", "uk"] | None = None
-                                                                         
+
         self.__subcategories_parse_locale: Literal["ru", "en", "uk"] | None = None
-                                                      
+
         self.__set_locale: Literal["ru", "en", "uk"] | None = None
-                                                                                 
+
         self.currency: FunPayAPI.types.Currency = FunPayAPI.types.Currency.UNKNOWN
-                             
+
         self.total_balance: int | None = None
-                                                                
+
         self.csrf_token: str | None = None
-                         
+
         self.phpsessid: str | None = None
-                               
+
         self.last_update: int | None = None
-                                                  
+
         self.__initiated: bool = False
 
         self.__saved_chats: dict[int, types.ChatShortcut] = {}
         self.runner: Runner | None = None
-                              
+
         self._logout_link: str | None = None
-                                          
+
         self.__categories: list[types.Category] = []
         self.__sorted_categories: dict[int, types.Category] = {}
 
@@ -102,9 +102,9 @@ class Account:
         }
 
         self.__bot_character = "⁡"
-                                                                                     
+
         self.__old_bot_character = "⁤"
-                                                                                                             
+
         self.session = requests.Session()
         retry_strategy = Retry(
             total=6,
@@ -122,7 +122,7 @@ class Account:
     def method(self, request_method: Literal["post", "get"], api_method: str, headers: dict, payload: Any,
                exclude_phpsessid: bool = False, raise_not_200: bool = False,
                locale: Literal["ru", "en", "uk"] | None = None) -> requests.Response:
-                   
+
         def normalize_url(api_method: str, locale: Literal["ru", "en", "uk"] | None = None) -> str:
             api_method = "https://funpay.com/" if api_method == "https://funpay.com" else api_method
             url = api_method if api_method.startswith("https://funpay.com/") else "https://funpay.com/" + api_method
@@ -187,7 +187,7 @@ class Account:
         return response
 
     def get(self, update_phpsessid: bool = True) -> Account:
-                   
+
         if not self.is_initiated:
             self.locale = self.__subcategories_parse_locale
         response = self.method("get", "https://funpay.com/", {}, {}, update_phpsessid, raise_not_200=True)
@@ -229,7 +229,7 @@ class Account:
 
     def get_subcategory_public_lots(self, subcategory_type: enums.SubCategoryTypes, subcategory_id: int,
                                     locale: Literal["ru", "en", "uk"] | None = None) -> list[types.LotShortcut]:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -312,7 +312,7 @@ class Account:
 
     def get_my_subcategory_lots(self, subcategory_id: int,
                                 locale: Literal["ru", "en", "uk"] | None = None) -> list[types.MyLotShortcut]:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         meth = f"lots/{subcategory_id}/trade"
@@ -362,15 +362,15 @@ class Account:
 
     def get_all_my_lots(self, profile: types.UserProfile | None = None,
                         locale: Literal["ru", "en", "uk"] | None = None) -> list[types.MyLotShortcut]:
-               
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
-        
+
         import os
         from datetime import datetime
         storage_dir = "storage"
         categories_file = os.path.join(storage_dir, "known_lot_categories.json")
-        
+
         saved_category_ids = set()
         if os.path.exists(categories_file):
             try:
@@ -380,29 +380,29 @@ class Account:
                     logger.info(f"Загружено {len(saved_category_ids)} сохранённых категорий")
             except Exception as e:
                 logger.warning(f"Не удалось загрузить сохранённые категории: {e}")
-        
+
         subcategory_ids = set()
-        
+
         if profile:
             subcategories_with_lots = profile.get_sorted_lots(2)
             for subcat in subcategories_with_lots.keys():
                 if subcat and hasattr(subcat, 'id') and subcat.type == enums.SubCategoryTypes.COMMON:
                     subcategory_ids.add(subcat.id)
-        
+
         subcategory_ids.update(saved_category_ids)
-        
+
         if not subcategory_ids:
             subcategories = self.get_sorted_subcategories().get(enums.SubCategoryTypes.COMMON, {})
             subcategory_ids = set(subcategories.keys())
             logger.warning(f"Нет категорий, загрузка из всех {len(subcategory_ids)} (медленно)...")
         else:
             logger.info(f"Загрузка лотов из {len(subcategory_ids)} категорий (в т.ч. сохранённых)...")
-        
+
         all_lots = []
         categories_with_lots = set()
         total = len(subcategory_ids)
         loaded = 0
-        
+
         for subcategory_id in subcategory_ids:
             try:
                 lots = self.get_my_subcategory_lots(subcategory_id, locale)
@@ -410,19 +410,19 @@ class Account:
                     all_lots.extend(lots)
                     categories_with_lots.add(subcategory_id)
                 loaded += 1
-                
+
                 active = sum(1 for l in lots if l.active)
                 inactive = len(lots) - active
                 if lots:
                     logger.info(f"[{loaded}/{total}] Категория {subcategory_id}: {len(lots)} лотов (✅{active} ❌{inactive})")
                 else:
                     logger.debug(f"[{loaded}/{total}] Категория {subcategory_id}: пусто")
-                
+
             except Exception as e:
                 loaded += 1
                 logger.warning(f"[{loaded}/{total}] Категория {subcategory_id}: ошибка - {e}")
                 continue
-        
+
         if categories_with_lots:
             try:
                 os.makedirs(storage_dir, exist_ok=True)
@@ -435,15 +435,15 @@ class Account:
                 logger.debug(f"Сохранено {len(categories_with_lots)} категорий в {categories_file}")
             except Exception as e:
                 logger.warning(f"Не удалось сохранить категории: {e}")
-        
+
         active_total = sum(1 for l in all_lots if l.active)
         inactive_total = len(all_lots) - active_total
         logger.info(f"Загружено: {len(all_lots)} лотов (✅{active_total} активных, ❌{inactive_total} деактивированных)")
-        
+
         return all_lots
 
     def get_lot_page(self, lot_id: int, locale: Literal["ru", "en", "uk"] | None = None):
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         headers = {
@@ -491,7 +491,7 @@ class Account:
                              short_description, detailed_description, image_urls, seller_id, seller_username)
 
     def get_balance(self, lot_id: int) -> types.Balance:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         response = self.method("get", f"lots/offer?id={lot_id}", {"accept": "*/*"}, {}, raise_not_200=True)
@@ -512,7 +512,7 @@ class Account:
 
     def get_chat_history(self, chat_id: int | str, last_message_id: int = 99999999999999999999999,
                          interlocutor_username: Optional[str] = None, from_id: int = 0) -> list[types.Message]:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -541,7 +541,7 @@ class Account:
                                      interlocutor_username, from_id)
 
     def get_chats_histories(self, chats_data: dict[int | str, str | None]) -> dict[int, list[types.Message]]:
-                   
+
         headers = {
             "accept": "*/*",
             "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -576,7 +576,7 @@ class Account:
         return result
 
     def upload_image(self, image: str | IO[bytes], type_: Literal["chat", "offer"] = "chat") -> int:
-                   
+
         assert type_ in ("chat", "offer")
 
         if not self.is_initiated:
@@ -600,7 +600,7 @@ class Account:
             "x-requested-with": "XMLHttpRequest",
             "content-type": m.content_type,
         }
-                                               
+
         response = self.method("post", f"file/add{type_.title()}Image", headers, m)
 
         if response.status_code == 400:
@@ -621,7 +621,7 @@ class Account:
                      interlocutor_id: Optional[int] = None,
                      image_id: Optional[int] = None, add_to_ignore_list: bool = True,
                      update_last_saved_message: bool = False, leave_as_unread: bool = False) -> types.Message:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -715,7 +715,7 @@ class Account:
                    interlocutor_id: Optional[int] = None,
                    add_to_ignore_list: bool = True, update_last_saved_message: bool = False,
                    leave_as_unread: bool = False) -> types.Message:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -727,7 +727,7 @@ class Account:
         return result
 
     def send_review(self, order_id: str, text: str, rating: Literal[1, 2, 3, 4, 5] = 5) -> str:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -755,7 +755,7 @@ class Account:
         return response.json().get("content")
 
     def delete_review(self, order_id: str) -> str:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -781,7 +781,7 @@ class Account:
         return response.json().get("content")
 
     def refund(self, order_id):
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -802,7 +802,7 @@ class Account:
             raise exceptions.RefundError(response, response.json().get("msg"), order_id)
 
     def withdraw(self, currency: enums.Currency, wallet: enums.Wallet, amount: int | float, address: str) -> float:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -835,7 +835,7 @@ class Account:
         return float(json_response.get("amount_ext"))
 
     def get_raise_modal(self, category_id: int) -> dict:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         category = self.get_category(category_id)
@@ -855,11 +855,11 @@ class Account:
 
     def raise_lots(self, category_id: int, subcategories: Optional[list[int | types.SubCategory]] = None,
                    exclude: list[int] | None = None) -> bool:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         if not (category := self.get_category(category_id)):
-            raise Exception("Not Found")        
+            raise Exception("Not Found")
 
         exclude = exclude or []
         if subcategories:
@@ -889,7 +889,7 @@ class Account:
 
         response = self.method("post", "lots/raise", headers, payload, raise_not_200=True)
         json_response = response.json()
-        logger.debug(f"Ответ FunPay (поднятие категорий): {json_response}.")          
+        logger.debug(f"Ответ FunPay (поднятие категорий): {json_response}.")
         if not json_response.get("error") and not json_response.get("url"):
             return True
         elif json_response.get("url"):
@@ -901,7 +901,7 @@ class Account:
             raise exceptions.RaiseError(response, category, json_response.get("msg"), None)
 
     def get_user(self, user_id: int, locale: Literal["ru", "en", "uk"] | None = None) -> types.UserProfile:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         if not locale:
@@ -972,7 +972,7 @@ class Account:
 
     def get_chat(self, chat_id: int, with_history: bool = True,
                  locale: Literal["ru", "en", "uk"] | None = None) -> types.Chat:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -985,7 +985,7 @@ class Account:
         parser = BeautifulSoup(html_response, "lxml")
         if (name := parser.find("div", {"class": "chat-header"}).find("div", {"class": "media-user-name"}).find(
                 "a").text) in ("Чат", "Chat"):
-            raise Exception("chat not found")        
+            raise Exception("chat not found")
 
         self.__update_csrf_token(parser)
 
@@ -1001,11 +1001,11 @@ class Account:
         return types.Chat(chat_id, name, link, text, html_response, history)
 
     def get_order_shortcut(self, order_id: str) -> types.OrderShortcut:
-                   
+
         return self.runner.saved_orders.get(order_id, self.get_sales(id=order_id)[1][0])
 
     def get_order(self, order_id: str, locale: Literal["ru", "en", "uk"] | None = None) -> types.Order:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         headers = {
@@ -1077,9 +1077,9 @@ class Account:
                     if match:
                         amount = int(match.group(1).replace(" ", ""))
             elif h.text in ("Відкрито", "Открыт", "Open"):
-                continue        
+                continue
             elif h.text in ("Закрито", "Закрыт", "Closed"):
-                continue        
+                continue
             elif not stop_params and h.text not in ("Игра", "Гра", "Game"):
                 div2 = div.find("div")
                 if div2:
@@ -1138,7 +1138,7 @@ class Account:
                   side: Optional[int] = None, locale: Literal["ru", "en", "uk"] | None = None,
                   subcategories: dict[str, tuple[types.SubCategoryTypes, int]] | None = None, **more_filters) ->            tuple[str | None, list[types.OrderShortcut], Literal["ru", "en", "uk"],
             dict[str, types.SubCategory]]:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -1232,20 +1232,20 @@ class Account:
 
             now = datetime.now()
             order_date_text = div.find("div", {"class": "tc-date-time"}).text
-            if any(today in order_date_text for today in ("сегодня", "сьогодні", "today")):                  
+            if any(today in order_date_text for today in ("сегодня", "сьогодні", "today")):
                 h, m = order_date_text.split(", ")[1].split(":")
                 order_date = datetime(now.year, now.month, now.day, int(h), int(m))
-            elif any(yesterday in order_date_text for yesterday in ("вчера", "вчора", "yesterday")):                
+            elif any(yesterday in order_date_text for yesterday in ("вчера", "вчора", "yesterday")):
                 h, m = order_date_text.split(", ")[1].split(":")
                 temp = now - timedelta(days=1)
                 order_date = datetime(temp.year, temp.month, temp.day, int(h), int(m))
-            elif order_date_text.count(" ") == 2:                    
+            elif order_date_text.count(" ") == 2:
                 split = order_date_text.split(", ")
                 day, month = split[0].split()
                 day, month = int(day), utils.MONTHS[month]
                 h, m = split[1].split(":")
                 order_date = datetime(now.year, month, day, int(h), int(m))
-            else:                         
+            else:
                 split = order_date_text.split(", ")
                 day, month, year = split[0].split()
                 day, month, year = int(day), utils.MONTHS[month], int(year)
@@ -1265,19 +1265,19 @@ class Account:
                   state: Optional[Literal["closed", "paid", "refunded"]] = None, game: Optional[int] = None,
                   section: Optional[str] = None, server: Optional[int] = None,
                   side: Optional[int] = None, **more_filters) -> tuple[str | None, list[types.OrderShortcut]]:
-                                                                                
+
         start_from, orders, loc, subcs = self.get_sales(start_from, include_paid, include_closed, include_refunded,
                                                         exclude_ids, id, buyer, state, game, section, server,
                                                         side, None, None, **more_filters)
         return start_from, orders
 
     def add_chats(self, chats: list[types.ChatShortcut]):
-                   
+
         for i in chats:
             self.__saved_chats[i.id] = i
 
     def request_chats(self) -> list[types.ChatShortcut]:
-                   
+
         chats = {
             "type": "chat_bookmarks",
             "id": self.id,
@@ -1334,7 +1334,7 @@ class Account:
         return chats_objs
 
     def get_chats(self, update: bool = False) -> dict[int, types.ChatShortcut]:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         if update:
@@ -1343,7 +1343,7 @@ class Account:
         return self.__saved_chats
 
     def get_chat_by_name(self, name: str, make_request: bool = False) -> types.ChatShortcut | None:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -1358,7 +1358,7 @@ class Account:
             return None
 
     def get_chat_by_id(self, chat_id: int, make_request: bool = False) -> types.ChatShortcut | None:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
 
@@ -1394,7 +1394,7 @@ class Account:
                         raise_not_200=True)
         json_resp = r.json()
         if (error := json_resp.get("error")):
-            raise Exception(f"Произошел бабах, не нашелся ответ: {error}")        
+            raise Exception(f"Произошел бабах, не нашелся ответ: {error}")
         methods = []
         for method in json_resp.get("methods"):
             methods.append(PaymentMethod(method.get("name"), float(method["price"].replace(" ", "")),
@@ -1409,7 +1409,7 @@ class Account:
                           self.currency)
 
     def get_lot_fields(self, lot_id: int) -> types.LotFields:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         headers = {}
@@ -1452,30 +1452,30 @@ class Account:
             payment_methods.append(PaymentMethod(pm.find("th").text, pm_price, pm_currency, i))
         calc_result = CalcResult(types.SubCategoryTypes.COMMON, subcategory.id, payment_methods,
                                  float(result["price"]), None, types.Currency.UNKNOWN, currency)
-        
+
         field_labels = {}
         field_options = {}
         required_fields = set()
-        
+
         for form_group in bs.find_all("div", class_="form-group"):
             label_tag = form_group.find("label")
             if not label_tag:
                 continue
             label_text = label_tag.get_text(strip=True)
-            
+
             is_required = False
             if form_group.get("class") and "required" in form_group.get("class", []):
                 is_required = True
             if label_tag.find("span", class_="text-danger") or "*" in label_text:
                 is_required = True
-            
+
             input_tag = form_group.find(["input", "select", "textarea"])
             if input_tag and input_tag.get("name"):
                 field_name = input_tag["name"]
-                
+
                 if input_tag.get("required"):
                     is_required = True
-                                             
+
                 if field_name.startswith("fields[") and field_name not in [
                     "fields[summary][ru]", "fields[summary][en]",
                     "fields[desc][ru]", "fields[desc][en]",
@@ -1483,24 +1483,24 @@ class Account:
                     "fields[images]"
                 ]:
                     field_labels[field_name] = label_text.rstrip("*").strip()
-                    
+
                     if is_required:
                         required_fields.add(field_name)
-                    
+
                     if input_tag.name == "select":
                         options = []
                         for option in input_tag.find_all("option"):
                             option_value = option.get("value", "")
                             option_text = option.get_text(strip=True)
-                            if option_value:                             
+                            if option_value:
                                 options.append((option_value, option_text))
                         if options:
                             field_options[field_name] = options
-        
+
         return types.LotFields(lot_id, result, subcategory, currency, calc_result, field_labels, field_options, required_fields)
 
     def get_create_lot_fields(self, category_id: int) -> types.LotFields:
-                                                                           
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         headers = {}
@@ -1511,7 +1511,7 @@ class Account:
         error_message = bs.find("p", class_="lead")
         if error_message:
             raise exceptions.LotParsingError(response, error_message.text, 0)
-        
+
         result = {}
         result.update(
             {field["name"]: field.get("value") or "" for field in bs.find_all("input") if field["name"] != "query"})
@@ -1527,18 +1527,18 @@ class Account:
                 first_option = field.find("option")
                 result[field["name"]] = first_option["value"] if first_option and first_option.get("value") else ""
         result.update({field["name"]: "on" for field in bs.find_all("input", {"type": "checkbox"}, checked=True)})
-        
+
         result["node_id"] = str(category_id)
-        
+
         subcategory = self.get_subcategory(enums.SubCategoryTypes.COMMON, category_id)
         self.csrf_token = result.get("csrf_token") or self.csrf_token
-        
+
         currency_span = bs.find("span", class_="form-control-feedback")
         currency = utils.parse_currency(currency_span.text) if currency_span else self.currency
-        
+
         if self.currency != currency:
             self.currency = currency
-            
+
         bs_buyer_prices = bs.find("table", class_="table-buyers-prices")
         payment_methods = []
         if bs_buyer_prices:
@@ -1547,35 +1547,35 @@ class Account:
                 pm_price = float(pm_price.replace(" ", ""))
                 pm_currency = parse_currency(pm_currency)
                 payment_methods.append(PaymentMethod(pm.find("th").text, pm_price, pm_currency, i))
-        
+
         price = float(result.get("price", "0") or "0")
-        
+
         calc_result = CalcResult(types.SubCategoryTypes.COMMON, category_id, payment_methods,
                                  price, None, types.Currency.UNKNOWN, currency)
-        
+
         field_labels = {}
         field_options = {}
         required_fields = set()
-        
+
         for form_group in bs.find_all("div", class_="form-group"):
             label_tag = form_group.find("label")
             if not label_tag:
                 continue
             label_text = label_tag.get_text(strip=True)
-            
+
             is_required = False
             if form_group.get("class") and "required" in form_group.get("class", []):
                 is_required = True
             if label_tag.find("span", class_="text-danger") or "*" in label_text:
                 is_required = True
-            
+
             input_tag = form_group.find(["input", "select", "textarea"])
             if input_tag and input_tag.get("name"):
                 field_name = input_tag["name"]
-                
+
                 if input_tag.get("required"):
                     is_required = True
-                                             
+
                 if field_name.startswith("fields[") and field_name not in [
                     "fields[summary][ru]", "fields[summary][en]",
                     "fields[desc][ru]", "fields[desc][en]",
@@ -1583,20 +1583,20 @@ class Account:
                     "fields[images]"
                 ]:
                     field_labels[field_name] = label_text.rstrip("*").strip()
-                    
+
                     if is_required:
                         required_fields.add(field_name)
-                    
+
                     if input_tag.name == "select":
                         options = []
                         for option in input_tag.find_all("option"):
                             option_value = option.get("value", "")
                             option_text = option.get_text(strip=True)
-                            if option_value:                              
+                            if option_value:
                                 options.append((option_value, option_text))
                         if options:
                             field_options[field_name] = options
-        
+
         return types.LotFields(0, result, subcategory, currency, calc_result, field_labels, field_options, required_fields)
 
     def get_chip_fields(self, subcategory_id: int) -> types.ChipFields:
@@ -1612,7 +1612,7 @@ class Account:
         return types.ChipFields(self.id, subcategory_id, result)
 
     def save_offer(self, offer_fields: types.LotFields | types.ChipFields):
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         headers = {
@@ -1647,11 +1647,11 @@ class Account:
         self.save_offer(lot_fields)
 
     def delete_lot(self, lot_id: int) -> None:
-                   
+
         self.save_lot(types.LotFields(lot_id, {"csrf_token": self.csrf_token, "offer_id": lot_id, "deleted": "1"}))
 
     def get_exchange_rate(self, currency: types.Currency) -> tuple[float, types.Currency]:
-                   
+
         r = self.method("post", "https://funpay.com/account/switchCurrency",
                         {"accept": "*/*", "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                          "x-requested-with": "XMLHttpRequest"},
@@ -1679,45 +1679,45 @@ class Account:
                 return price1 / price2, now_currency
 
     def get_category(self, category_id: int) -> types.Category | None:
-                   
+
         return self.__sorted_categories.get(category_id)
 
     @property
     def categories(self) -> list[types.Category]:
-                   
+
         return self.__categories
 
     def get_sorted_categories(self) -> dict[int, types.Category]:
-                   
+
         return self.__sorted_categories
 
     def get_subcategory(self, subcategory_type: types.SubCategoryTypes,
                         subcategory_id: int) -> types.SubCategory | None:
-                   
+
         return self.__sorted_subcategories[subcategory_type].get(subcategory_id)
 
     @property
     def subcategories(self) -> list[types.SubCategory]:
-                   
+
         return self.__subcategories
 
     def get_sorted_subcategories(self) -> dict[types.SubCategoryTypes, dict[int, types.SubCategory]]:
-                   
+
         return self.__sorted_subcategories
 
     def logout(self) -> None:
-                   
+
         if not self.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         self.method("get", self._logout_link, {"accept": "*/*"}, {}, raise_not_200=True)
 
     @property
     def is_initiated(self) -> bool:
-                   
+
         return self.__initiated
 
     def __setup_categories(self, html: str):
-                   
+
         parser = BeautifulSoup(html, "lxml")
         games_table = parser.find_all("div", {"class": "promo-game-list"})
         if not games_table:
@@ -1799,7 +1799,7 @@ class Account:
                 image_name = image_name.get('alt') if image_name else None
                 image_link = image_tag.get("href")
                 message_text = None
-                                                                                        
+
                 if isinstance(image_name, str) and "funpay_cardinal" in image_name.lower():
                     by_bot = True
                 elif image_name == "funpay_vertex_image.png":
@@ -1815,7 +1815,7 @@ class Account:
                 if message_text.startswith(self.__bot_character) or                        message_text.startswith(self.__old_bot_character) and author_id == self.id:
                     message_text = message_text[1:]
                     by_bot = True
-                                                                                                         
+
             message_obj = types.Message(i["id"], message_text, chat_id, interlocutor_username, interlocutor_id,
                                         None, author_id, i["html"], image_link, image_name, determine_msg_type=False)
             message_obj.by_bot = by_bot

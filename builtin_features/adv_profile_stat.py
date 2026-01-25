@@ -25,12 +25,12 @@ ORDER_CONFIRMED = {}
 
 def get_profile_stats(cardinal: Cardinal) -> dict:
     account = cardinal.account
-    
+
     try:
         response = account.method("get", f"users/{account.id}/", {"accept": "*/*"}, {}, raise_not_200=True)
         html = response.content.decode()
         parser = bs(html, "lxml")
-        
+
         rating_stars = 0
         rating_div = parser.find("div", class_="rating-stars")
         if rating_div:
@@ -39,7 +39,7 @@ def get_profile_stats(cardinal: Cardinal) -> dict:
             rating_div = parser.find("div", class_="rating-full-stars")
             if rating_div:
                 rating_stars = len(rating_div.find_all("i", class_="fas"))
-        
+
         reviews_count = 0
         reviews_div = parser.find("div", class_="media-user-reviews")
         if reviews_div:
@@ -50,7 +50,7 @@ def get_profile_stats(cardinal: Cardinal) -> dict:
             if reviews_div:
                 reviews_text = reviews_div.text.strip()
                 reviews_count = int("".join([c for c in reviews_text if c.isdigit()]) or "0")
-        
+
         reg_date = None
         reg_date_div = parser.find("div", class_="text-nowrap")
         if reg_date_div and "На сайте" in reg_date_div.text:
@@ -59,11 +59,11 @@ def get_profile_stats(cardinal: Cardinal) -> dict:
             reg_date_div = parser.find("div", class_="user-regdate")
             if reg_date_div:
                 reg_date = reg_date_div.text.strip()
-        
+
         lots_count = 0
         offers = parser.find_all("a", class_="tc-item")
         lots_count = len(offers)
-        
+
         subcategories = {}
         subcategories_divs = parser.find_all("div", class_="offer-list-title-container")
         for div in subcategories_divs:
@@ -72,7 +72,7 @@ def get_profile_stats(cardinal: Cardinal) -> dict:
                 cat_name = title.text.strip()
                 offers_in_cat = div.parent.find_all("a", class_="tc-item")
                 subcategories[cat_name] = len(offers_in_cat)
-        
+
         return {
             "rating_stars": rating_stars,
             "reviews_count": reviews_count,
@@ -95,22 +95,22 @@ def analyze_sales(all_sales: list) -> dict:
     buyers = defaultdict(lambda: {"count": 0, "total": 0, "currencies": set()})
     categories = defaultdict(lambda: {"count": 0, "total": 0, "refunds": 0})
     lots_sold = defaultdict(lambda: {"count": 0, "total": 0, "refunds": 0})
-    
+
     sale_times = []
-    
+
     for sale in all_sales:
         try:
             curr = str(sale.currency)
         except:
             curr = "?"
-        
+
         buyer_key = sale.buyer_username
         buyers[buyer_key]["count"] += 1
         buyers[buyer_key]["currencies"].add(curr)
-        
+
         cat_key = sale.subcategory_name if hasattr(sale, 'subcategory_name') else "Неизвестно"
         lot_key = sale.description if hasattr(sale, 'description') else cat_key
-        
+
         if sale.status == OrderStatuses.REFUNDED:
             categories[cat_key]["refunds"] += 1
             lots_sold[lot_key]["refunds"] += 1
@@ -120,12 +120,12 @@ def analyze_sales(all_sales: list) -> dict:
             buyers[buyer_key]["total"] += sale.price
             lots_sold[lot_key]["count"] += 1
             lots_sold[lot_key]["total"] += sale.price
-        
+
         if hasattr(sale, 'date') and sale.date:
             sale_times.append(sale.date)
-    
+
     sale_times.sort(reverse=True)
-    
+
     avg_sale_interval = None
     if len(sale_times) >= 2:
         intervals = []
@@ -137,21 +137,21 @@ def analyze_sales(all_sales: list) -> dict:
         if intervals:
             avg_seconds = sum(intervals) / len(intervals)
             avg_sale_interval = avg_seconds
-    
+
     sales_per_day = {}
     sales_per_week = {}
-    
+
     for t in sale_times[:100]:
         day_key = t.strftime("%d.%m")
         week_key = t.strftime("%W")
         sales_per_day[day_key] = sales_per_day.get(day_key, 0) + 1
         sales_per_week[week_key] = sales_per_week.get(week_key, 0) + 1
-    
+
     repeat_buyers = sum(1 for b in buyers.values() if b["count"] > 1)
     top_buyers = sorted(buyers.items(), key=lambda x: x[1]["count"], reverse=True)[:5]
     top_categories = sorted(categories.items(), key=lambda x: x[1]["count"], reverse=True)[:5]
     top_lots = sorted(lots_sold.items(), key=lambda x: x[1]["count"], reverse=True)[:10]
-    
+
     return {
         "total_buyers": len(buyers),
         "repeat_buyers": repeat_buyers,
@@ -325,11 +325,11 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> tupl
             salesPrice[s] = "0 ¤"
 
     sales_analysis = analyze_sales(all_sales)
-    
+
     stars_emoji = "⭐" * profile_stats["rating_stars"] if profile_stats["rating_stars"] else "—"
-    
+
     avg_interval_text = format_interval(sales_analysis["avg_sale_interval"]) if sales_analysis["avg_sale_interval"] else "—"
-    
+
     success_rate = 0
     if sales["all"] + refunds["all"] > 0:
         success_rate = round(sales["all"] / (sales["all"] + refunds["all"]) * 100, 1)
@@ -340,7 +340,7 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> tupl
         "sales": sales,
         "refunds": refunds
     }
-    
+
     main_text = f"""📊 <b>Статистика профиля</b> — <i>{account.username}</i>
 
 <b>👤 Профиль</b>
@@ -381,59 +381,59 @@ def generate_adv_profile(cardinal: Cardinal, chat_id: int, mess_id: int) -> tupl
 def generate_buyers_page(extra_data: dict, account_name: str) -> str:
     sales_analysis = extra_data.get("sales_analysis", {})
     top_buyers = sales_analysis.get("top_buyers", [])
-    
+
     if not top_buyers:
         return f"📊 <b>Топ покупателей</b> — <i>{account_name}</i>\n\nНет данных о покупателях"
-    
+
     text = f"📊 <b>Топ покупателей</b> — <i>{account_name}</i>\n\n"
-    
+
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
     for i, (buyer, data) in enumerate(top_buyers):
         medal = medals[i] if i < len(medals) else f"{i+1}."
         currencies = ", ".join(data["currencies"])
         text += f"{medal} <b>{buyer}</b>\n"
         text += f"    └ Заказов: <code>{data['count']}</code> · Сумма: <code>{data['total']:.0f} {currencies}</code>\n"
-    
+
     return text
 
 def generate_categories_page(extra_data: dict, account_name: str) -> str:
     sales_analysis = extra_data.get("sales_analysis", {})
     categories = sales_analysis.get("categories", {})
-    
+
     if not categories:
         return f"📊 <b>Статистика по категориям</b> — <i>{account_name}</i>\n\nНет данных о категориях"
-    
+
     text = f"📊 <b>Статистика по категориям</b> — <i>{account_name}</i>\n\n"
-    
+
     sorted_cats = sorted(categories.items(), key=lambda x: x[1]["count"], reverse=True)
-    
+
     for cat_name, data in sorted_cats[:10]:
         short_name = cat_name[:35] + "..." if len(cat_name) > 35 else cat_name
         refund_text = f" · ↩️{data['refunds']}" if data["refunds"] > 0 else ""
         text += f"📁 <b>{short_name}</b>\n"
         text += f"    └ Продано: <code>{data['count']}</code>{refund_text}\n"
-    
+
     if len(sorted_cats) > 10:
         text += f"\n<i>...и ещё {len(sorted_cats) - 10} категорий</i>"
-    
+
     return text
 
 def generate_lots_page(extra_data: dict, account_name: str) -> str:
     sales_analysis = extra_data.get("sales_analysis", {})
     top_lots = sales_analysis.get("top_lots", [])
     lots_sold = sales_analysis.get("lots_sold", {})
-    
+
     if not top_lots:
         return f"📊 <b>Проданные товары</b> — <i>{account_name}</i>\n\nНет данных о продажах"
-    
+
     total_lots = len(lots_sold)
     total_sold = sum(lot["count"] for lot in lots_sold.values())
-    
+
     text = f"📊 <b>Проданные товары</b> — <i>{account_name}</i>\n\n"
     text += f"Уникальных товаров: <code>{total_lots}</code>\n"
     text += f"Всего продано: <code>{total_sold}</code>\n\n"
     text += "<b>Топ по продажам:</b>\n"
-    
+
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
     for i, (lot_name, data) in enumerate(top_lots):
         medal = medals[i] if i < len(medals) else f"{i+1}."
@@ -441,10 +441,10 @@ def generate_lots_page(extra_data: dict, account_name: str) -> str:
         refund_text = f" · ↩️{data['refunds']}" if data["refunds"] > 0 else ""
         text += f"{medal} <b>{short_name}</b>\n"
         text += f"    └ Продаж: <code>{data['count']}</code> · <code>{data['total']:.0f}</code>{refund_text}\n"
-    
+
     if len(lots_sold) > 10:
         text += f"\n<i>...и ещё {len(lots_sold) - 10} товаров</i>"
-    
+
     return text
 
 def init(cardinal: Cardinal):
@@ -452,7 +452,7 @@ def init(cardinal: Cardinal):
         return
     tg = cardinal.telegram
     bot = tg.bot
-    
+
     cached_data = {}
 
     storage_path = "storage/builtin/advProfileStat.json"
@@ -470,7 +470,7 @@ def init(cardinal: Cardinal):
         try:
             main_text, extra_data = generate_adv_profile(cardinal, new_msg.chat.id, new_msg.id)
             cached_data[call.message.chat.id] = extra_data
-            
+
             kb = telebot.types.InlineKeyboardMarkup(row_width=3)
             kb.add(
                 telebot.types.InlineKeyboardButton("👥 Покупатели", callback_data=f"{ADV_PROFILE_PAGE_CB}buyers"),
@@ -478,7 +478,7 @@ def init(cardinal: Cardinal):
                 telebot.types.InlineKeyboardButton("🏷 Товары", callback_data=f"{ADV_PROFILE_PAGE_CB}lots")
             )
             kb.add(telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=ADV_PROFILE_CB))
-            
+
             bot.edit_message_text(main_text, call.message.chat.id, call.message.id, reply_markup=kb)
         except Exception as ex:
             bot.edit_message_text(f"❌ Не удалось обновить статистику: {ex}", new_msg.chat.id, new_msg.id)
@@ -491,13 +491,13 @@ def init(cardinal: Cardinal):
     def page_handler(call: telebot.types.CallbackQuery):
         page = call.data.replace(ADV_PROFILE_PAGE_CB, "")
         extra_data = cached_data.get(call.message.chat.id, {})
-        
+
         if not extra_data:
             bot.answer_callback_query(call.id, "Сначала обнови статистику", show_alert=True)
             return
-        
+
         account_name = cardinal.account.username
-        
+
         if page == "buyers":
             text = generate_buyers_page(extra_data, account_name)
         elif page == "categories":
@@ -507,10 +507,10 @@ def init(cardinal: Cardinal):
         else:
             bot.answer_callback_query(call.id)
             return
-        
+
         kb = telebot.types.InlineKeyboardMarkup(row_width=2)
         kb.add(telebot.types.InlineKeyboardButton("◀️ Назад", callback_data=f"{ADV_PROFILE_PAGE_CB}main"))
-        
+
         try:
             bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=kb)
         except:
@@ -519,18 +519,18 @@ def init(cardinal: Cardinal):
 
     def back_to_main(call: telebot.types.CallbackQuery):
         extra_data = cached_data.get(call.message.chat.id, {})
-        
+
         if not extra_data:
             bot.answer_callback_query(call.id, "Сначала обнови статистику", show_alert=True)
             return
-        
+
         sales_analysis = extra_data.get("sales_analysis", {})
         profile_stats = extra_data.get("profile_stats", {})
-        
+
         account = cardinal.account
         sales = extra_data.get("sales", {})
         refunds = extra_data.get("refunds", {})
-        
+
         def format_number(number):
             num_str = f"{number:,}".replace(',', ' ')
             if '.' in num_str:
@@ -543,14 +543,14 @@ def init(cardinal: Cardinal):
             if integer_part.count(' ') == 1 and len(integer_part) == 5:
                 integer_part = integer_part.replace(' ', "")
             return integer_part + decimal_part
-        
+
         stars_emoji = "⭐" * profile_stats.get("rating_stars", 0) if profile_stats.get("rating_stars") else "—"
         avg_interval_text = format_interval(sales_analysis.get("avg_sale_interval")) if sales_analysis.get("avg_sale_interval") else "—"
-        
+
         success_rate = 0
         if sales.get("all", 0) + refunds.get("all", 0) > 0:
             success_rate = round(sales["all"] / (sales["all"] + refunds["all"]) * 100, 1)
-        
+
         main_text = f"""📊 <b>Статистика профиля</b> — <i>{account.username}</i>
 
 <b>👤 Профиль</b>
@@ -571,7 +571,7 @@ def init(cardinal: Cardinal):
 └ Повторных покупок: <code>{sales_analysis.get("repeat_buyers", 0)}</code>
 
 <i>🕐 {time.strftime('%H:%M:%S', time.localtime(account.last_update))}</i>"""
-        
+
         kb = telebot.types.InlineKeyboardMarkup(row_width=3)
         kb.add(
             telebot.types.InlineKeyboardButton("👥 Покупатели", callback_data=f"{ADV_PROFILE_PAGE_CB}buyers"),
@@ -579,7 +579,7 @@ def init(cardinal: Cardinal):
             telebot.types.InlineKeyboardButton("🏷 Товары", callback_data=f"{ADV_PROFILE_PAGE_CB}lots")
         )
         kb.add(telebot.types.InlineKeyboardButton("🔄 Обновить", callback_data=ADV_PROFILE_CB))
-        
+
         try:
             bot.edit_message_text(main_text, call.message.chat.id, call.message.id, reply_markup=kb)
         except:
@@ -593,11 +593,11 @@ def init(cardinal: Cardinal):
 
     import tg_bot.static_keyboards
     tg_bot.static_keyboards.REFRESH_BTN = refresh_kb
-    
+
     tg.cbq_handler(profile_handler, lambda c: c.data == ADV_PROFILE_CB)
     tg.cbq_handler(page_handler, lambda c: c.data.startswith(ADV_PROFILE_PAGE_CB) and c.data != f"{ADV_PROFILE_PAGE_CB}main")
     tg.cbq_handler(back_to_main, lambda c: c.data == f"{ADV_PROFILE_PAGE_CB}main")
-    
+
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 def message_hook(cardinal: Cardinal, event: NewMessageEvent):
@@ -621,7 +621,7 @@ def message_hook(cardinal: Cardinal, event: NewMessageEvent):
         if order.buyer_id == cardinal.account.id:
             return
         ORDER_CONFIRMED[order_id] = {"time": int(time.time()), "price": order.sum, "currency": str(order.currency)}
-        
+
         os.makedirs("storage/builtin", exist_ok=True)
         with open("storage/builtin/advProfileStat.json", "w", encoding="UTF-8") as f:
             f.write(json.dumps(ORDER_CONFIRMED, indent=4, ensure_ascii=False))

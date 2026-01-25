@@ -21,7 +21,7 @@ localizer = Localizer()
 _ = localizer.translate
 
 def power_off(instance_id: int, state: int) -> K:
-           
+
     kb = K()
     if state == 0:
         kb.row(B(_("gl_yes"), None, f"{CBT.SHUT_DOWN}:1:{instance_id}"),
@@ -69,7 +69,7 @@ def language_settings(c: Cardinal) -> K:
     return kb
 
 def main_settings(c: Cardinal) -> K:
-           
+
     p = f"{CBT.SWITCH}:FunPay"
 
     def l(s):
@@ -86,7 +86,7 @@ def main_settings(c: Cardinal) -> K:
     return kb
 
 def new_message_view_settings(c: Cardinal) -> K:
-           
+
     p = f"{CBT.SWITCH}:NewMessageView"
 
     def l(s):
@@ -96,7 +96,7 @@ def new_message_view_settings(c: Cardinal) -> K:
     return kb
 
 def greeting_settings(c: Cardinal):
-           
+
     p = f"{CBT.SWITCH}:Greetings"
 
     def l(s):
@@ -127,12 +127,12 @@ def category_greetings_list(c: Cardinal):
 def category_greeting_edit(c: Cardinal, cat_id: str):
     settings = c.category_greetings.get(cat_id, {})
     enabled = bool_to_text(int(settings.get("enabled", True)))
-    
+
     kb = K()        .add(B(_("gr_cat_toggle", enabled), None, f"{CBT.GR_CATEGORY_TOGGLE}:{cat_id}"))        .add(B(_("gr_cat_template"), None, f"{CBT.GR_CATEGORY_EDIT_TEMPLATE}:{cat_id}"))        .add(B(_("gr_copy_default"), None, f"{CBT.GR_COPY_DEFAULT}:{cat_id}"))        .row(B(_("gl_delete"), None, f"{CBT.GR_CATEGORY_DELETE}:{cat_id}"), B(_("gl_back"), None, CBT.GR_CATEGORY_LIST))
     return kb
 
 def order_confirm_reply_settings(c: Cardinal):
-           
+
     kb = K()        .add(B(_("oc_send_reply", bool_to_text(int(c.MAIN_CFG['OrderConfirm']['sendReply']))),
                None, f"{CBT.SWITCH}:OrderConfirm:sendReply"))        .add(B(_("oc_watermark", bool_to_text(int(c.MAIN_CFG['OrderConfirm']['watermark']))),
                None, f"{CBT.SWITCH}:OrderConfirm:watermark"))        .add(B(_("oc_edit_message"), None, CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT))        .add(B(_("gl_back"), None, CBT.MAIN2))
@@ -165,7 +165,7 @@ def category_reminder_edit(c: Cardinal, cat_id: str):
     timeout = settings.get("timeout", 60)
     repeat_count = settings.get("repeat_count", 3)
     interval = settings.get("interval", 30)
-    
+
     kb = K()        .add(B(_("or_cat_toggle", enabled), None, f"{CBT.OR_CATEGORY_TOGGLE}:{cat_id}"))        .add(B(_("or_timeout").format(timeout), None, f"{CBT.OR_CATEGORY_EDIT_TIMEOUT}:{cat_id}"))        .add(B(_("or_cat_template"), None, f"{CBT.OR_CATEGORY_EDIT_TEMPLATE}:{cat_id}"))        .add(B(_("or_repeat_count").format(repeat_count), None, f"{CBT.OR_CATEGORY_EDIT_REPEAT_COUNT}:{cat_id}"))        .add(B(_("or_interval").format(interval), None, f"{CBT.OR_CATEGORY_EDIT_INTERVAL}:{cat_id}"))        .row(B(_("gl_delete"), None, f"{CBT.OR_CATEGORY_DELETE}:{cat_id}"), B(_("gl_back"), None, CBT.OR_CATEGORY_LIST))
     return kb
 
@@ -179,7 +179,7 @@ def review_reminders_settings(c: Cardinal):
     return kb
 
 def authorized_users(c: Cardinal, offset: int):
-           
+
     kb = K()
     p = f"{CBT.SWITCH}:Telegram"
 
@@ -201,7 +201,7 @@ def authorized_users(c: Cardinal, offset: int):
     return kb
 
 def authorized_user_settings(c: Cardinal, user_id: int, offset: int, user_link: bool):
-           
+
     kb = K()
 
     if user_link:
@@ -209,26 +209,26 @@ def authorized_user_settings(c: Cardinal, user_id: int, offset: int, user_link: 
     for i in range(1, 7):
         kb.add(B(f"Настроечки {i}", callback_data=CBT.EMPTY))
     kb.add(B(_("gl_back"), None, f"{CBT.AUTHORIZED_USERS}:{offset}"))
-                                                        
+
     return kb
 
 def proxy(c: Cardinal, offset: int, proxies: dict[str, bool]):
-               
+
     kb = K()
     ps = list(c.proxy_dict.items())[offset: offset + MENU_CFG.PROXY_BTNS_AMOUNT]
     ip, port = c.MAIN_CFG["Proxy"]["ip"], c.MAIN_CFG["Proxy"]["port"]
     login, password = c.MAIN_CFG["Proxy"]["login"], c.MAIN_CFG["Proxy"]["password"]
     now_proxy = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
-    
+
     proxy_enabled = bool_to_text(c.MAIN_CFG["Proxy"].getboolean("enable"))
     kb.row(B(_("prx_proxy_enabled", proxy_enabled), callback_data=f"{CBT.SWITCH}:Proxy:enable:{offset}"))
 
     check_enabled = bool_to_text(c.MAIN_CFG["Proxy"].getboolean("check"))
     kb.row(B(_("prx_proxy_check", check_enabled), callback_data=f"{CBT.SWITCH}:Proxy:check:{offset}"))
-    
+
     proxy_type = c.MAIN_CFG["Proxy"]["type"] if c.MAIN_CFG["Proxy"]["type"] in ["HTTP", "SOCKS5"] else "HTTP"
     kb.row(B(_("prx_proxy_type", proxy_type), callback_data=f"{CBT.CHANGE_PROXY_TYPE}:{offset}"))
-    
+
     kb.row(B(f"", callback_data=CBT.EMPTY))
     for i, p in ps:
         work = proxies.get(p)
@@ -246,7 +246,7 @@ def proxy(c: Cardinal, offset: int, proxies: dict[str, bool]):
     return kb
 
 def review_reply_settings(c: Cardinal):
-           
+
     kb = K()
     for i in range(1, 6):
         kb.row(B(f"{'⭐' * i}", None, f"{CBT.SEND_REVIEW_REPLY_TEXT}:{i}"),
@@ -257,7 +257,7 @@ def review_reply_settings(c: Cardinal):
     return kb
 
 def notifications_settings(c: Cardinal, chat_id: int) -> K:
-           
+
     p = f"{CBT.SWITCH_TG_NOTIFICATIONS}:{chat_id}"
     n = NotificationTypes
 
@@ -272,7 +272,7 @@ def notifications_settings(c: Cardinal, chat_id: int) -> K:
     return kb
 
 def announcements_settings(c: Cardinal, chat_id: int):
-           
+
     p = f"{CBT.SWITCH_TG_NOTIFICATIONS}:{chat_id}"
     n = NotificationTypes
 
@@ -283,7 +283,7 @@ def announcements_settings(c: Cardinal, chat_id: int):
     return kb
 
 def blacklist_settings(c: Cardinal) -> K:
-           
+
     p = f"{CBT.SWITCH}:BlockList"
 
     def l(s):
@@ -294,7 +294,7 @@ def blacklist_settings(c: Cardinal) -> K:
     return kb
 
 def commands_list(c: Cardinal, offset: int) -> K:
-           
+
     kb = K()
     commands = c.RAW_AR_CFG.sections()[offset: offset + MENU_CFG.AR_BTNS_AMOUNT]
     if not commands and offset != 0:
@@ -313,16 +313,18 @@ def commands_list(c: Cardinal, offset: int) -> K:
     return kb
 
 def edit_command(c: Cardinal, command_index: int, offset: int) -> K:
-           
+
     command = c.RAW_AR_CFG.sections()[command_index]
     command_obj = c.RAW_AR_CFG[command]
-    kb = K()        .add(B(_("ar_edit_response"), None, f"{CBT.EDIT_CMD_RESPONSE_TEXT}:{command_index}:{offset}"))        .add(B(_("ar_edit_notification"), None, f"{CBT.EDIT_CMD_NOTIFICATION_TEXT}:{command_index}:{offset}"))        .add(B(_("ar_notification", bool_to_text(command_obj.get('telegramNotification'), '🔔', '🔕')),
+    command_disabled = command_obj.getboolean("disabled", fallback=False)
+    kb = K()        .add(B(_("ar_toggle_command", "❌" if command_disabled else "✅"),
+               None, f"{CBT.TOGGLE_CMD_DISABLED}:{command_index}:{offset}"))        .add(B(_("ar_edit_response"), None, f"{CBT.EDIT_CMD_RESPONSE_TEXT}:{command_index}:{offset}"))        .add(B(_("ar_edit_notification"), None, f"{CBT.EDIT_CMD_NOTIFICATION_TEXT}:{command_index}:{offset}"))        .add(B(_("ar_notification", bool_to_text(command_obj.get('telegramNotification'), '🔔', '🔕')),
                None, f"{CBT.SWITCH_CMD_NOTIFICATION}:{command_index}:{offset}"))        .add(B(_("gl_delete"), None, f"{CBT.DEL_CMD}:{command_index}:{offset}"))        .row(B(_("gl_back"), None, f"{CBT.CMD_LIST}:{offset}"),
              B(_("gl_refresh"), None, f"{CBT.EDIT_CMD}:{command_index}:{offset}"))
     return kb
 
 def products_files_list(offset: int) -> K:
-           
+
     keyboard = K()
     files = os.listdir("storage/products")[offset:offset + MENU_CFG.PF_BTNS_AMOUNT]
     if not files and offset != 0:
@@ -344,7 +346,7 @@ def products_files_list(offset: int) -> K:
     return keyboard
 
 def products_file_edit(file_number: int, offset: int, confirmation: bool = False)        -> K:
-           
+
     keyboard = K()        .add(B(_("gf_add_goods"), None, f"{CBT.ADD_PRODUCTS_TO_FILE}:{file_number}:{file_number}:{offset}:0"))        .add(B(_("gf_download"), None, f"download_products_file:{file_number}:{offset}"))
     if not confirmation:
         keyboard.add(B(_("gl_delete"), None, f"del_products_file:{file_number}:{offset}"))
@@ -356,7 +358,7 @@ def products_file_edit(file_number: int, offset: int, confirmation: bool = False
     return keyboard
 
 def lots_list(cardinal: Cardinal, offset: int) -> K:
-           
+
     keyboard = K()
     lots = cardinal.AD_CFG.sections()[offset: offset + MENU_CFG.AD_BTNS_AMOUNT]
     if not lots and offset != 0:
@@ -375,7 +377,7 @@ def lots_list(cardinal: Cardinal, offset: int) -> K:
     return keyboard
 
 def funpay_lots_list(c: Cardinal, offset: int):
-           
+
     keyboard = K()
     lots = c.tg_profile.get_common_lots()
     lots = lots[offset: offset + MENU_CFG.FP_LOTS_BTNS_AMOUNT]
@@ -396,7 +398,7 @@ def funpay_lots_list(c: Cardinal, offset: int):
     return keyboard
 
 def edit_lot(c: Cardinal, lot_number: int, offset: int) -> K:
-           
+
     lot = c.AD_CFG.sections()[lot_number]
     lot_obj = c.AD_CFG[lot]
     file_name = lot_obj.get("productsFileName")
@@ -432,7 +434,7 @@ def edit_lot(c: Cardinal, lot_number: int, offset: int) -> K:
 
 def new_order(order_id: str, username: str, node_id: int,
               confirmation: bool = False, no_refund: bool = False) -> K:
-           
+
     kb = K()
     if not no_refund:
         if confirmation:
@@ -454,7 +456,7 @@ def new_review(order_id: str, username: str, node_id: int) -> K:
     return kb
 
 def reply(node_id: int, username: str, again: bool = False, extend: bool = False) -> K:
-           
+
     bts = [B(_("msg_reply2") if again else _("msg_reply"), None, f"{CBT.SEND_FP_MESSAGE}:{node_id}:{username}"),
            B(_("msg_templates"), None, f"{CBT.TMPLT_LIST_ANS_MODE}:0:{node_id}:{username}:{int(again)}:{int(extend)}")]
     if extend:
@@ -464,7 +466,7 @@ def reply(node_id: int, username: str, again: bool = False, extend: bool = False
     return kb
 
 def templates_list(c: Cardinal, offset: int) -> K:
-           
+
     kb = K()
     templates = c.telegram.answer_templates[offset: offset + MENU_CFG.TMPLT_BTNS_AMOUNT]
     if not templates and offset != 0:
@@ -482,13 +484,13 @@ def templates_list(c: Cardinal, offset: int) -> K:
     return kb
 
 def edit_template(c: Cardinal, template_index: int, offset: int) -> K:
-           
+
     kb = K()        .add(B(_("gl_delete"), None, f"{CBT.DEL_TMPLT}:{template_index}:{offset}"))        .add(B(_("gl_back"), None, f"{CBT.TMPLT_LIST}:{offset}"))
     return kb
 
 def templates_list_ans_mode(c: Cardinal, offset: int, node_id: int, username: str, prev_page: int,
                             extra: list | None = None):
-           
+
     kb = K()
     templates = c.telegram.answer_templates[offset: offset + MENU_CFG.TMPLT_BTNS_AMOUNT]
     extra_str = ":" + ":".join(str(i) for i in extra) if extra else ""
@@ -520,9 +522,11 @@ def templates_list_ans_mode(c: Cardinal, offset: int, node_id: int, username: st
     return kb
 
 def plugins_list(c: Cardinal, offset: int):
-           
+
     kb = K()
-    plugins = list(sorted(c.plugins.keys(), key=lambda x: c.plugins[x].name.lower()))[
+    pinned = c.pinned_plugins if hasattr(c, 'pinned_plugins') else []
+    plugins = list(sorted(c.plugins.keys(),
+        key=lambda x: (0 if x in pinned else 1, c.plugins[x].name.lower())))[
               offset: offset + MENU_CFG.PLUGINS_BTNS_AMOUNT]
     if not plugins and offset != 0:
         offset = 0
@@ -532,7 +536,8 @@ def plugins_list(c: Cardinal, offset: int):
         row_plugs = plugins[i:i + 2]
         btns = []
         for idx, uuid in enumerate(row_plugs):
-            btns.append(B(f"{c.plugins[uuid].name} {bool_to_text(c.plugins[uuid].enabled)}",
+            pin_icon = "📌 " if uuid in pinned else ""
+            btns.append(B(f"{pin_icon}{c.plugins[uuid].name} {bool_to_text(c.plugins[uuid].enabled)}",
                           None, f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"))
         kb.row(*btns)
 
@@ -543,11 +548,16 @@ def plugins_list(c: Cardinal, offset: int):
     return kb
 
 def edit_plugin(c: Cardinal, uuid: str, offset: int, ask_to_delete: bool = False):
-           
+
     plugin_obj = c.plugins[uuid]
     kb = K()
     active_text = _("pl_deactivate") if c.plugins[uuid].enabled else _("pl_activate")
     kb.add(B(active_text, None, f"{CBT.TOGGLE_PLUGIN}:{uuid}:{offset}"))
+
+    pinned = c.pinned_plugins if hasattr(c, 'pinned_plugins') else []
+    is_pinned = uuid in pinned
+    pin_text = _("pl_unpin") if is_pinned else _("pl_pin")
+    kb.add(B(f"📌 {pin_text}", None, f"{CBT.TOGGLE_PIN_PLUGIN}:{uuid}:{offset}"))
 
     if plugin_obj.commands:
         kb.add(B(_("pl_commands"), None, f"{CBT.PLUGIN_COMMANDS}:{uuid}:{offset}"))
@@ -563,12 +573,12 @@ def edit_plugin(c: Cardinal, uuid: str, offset: int, ask_to_delete: bool = False
     return kb
 
 def funpay_lots_edit_list(c: Cardinal, offset: int) -> K:
-           
+
     kb = K()
-                                                                           
+
     lots = c.all_lots if hasattr(c, 'all_lots') and c.all_lots else c.tg_profile.get_common_lots()
     lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT]
-    
+
     if not lots_slice and offset != 0:
         offset = 0
         lots_slice = lots[offset: offset + MENU_CFG.FP_LOTS_EDIT_BTNS_AMOUNT]
@@ -598,7 +608,7 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
     lot_id = lot_fields.lot_id
     is_create = lot_id < 0
     kb = K()
-    
+
     if not category_id and lot_fields.subcategory:
         category_id = lot_fields.subcategory.id
 
@@ -608,11 +618,11 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
             B(_("le_cancel_delete"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{category_id}")
         )
         return kb
-    
+
     active_icon = "✅" if lot_fields.active else "❌"
     active_text = _("le_status_active") if lot_fields.active else _("le_status_inactive")
     kb.add(B(f"{active_icon} {active_text}", None, f"{CBT.FP_LOT_TOGGLE_ACTIVE}:{lot_id}:{category_id}"))
-    
+
     price_req = "🔴 " if not lot_fields.price or lot_fields.price <= 0 else ""
     price_str = str(lot_fields.price) if lot_fields.price else "—"
     amount_str = str(lot_fields.amount) if lot_fields.amount else "∞"
@@ -620,7 +630,7 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
         B(f"{price_req}{_('le_edit_price', price_str, lot_fields.currency)}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:price:{category_id}"),
         B(_("le_edit_amount", amount_str), None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:amount:{category_id}")
     )
-    
+
     required_fields = getattr(lot_fields, 'required_fields', set())
     category_fields = _get_category_fields(lot_fields)
     if category_fields:
@@ -628,29 +638,29 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
             req_mark = "🔴 " if key in required_fields and not value else "⚙️ "
             display_value = str(value)[:20] + "..." if len(str(value)) > 20 else str(value)
             kb.add(B(f"{req_mark}{name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{category_id}"))
-    
+
     t_ru = lot_fields.title_ru or ""
     t_ru_req = "🔴 " if not t_ru else "📝 "
     t_ru_short = t_ru[:20] + "..." if len(t_ru) > 20 else t_ru if t_ru else _("le_empty")
     kb.add(B(f"{t_ru_req}Название: {t_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:title_ru:{category_id}"))
-    
+
     d_ru = lot_fields.description_ru or ""
     d_ru_short = _("le_filled") if d_ru else _("le_empty")
     kb.add(B(f"📄 Описание: {d_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:desc_ru:{category_id}"))
-    
+
     p_ru = lot_fields.payment_msg_ru or ""
     p_ru_short = _("le_filled") if p_ru else _("le_empty")
     kb.add(B(f"💬 Автоответ: {p_ru_short}", None, f"{CBT.FP_LOT_EDIT_FIELD}:{lot_id}:payment_msg_ru:{category_id}"))
-    
+
     deact_icon = "✅" if lot_fields.deactivate_after_sale else "❌"
     deact_text = _("le_deact_after_sale")
     kb.add(B(f"{deact_icon} {deact_text}", None, f"{CBT.FP_LOT_TOGGLE_DEACTIVATE}:{lot_id}:{category_id}"))
-    
+
     if is_create:
         kb.add(B(f"🚀 {_('le_create_btn')}", None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
     else:
         kb.add(B(f"💾 {_('le_save')}", None, f"{CBT.FP_LOT_SAVE}:{lot_id}:{category_id}"))
-    
+
     if is_create:
         kb.row(
             B(_("le_save_draft"), None, f"le_save_draft:{lot_id}:{category_id}"),
@@ -673,18 +683,18 @@ def edit_funpay_lot(lot_fields, category_id: int = 0, confirm_delete: bool = Fal
             B(_("le_delete"), None, f"{CBT.FP_LOT_DELETE}:{lot_id}:{category_id}"),
             B(_("le_open_fp"), url=lot_fields.public_link)
         )
-    
+
     if back_to_main:
         back_cb = f"{CBT.LE_SEARCH_MENU}:0"
     else:
         back_cb = f"{CBT.LE_CATEGORY_VIEW}:{category_id}:0" if category_id else f"{CBT.LE_SEARCH_MENU}:0"
-    
+
     kb.add(B(_("gl_back"), None, back_cb))
-    
+
     return kb
 
 def _get_category_fields(lot_fields) -> dict:
-           
+
     category_fields = {}
     standard_keys = [
         "offer_id", "node_id", "csrf_token", "active", "price", "amount",
@@ -694,33 +704,33 @@ def _get_category_fields(lot_fields) -> dict:
         "fields[payment_msg][ru]", "fields[payment_msg][en]",
         "fields[images]"
     ]
-    
+
     for key, value in lot_fields.fields.items():
         if key not in standard_keys and key.startswith("fields["):
-                                                                      
+
             if hasattr(lot_fields, 'field_labels') and key in lot_fields.field_labels:
                 field_name = lot_fields.field_labels[key]
             else:
-                                                 
+
                 field_name = key.replace("fields[", "").rstrip("]").replace("][", " > ")
             category_fields[key] = (field_name, value)
-    
+
     return category_fields
 
 def category_fields_keyboard(lot_fields, offset: int) -> K:
-           
+
     lot_id = lot_fields.lot_id
     kb = K()
-    
+
     category_fields = _get_category_fields(lot_fields)
-    
+
     if category_fields:
         for key, (name, value) in category_fields.items():
             display_value = str(value)[:20] + "..." if len(str(value)) > 20 else str(value)
             kb.add(B(f"📝 {name}: {display_value}", None, f"{CBT.FP_LOT_EDIT_CATEGORY_FIELD}:{lot_id}:{key}:{offset}"))
     else:
         kb.add(B("📭 Нет специфичных полей", None, CBT.EMPTY))
-    
+
     kb.add(B(_("gl_back"), None, f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
     return kb
 

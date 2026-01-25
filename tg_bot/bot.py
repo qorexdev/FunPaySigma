@@ -33,19 +33,19 @@ telebot.apihelper.ENABLE_MIDDLEWARE = True
 class TGBot:
     def __init__(self, cardinal: Cardinal):
         self.cardinal = cardinal
-                                                                
+
         self.bot = telebot.TeleBot(self.cardinal.MAIN_CFG["Telegram"]["token"], parse_mode="HTML",
                                    allow_sending_without_reply=True, num_threads=2)
 
-        self.file_handlers = {}                                            
-        self.attempts = {}                                                            
-        self.init_messages = []                                                                 
+        self.file_handlers = {}
+        self.attempts = {}
+        self.init_messages = []
 
         self.user_states = {}
 
-        self.notification_settings = utils.load_notification_settings()                          
-        self.answer_templates = utils.load_answer_templates()                      
-        self.authorized_users = utils.load_authorized_users()                                  
+        self.notification_settings = utils.load_notification_settings()
+        self.answer_templates = utils.load_answer_templates()
+        self.authorized_users = utils.load_authorized_users()
 
         self.commands = {
             "menu": "cmd_menu",
@@ -79,20 +79,20 @@ class TGBot:
         }
 
     def get_state(self, chat_id: int, user_id: int) -> dict | None:
-                   
+
         try:
             return self.user_states[chat_id][user_id]
         except KeyError:
             return None
 
     def set_state(self, chat_id: int, message_id: int, user_id: int, state: str, data: dict | None = None):
-                   
+
         if chat_id not in self.user_states:
             self.user_states[chat_id] = {}
         self.user_states[chat_id][user_id] = {"state": state, "mid": message_id, "data": data or {}}
 
     def clear_state(self, chat_id: int, user_id: int, del_msg: bool = False) -> int | None:
-                   
+
         try:
             state = self.user_states[chat_id][user_id]
         except KeyError:
@@ -108,21 +108,21 @@ class TGBot:
         return msg_id
 
     def check_state(self, chat_id: int, user_id: int, state: str) -> bool:
-                   
+
         try:
             return self.user_states[chat_id][user_id]["state"] == state
         except KeyError:
             return False
 
     def is_notification_enabled(self, chat_id: int | str, notification_type: str) -> bool:
-                   
+
         try:
             return bool(self.notification_settings[str(chat_id)][notification_type])
         except KeyError:
             return False
 
     def toggle_notification(self, chat_id: int, notification_type: str) -> bool:
-                   
+
         chat_id = str(chat_id)
         if chat_id not in self.notification_settings:
             self.notification_settings[chat_id] = {}
@@ -148,7 +148,7 @@ class TGBot:
             logger.debug("TRACEBACK", exc_info=True)
 
     def msg_handler(self, handler, **kwargs):
-                   
+
         bot_instance = self.bot
 
         @bot_instance.message_handler(**kwargs)
@@ -160,7 +160,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
 
     def cbq_handler(self, handler, func, **kwargs):
-                   
+
         bot_instance = self.bot
 
         @bot_instance.callback_query_handler(func, **kwargs)
@@ -172,7 +172,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
 
     def mdw_handler(self, handler, **kwargs):
-                   
+
         bot_instance = self.bot
 
         @bot_instance.middleware_handler(**kwargs)
@@ -184,7 +184,7 @@ class TGBot:
                 logger.debug("TRACEBACK", exc_info=True)
 
     def setup_chat_notifications(self, bot: TGBot, m: Message):
-                   
+
         if str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
             return
         elif str(m.chat.id) in self.notification_settings and m.from_user.id in self.authorized_users and not                self.is_notification_enabled(m.chat.id, NotificationTypes.critical):
@@ -196,7 +196,7 @@ class TGBot:
             utils.save_notification_settings(self.notification_settings)
 
     def reg_admin(self, m: Message):
-                   
+
         lang = m.from_user.language_code
         if m.chat.type != "private" or (self.attempts.get(m.from_user.id, 0) >= 5) or m.text is None:
             return
@@ -221,7 +221,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, text, reply_markup=kb_links)
 
     def ignore_unauthorized_users(self, c: CallbackQuery):
-                   
+
         logger.warning(_("log_click_attempt", hashlib.sha256(c.from_user.username.encode()).hexdigest()[:8], c.from_user.id, hashlib.sha256(c.message.chat.username.encode()).hexdigest()[:8] if c.message.chat.username else None,
                           c.message.chat.id))
         self.attempts[c.from_user.id] = self.attempts.get(c.from_user.id, 0) + 1
@@ -230,21 +230,21 @@ class TGBot:
         return
 
     def send_settings_menu(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, _("desc_main"), reply_markup=skb.SETTINGS_SECTIONS())
 
     def send_profile(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, utils.generate_profile_text(self.cardinal),
                               reply_markup=skb.REFRESH_BTN())
 
     def act_change_cookie(self, m: Message):
-                   
+
         result = self.bot.send_message(m.chat.id, _("act_change_golden_key"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.CHANGE_GOLDEN_KEY)
 
     def change_cookie(self, m: Message):
-                   
+
         self.clear_state(m.chat.id, m.from_user.id, True)
         golden_key = m.text
         if len(golden_key) != 32 or golden_key != golden_key.lower() or len(golden_key.split()) != 1:
@@ -256,7 +256,7 @@ class TGBot:
         try:
             new_account.get()
         except:
-            logger.warning("Произошла ошибка")          
+            logger.warning("Произошла ошибка")
             logger.debug("TRACEBACK", exc_info=True)
             self.bot.send_message(m.chat.id, _("cookie_error"))
             return
@@ -268,7 +268,7 @@ class TGBot:
             try:
                 self.cardinal.account.get()
             except:
-                logger.warning("Произошла ошибка")          
+                logger.warning("Произошла ошибка")
                 logger.debug("TRACEBACK", exc_info=True)
                 self.bot.send_message(m.chat.id, _("cookie_error"))
                 return
@@ -300,12 +300,12 @@ class TGBot:
                                    c.message.id, reply_markup=skb.REFRESH_BTN())
 
     def act_manual_delivery_test(self, m: Message):
-                   
+
         result = self.bot.send_message(m.chat.id, _("create_test_ad_key"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.MANUAL_AD_TEST)
 
     def manual_delivery_text(self, m: Message):
-                   
+
         self.clear_state(m.chat.id, m.from_user.id, True)
         lot_name = m.text.strip()
         key = "".join(random.sample(string.ascii_letters + string.digits, 50))
@@ -315,12 +315,12 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("test_ad_key_created", utils.escape(lot_name), key))
 
     def act_ban(self, m: Message):
-                   
+
         result = self.bot.send_message(m.chat.id, _("act_blacklist"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.BAN)
 
     def ban(self, m: Message):
-                   
+
         self.clear_state(m.chat.id, m.from_user.id, True)
         nickname = m.text.strip()
 
@@ -334,12 +334,12 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("user_blacklisted", nickname))
 
     def act_unban(self, m: Message):
-                   
+
         result = self.bot.send_message(m.chat.id, _("act_unban"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.UNBAN)
 
     def unban(self, m: Message):
-                   
+
         self.clear_state(m.chat.id, m.from_user.id, True)
         nickname = m.text.strip()
         if nickname not in self.cardinal.blacklist:
@@ -351,7 +351,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("user_unbanned", nickname))
 
     def send_ban_list(self, m: Message):
-                   
+
         if not self.cardinal.blacklist:
             self.bot.send_message(m.chat.id, _("blacklist_empty"))
             return
@@ -359,7 +359,7 @@ class TGBot:
         self.bot.send_message(m.chat.id, blacklist)
 
     def act_edit_watermark(self, m: Message):
-                   
+
         watermark = self.cardinal.MAIN_CFG["Other"]["watermark"]
         watermark = f"\n<code>{utils.escape(watermark)}</code>" if watermark else ""
         result = self.bot.send_message(m.chat.id, _("act_edit_watermark").format(watermark),
@@ -384,7 +384,7 @@ class TGBot:
             self.bot.reply_to(m, preview + _("watermark_deleted"))
 
     def send_logs(self, m: Message):
-                   
+
         if not os.path.exists("logs/log.log"):
             self.bot.send_message(m.chat.id, _("logfile_not_found"))
         else:
@@ -398,23 +398,23 @@ class TGBot:
                     if "TRACEBACK" in file_content:
                         file_content, right = file_content.rsplit("TRACEBACK", 1)
                         file_content = "\n[".join(file_content.rsplit("\n[", 2)[-2:])
-                        right = right.split("\n[", 1)[0]          
+                        right = right.split("\n[", 1)[0]
                         result = f"<b>Текст последней ошибки:</b>\n\n[{utils.escape(file_content)}TRACEBACK{utils.escape(right)}"
                         while result:
                             text, result = result[:4096], result[4096:]
                             self.bot.send_message(m.chat.id, text)
                             time.sleep(0.5)
                     else:
-                        self.bot.send_message(m.chat.id, "<b>Ошибок в последнем лог-файле не обнаружено.</b>")          
+                        self.bot.send_message(m.chat.id, "<b>Ошибок в последнем лог-файле не обнаружено.</b>")
             except:
                 logger.debug("TRACEBACK", exc_info=True)
                 self.bot.send_message(m.chat.id, _("logfile_error"))
 
     def del_logs(self, m: Message):
-                   
+
         logger.info(
             f"[IMPORTANT] Удаляю логи по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
-        deleted = 0          
+        deleted = 0
         for file in os.listdir("logs"):
             if not file.endswith(".log"):
                 try:
@@ -425,30 +425,30 @@ class TGBot:
         self.bot.send_message(m.chat.id, _("logfile_deleted").format(deleted))
 
     def about(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, _("about", self.cardinal.VERSION))
 
     def send_activity(self, m: Message):
         from Utils import activity_tracker
-        
+
         uptime_seconds = activity_tracker.get_instance_uptime()
         uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
-        
+
         stats = activity_tracker.get_project_stats()
-        
+
         if stats.get("error") and stats.get("stars") is None:
             self.bot.send_message(m.chat.id, _("activity_error"))
             return
-        
+
         stars = stats.get("stars", "—")
         forks = stats.get("forks", "—")
         watchers = stats.get("watchers", "—")
-        
+
         kb = K()
         kb.add(B(_("gl_refresh"), callback_data=CBT.ACTIVITY_REFRESH))
-        
+
         self.bot.send_message(
-            m.chat.id, 
+            m.chat.id,
             _("activity_info", uptime_str, stars, forks, watchers),
             disable_web_page_preview=True,
             reply_markup=kb
@@ -456,19 +456,19 @@ class TGBot:
 
     def refresh_activity(self, c: CallbackQuery):
         from Utils import activity_tracker
-        
+
         uptime_seconds = activity_tracker.get_instance_uptime()
         uptime_str = cardinal_tools.time_to_str(uptime_seconds) if uptime_seconds else "0"
-        
+
         stats = activity_tracker.get_project_stats()
-        
+
         stars = stats.get("stars", "—")
         forks = stats.get("forks", "—")
         watchers = stats.get("watchers", "—")
-        
+
         kb = K()
         kb.add(B(_("gl_refresh"), callback_data=CBT.ACTIVITY_REFRESH))
-        
+
         self.bot.edit_message_text(
             _("activity_info", uptime_str, stars, forks, watchers),
             c.message.chat.id,
@@ -489,7 +489,7 @@ class TGBot:
             }
             self.bot.send_message(m.chat.id, _(errors[releases][0], *errors[releases][1]))
             return
-                                                               
+
         if releases:
             latest_release = releases[0]
             skipped = updater.get_skipped_count(releases)
@@ -504,13 +504,13 @@ class TGBot:
     def get_backup(self, m: Message):
         logger.info(
             f"[IMPORTANT] Получаю бэкап по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
-        if os.path.exists("backup.zip"):          
+        if os.path.exists("backup.zip"):
             file_path = "backup.zip"
             modification_time = os.path.getmtime(file_path)
             formatted_time = time.strftime('%d.%m.%Y %H:%M:%S', time.localtime(modification_time))
             with open(file_path, 'rb') as file:
                 self.bot.send_document(
-                    chat_id=m.chat.id, 
+                    chat_id=m.chat.id,
                     document=file,
                     visible_file_name='backup.zip',
                     caption=f'{_("update_backup")}\n\n{formatted_time}'
@@ -541,7 +541,7 @@ class TGBot:
             return
 
         if not releases:
-                                            
+
             self.bot.send_message(m.chat.id, _("update_lasted", self.cardinal.VERSION))
             return
 
@@ -550,7 +550,7 @@ class TGBot:
         if updater.download_zip(release.sources_link) or (release_folder := updater.extract_update_archive()) == 1:
             self.bot.send_message(m.chat.id, _("update_download_error"))
             return
-                                                        
+
         self.bot.send_message(m.chat.id, _("update_downloaded").format(release.name, str(skipped)))
 
         if updater.install_release(release_folder):
@@ -558,20 +558,20 @@ class TGBot:
             return
 
         if getattr(sys, 'frozen', False):
-                                                        
+
             self.bot.send_message(m.chat.id, _(("update_done_exe")))
         else:
-                                                                      
+
             self.bot.send_message(m.chat.id, _(("update_done")))
             logger.info("Обновление установлено. Выполняю автоматический рестарт...")
-            time.sleep(2)                                  
+            time.sleep(2)
             cardinal_tools.restart_program()
 
     def send_update_confirmation(self, release):
-                   
+
         keyboard = K().row(B("✅ Да", callback_data="update:yes"), B("❌ Нет", callback_data="update:no"))
         text = _("update_available", release.name, release.description) + "\n\n<b>Обновить автоматически?</b>"
-        
+
         if not self.authorized_users:
             return
 
@@ -582,7 +582,7 @@ class TGBot:
                 pass
 
     def confirm_update_handler(self, c: CallbackQuery):
-                   
+
         answer = c.data.split(":")[1]
         try:
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id, reply_markup=None)
@@ -597,7 +597,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def send_system_info(self, m: Message):
-                   
+
         current_time = int(time.time())
         uptime = current_time - self.cardinal.start_time
 
@@ -610,21 +610,21 @@ class TGBot:
                                            cardinal_tools.time_to_str(uptime), m.chat.id))
 
     def restart_cardinal(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, _("restarting"))
         cardinal_tools.restart_program()
 
     def ask_power_off(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, _("power_off_0"), reply_markup=kb.power_off(self.cardinal.instance_id, 0))
 
     def cancel_power_off(self, c: CallbackQuery):
-                   
+
         self.bot.edit_message_text(_("power_off_cancelled"), c.message.chat.id, c.message.id)
         self.bot.answer_callback_query(c.id)
 
     def power_off(self, c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         state = int(split[1])
         instance_id = int(split[2])
@@ -645,7 +645,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def act_send_funpay_message(self, c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         node_id = int(split[1])
         try:
@@ -658,7 +658,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def send_funpay_message(self, message: Message):
-                   
+
         data = self.get_state(message.chat.id, message.from_user.id)["data"]
         node_id, username = data["node_id"], data["username"]
         self.clear_state(message.chat.id, message.from_user.id, True)
@@ -672,13 +672,13 @@ class TGBot:
                               reply_markup=kb.reply(node_id, username, again=True, extend=True))
 
     def act_upload_image(self, m: Message):
-                   
+
         cbt = CBT.UPLOAD_CHAT_IMAGE if m.text.startswith("/upload_chat_img") else CBT.UPLOAD_OFFER_IMAGE
         result = self.bot.send_message(m.chat.id, _("send_img"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, cbt)
 
     def act_upload_backup(self, m: Message):
-                   
+
         result = self.bot.send_message(m.chat.id, _("send_backup"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.UPLOAD_BACKUP)
 
@@ -820,7 +820,7 @@ class TGBot:
     def send_all_reminders(self, c: CallbackQuery):
         from Utils import cardinal_tools
         from FunPayAPI import types
-        
+
         try:
             cursor, orders, locale, subcats = self.cardinal.account.get_sales(state="paid", include_closed=False, include_refunded=False)
             paid_orders = [o for o in orders if o.status == types.OrderStatuses.PAID]
@@ -828,38 +828,38 @@ class TGBot:
             logger.warning(f"Ошибка получения заказов: {e}")
             self.bot.answer_callback_query(c.id, _("gl_error"), show_alert=True)
             return
-        
+
         if not paid_orders:
             self.bot.answer_callback_query(c.id, _("or_send_all_no_orders"), show_alert=True)
             return
-        
+
         self.bot.answer_callback_query(c.id)
-        
+
         template = self.cardinal.MAIN_CFG["OrderReminders"]["template"]
         if not template:
             template = "Привет! Напоминаю о заказе #$order_id. Подтверди, пожалуйста: $order_link"
-        
+
         progress_msg = self.bot.send_message(c.message.chat.id, _("or_send_all_started"))
-        
+
         sent_count = 0
         error_count = 0
         total = len(paid_orders)
-        
+
         for order in paid_orders:
             try:
                 formatted_text = cardinal_tools.format_order_text(template, order)
                 chat = self.cardinal.account.get_chat_by_name(order.buyer_username, True)
                 result = self.cardinal.send_message(chat.id, formatted_text, order.buyer_username)
-                
+
                 if result:
                     sent_count += 1
                 else:
                     error_count += 1
-                    
+
             except Exception as e:
                 logger.warning(f"Ошибка при отправке напоминания для заказа {order.id}: {e}")
                 error_count += 1
-            
+
             if (sent_count + error_count) % 3 == 0:
                 try:
                     self.bot.edit_message_text(
@@ -869,9 +869,9 @@ class TGBot:
                     )
                 except:
                     pass
-            
+
             time.sleep(1)
-        
+
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.edit_message_text(
             _("or_send_all_done", sent_count, error_count),
@@ -903,7 +903,7 @@ class TGBot:
         except ValueError:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
-        
+
         result = self.bot.send_message(m.chat.id, _("v_edit_or_cat_name"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, "or_cat_set_name", {"cat_id": cat_id})
 
@@ -911,13 +911,13 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         name = m.text.strip()
         default_timeout = int(self.cardinal.MAIN_CFG["OrderReminders"]["timeout"])
         default_interval = int(self.cardinal.MAIN_CFG["OrderReminders"]["interval"])
         default_repeat = int(self.cardinal.MAIN_CFG["OrderReminders"]["repeatCount"])
         default_template = self.cardinal.MAIN_CFG["OrderReminders"]["template"]
-        
+
         self.cardinal.category_reminders[cat_id] = {
             "name": name,
             "enabled": True,
@@ -927,7 +927,7 @@ class TGBot:
             "template": default_template
         }
         self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_added", name), reply_markup=keyboard)
 
@@ -936,17 +936,17 @@ class TGBot:
         if cat_id not in self.cardinal.category_reminders:
             self.bot.answer_callback_query(c.id, _("or_cat_not_found"), show_alert=True)
             return
-        
+
         settings = self.cardinal.category_reminders[cat_id]
         name = settings.get("name", f"ID {cat_id}")
         timeout = settings.get("timeout", 60)
         repeat_count = settings.get("repeat_count", 3)
         interval = settings.get("interval", 30)
         template = settings.get("template", "—")
-        
+
         text = _("desc_or_category_edit", name, cat_id, timeout, repeat_count, interval, template[:200])
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
-        
+
         self.bot.edit_message_text(
             text,
             c.message.chat.id,
@@ -960,11 +960,11 @@ class TGBot:
         if cat_id not in self.cardinal.category_reminders:
             self.bot.answer_callback_query(c.id, _("or_cat_not_found"), show_alert=True)
             return
-        
+
         current = self.cardinal.category_reminders[cat_id].get("enabled", True)
         self.cardinal.category_reminders[cat_id]["enabled"] = not current
         self.cardinal.save_category_reminders()
-        
+
         self.show_category_reminder_edit(c)
 
     def delete_category_reminder(self, c: CallbackQuery):
@@ -972,7 +972,7 @@ class TGBot:
         if cat_id in self.cardinal.category_reminders:
             del self.cardinal.category_reminders[cat_id]
             self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminders_list(self.cardinal)
         self.bot.edit_message_text(
             _("or_cat_deleted") + "\n\n" + _("desc_or_category_list"),
@@ -993,7 +993,7 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         try:
             timeout = int(m.text)
             if timeout <= 0:
@@ -1001,11 +1001,11 @@ class TGBot:
         except ValueError:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
-        
+
         if cat_id in self.cardinal.category_reminders:
             self.cardinal.category_reminders[cat_id]["timeout"] = timeout
             self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_timeout_set", timeout), reply_markup=keyboard)
 
@@ -1022,11 +1022,11 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         if cat_id in self.cardinal.category_reminders:
             self.cardinal.category_reminders[cat_id]["template"] = m.text
             self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_template_set"), reply_markup=keyboard)
 
@@ -1041,7 +1041,7 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         try:
             repeat_count = int(m.text)
             if repeat_count < 0:
@@ -1049,11 +1049,11 @@ class TGBot:
         except ValueError:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
-        
+
         if cat_id in self.cardinal.category_reminders:
             self.cardinal.category_reminders[cat_id]["repeat_count"] = repeat_count
             self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_repeat_set", repeat_count), reply_markup=keyboard)
 
@@ -1068,7 +1068,7 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         try:
             interval = int(m.text)
             if interval <= 0:
@@ -1076,11 +1076,11 @@ class TGBot:
         except ValueError:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
-        
+
         if cat_id in self.cardinal.category_reminders:
             self.cardinal.category_reminders[cat_id]["interval"] = interval
             self.cardinal.save_category_reminders()
-        
+
         keyboard = kb.category_reminder_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("or_cat_interval_set", interval), reply_markup=keyboard)
 
@@ -1107,7 +1107,7 @@ class TGBot:
         except ValueError:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
-        
+
         result = self.bot.send_message(m.chat.id, _("v_edit_gr_cat_name"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, "gr_cat_set_name", {"cat_id": cat_id})
 
@@ -1115,17 +1115,17 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         name = m.text.strip()
         default_template = self.cardinal.MAIN_CFG["Greetings"]["greetingsText"]
-        
+
         self.cardinal.category_greetings[cat_id] = {
             "name": name,
             "enabled": True,
             "template": default_template
         }
         self.cardinal.save_category_greetings()
-        
+
         keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("gr_cat_added", name), reply_markup=keyboard)
 
@@ -1134,15 +1134,15 @@ class TGBot:
         if cat_id not in self.cardinal.category_greetings:
             self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
             return
-        
+
         settings = self.cardinal.category_greetings[cat_id]
         name = settings.get("name", f"ID {cat_id}")
         template = settings.get("template", "—")
         enabled = "✅" if settings.get("enabled", True) else "❌"
-        
+
         text = _("desc_gr_category_edit", name, cat_id, enabled, template[:300])
         keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
-        
+
         self.bot.edit_message_text(
             text,
             c.message.chat.id,
@@ -1156,11 +1156,11 @@ class TGBot:
         if cat_id not in self.cardinal.category_greetings:
             self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
             return
-        
+
         current = self.cardinal.category_greetings[cat_id].get("enabled", True)
         self.cardinal.category_greetings[cat_id]["enabled"] = not current
         self.cardinal.save_category_greetings()
-        
+
         self.show_category_greeting_edit(c)
 
     def delete_category_greeting(self, c: CallbackQuery):
@@ -1168,7 +1168,7 @@ class TGBot:
         if cat_id in self.cardinal.category_greetings:
             del self.cardinal.category_greetings[cat_id]
             self.cardinal.save_category_greetings()
-        
+
         keyboard = kb.category_greetings_list(self.cardinal)
         self.bot.edit_message_text(
             _("gr_cat_deleted") + "\n\n" + _("desc_gr_category_list"),
@@ -1191,11 +1191,11 @@ class TGBot:
         data = self.get_state(m.chat.id, m.from_user.id)["data"]
         cat_id = data["cat_id"]
         self.clear_state(m.chat.id, m.from_user.id, True)
-        
+
         if cat_id in self.cardinal.category_greetings:
             self.cardinal.category_greetings[cat_id]["template"] = m.text
             self.cardinal.save_category_greetings()
-        
+
         keyboard = kb.category_greeting_edit(self.cardinal, cat_id)
         self.bot.reply_to(m, _("gr_cat_template_set"), reply_markup=keyboard)
 
@@ -1204,7 +1204,7 @@ class TGBot:
         if cat_id not in self.cardinal.category_greetings:
             self.bot.answer_callback_query(c.id, _("gr_cat_not_found"), show_alert=True)
             return
-        
+
         default_template = self.cardinal.MAIN_CFG["Greetings"]["greetingsText"]
         self.bot.send_message(
             c.message.chat.id,
@@ -1294,17 +1294,17 @@ class TGBot:
 
     def send_all_review_reminders(self, c: CallbackQuery):
         from FunPayAPI import types
-        
+
         self.bot.answer_callback_query(c.id)
         progress_msg = self.bot.send_message(c.message.chat.id, "🔍 Сканирую все закрытые заказы...")
-        
+
         try:
             all_closed_orders = []
             next_order_id, orders, locale, subcats = self.cardinal.account.get_sales(
                 state="closed", include_paid=False, include_refunded=False
             )
             all_closed_orders.extend([o for o in orders if o.status == types.OrderStatuses.CLOSED])
-            
+
             request_count = 1
             while next_order_id is not None:
                 for attempts in range(3, 0, -1):
@@ -1320,7 +1320,7 @@ class TGBot:
                         logger.debug(f"Не удалось получить заказы (#{next_order_id}). Попыток: {attempts}")
                         if attempts == 1:
                             next_order_id = None
-                
+
                 request_count += 1
                 if request_count % 5 == 0:
                     try:
@@ -1332,7 +1332,7 @@ class TGBot:
                         )
                     except:
                         pass
-                        
+
         except Exception as e:
             logger.warning(f"Ошибка получения заказов: {e}")
             keyboard = kb.review_reminders_settings(self.cardinal)
@@ -1343,7 +1343,7 @@ class TGBot:
                 reply_markup=keyboard
             )
             return
-        
+
         if not all_closed_orders:
             keyboard = kb.review_reminders_settings(self.cardinal)
             self.bot.edit_message_text(
@@ -1353,28 +1353,28 @@ class TGBot:
                 reply_markup=keyboard
             )
             return
-        
+
         self.bot.edit_message_text(
             f"✅ Найдено {len(all_closed_orders)} закрытых заказов\n🔎 Проверяю отзывы...",
             progress_msg.chat.id,
             progress_msg.id
         )
-        
+
         unique_buyers = {}
         sorted_orders = sorted(all_closed_orders, key=lambda o: o.date, reverse=True)
         for order in sorted_orders:
             buyer = order.buyer_username
             if buyer not in unique_buyers:
                 unique_buyers[buyer] = order
-        
+
         buyers_already_sent = getattr(self.cardinal, '_review_reminder_sent_buyers', set())
         self.cardinal._review_reminder_sent_buyers = buyers_already_sent
-        
+
         to_check = [(buyer, order) for buyer, order in unique_buyers.items() if buyer not in buyers_already_sent]
-        
+
         to_send = []
         skipped_count = 0
-        
+
         for i, (buyer, order) in enumerate(to_check):
             try:
                 if self.cardinal.buyer_has_any_review(buyer):
@@ -1383,7 +1383,7 @@ class TGBot:
                     to_send.append((buyer, order))
             except:
                 to_send.append((buyer, order))
-            
+
             if (i + 1) % 10 == 0:
                 try:
                     self.bot.edit_message_text(
@@ -1393,7 +1393,7 @@ class TGBot:
                     )
                 except:
                     pass
-        
+
         if not to_send:
             keyboard = kb.review_reminders_settings(self.cardinal)
             self.bot.edit_message_text(
@@ -1403,35 +1403,35 @@ class TGBot:
                 reply_markup=keyboard
             )
             return
-        
+
         template = self.cardinal.MAIN_CFG["ReviewReminders"]["template"]
         if not template:
             template = "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз"
-        
+
         total = len(to_send)
         sent_count = 0
         error_count = 0
-        
+
         self.bot.edit_message_text(
             f"📤 Начинаю рассылку: {total} покупателей\n⏭️ Уже с отзывами: {skipped_count}",
             progress_msg.chat.id,
             progress_msg.id
         )
-        
+
         for i, (buyer, order) in enumerate(to_send):
             try:
                 order_link = f"https://funpay.com/orders/{order.id}/"
                 formatted_text = template.replace("$order_link", order_link).replace("$order_id", order.id).replace("$username", buyer)
-                
+
                 chat = self.cardinal.account.get_chat_by_name(buyer, True)
                 result = self.cardinal.send_message(chat.id, formatted_text, buyer)
-                
+
                 if result:
                     sent_count += 1
                     buyers_already_sent.add(buyer)
                 else:
                     error_count += 1
-                    
+
             except Exception as e:
                 err_str = str(e).lower()
                 if "слишком часто" in err_str or "too often" in err_str:
@@ -1440,11 +1440,11 @@ class TGBot:
                 else:
                     logger.warning(f"Ошибка при отправке напоминания об отзыве для заказа {order.id}: {e}")
                 error_count += 1
-            
+
             remaining = total - (i + 1)
             remaining_seconds = remaining * 5
             remaining_time = f"{remaining_seconds // 60} мин." if remaining_seconds >= 60 else f"{remaining_seconds} сек."
-            
+
             try:
                 progress_text = f"📤 Отправлено: {sent_count}/{total}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}\n\n⏳ Осталось: ~{remaining_time}"
                 self.bot.edit_message_text(
@@ -1454,10 +1454,10 @@ class TGBot:
                 )
             except:
                 pass
-            
+
             if remaining > 0:
                 time.sleep(5)
-        
+
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.edit_message_text(
             f"✅ Готово!\n\n📨 Отправлено: {sent_count}\n⏭️ Уже с отзывами: {skipped_count}\n❌ Ошибок: {error_count}",
@@ -1487,7 +1487,7 @@ class TGBot:
         self.bot.reply_to(m, _("review_reply_changed", '⭐' * stars), reply_markup=keyboard)
 
     def open_reply_menu(self, c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         node_id, username, again = int(split[1]), split[2], int(split[3])
         extend = True if len(split) > 4 and int(split[4]) else False
@@ -1495,7 +1495,7 @@ class TGBot:
                                            reply_markup=kb.reply(node_id, username, bool(again), extend))
 
     def extend_new_message_notification(self, c: CallbackQuery):
-                   
+
         chat_id, username = c.data.split(":")[1:]
         try:
             chat = self.cardinal.account.get_chat(int(chat_id))
@@ -1547,7 +1547,7 @@ class TGBot:
                                    reply_markup=kb.reply(int(chat_id), username, False, False))
 
     def ask_confirm_refund(self, call: CallbackQuery):
-                   
+
         split = call.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         keyboard = kb.new_order(order_id, username, node_id, confirmation=True)
@@ -1555,7 +1555,7 @@ class TGBot:
         self.bot.answer_callback_query(call.id)
 
     def cancel_refund(self, call: CallbackQuery):
-                   
+
         split = call.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         keyboard = kb.new_order(order_id, username, node_id)
@@ -1563,7 +1563,7 @@ class TGBot:
         self.bot.answer_callback_query(call.id)
 
     def refund(self, c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         order_id, node_id, username = split[1], int(split[2]), split[3]
         new_msg = None
@@ -1604,7 +1604,7 @@ class TGBot:
                                            reply_markup=kb.new_order(order_id, username, node_id, no_refund=no_refund))
 
     def open_cp(self, c: CallbackQuery):
-                   
+
         self.bot.edit_message_text(_("desc_main"), c.message.chat.id, c.message.id,
                                    reply_markup=skb.SETTINGS_SECTIONS())
         self.bot.answer_callback_query(c.id)
@@ -1620,13 +1620,13 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def switch_param(self, c: CallbackQuery):
-                   
+
         split = c.data.split(":")
         section, option = split[1], split[2]
         if section == "FunPay" and option == "oldMsgGetMode":
             self.cardinal.switch_msg_get_mode()
         elif section == "Proxy" and option == "enable":
-                                                     
+
             current_state = self.cardinal.MAIN_CFG[section].getboolean(option)
             new_state = not current_state
             self.cardinal.toggle_proxy(new_state)
@@ -1643,13 +1643,13 @@ class TGBot:
             "OrderReminders": kb.order_reminders_settings,
             "ReviewReminders": kb.review_reminders_settings,
             "ReviewReply": kb.review_reply_settings,
-            "Proxy": kb.proxy                                                    
+            "Proxy": kb.proxy
         }
         if section == "Telegram":
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=kb.authorized_users(self.cardinal, offset=int(split[3])))
         elif section == "Proxy":
-                                                                      
+
             offset = int(split[3]) if len(split) > 3 else 0
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=kb.proxy(self.cardinal, offset, {}))
@@ -1674,7 +1674,7 @@ class TGBot:
         self.bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
     def open_settings_section(self, c: CallbackQuery):
-                   
+
         section = c.data.split(":")[1]
         sections = {
             "lang": (_("desc_lang"), kb.language_settings, [self.cardinal]),
@@ -1698,17 +1698,17 @@ class TGBot:
         self.bot.answer_callback_query(c.id)
 
     def cancel_action(self, call: CallbackQuery):
-                   
+
         result = self.clear_state(call.message.chat.id, call.from_user.id, True)
         if result is None:
             self.bot.answer_callback_query(call.id)
 
     def param_disabled(self, c: CallbackQuery):
-                   
+
         self.bot.answer_callback_query(c.id, _("param_disabled"), show_alert=True)
 
     def send_announcements_kb(self, m: Message):
-                   
+
         self.bot.send_message(m.chat.id, _("desc_an"), reply_markup=kb.announcements_settings(self.cardinal, m.chat.id))
 
     def send_review_reply_text(self, c: CallbackQuery):
@@ -1750,7 +1750,7 @@ class TGBot:
         self.open_settings_section(c)
 
     def __register_handlers(self):
-                   
+
         self.mdw_handler(self.setup_chat_notifications, update_types=['message'])
         self.msg_handler(self.reg_admin, func=lambda msg: msg.from_user.id not in self.authorized_users,
                          content_types=['text', 'document', 'photo', 'sticker'])
@@ -1893,7 +1893,7 @@ class TGBot:
     def send_notification(self, text: str | None, keyboard: K | None = None,
                           notification_type: str = utils.NotificationTypes.other, photo: bytes | None = None,
                           pin: bool = False):
-                   
+
         kwargs = {}
         if keyboard is not None:
             kwargs["reply_markup"] = keyboard
@@ -1927,24 +1927,24 @@ class TGBot:
                 utils.save_notification_settings(self.notification_settings)
 
     def add_command_to_menu(self, command: str, help_text: str) -> None:
-                   
+
         self.commands[command] = help_text
 
     def setup_commands(self):
-                   
+
         if hasattr(self.cardinal, 'builtin_tg_commands'):
             for module_name, cmds in self.cardinal.builtin_tg_commands.items():
                 for cmd, desc, is_admin in cmds:
                     if cmd not in self.commands:
                         self.commands[cmd] = desc
-        
+
         logger.info(f"Регистрация {len(self.commands)} команд в Telegram...")
         for lang in (None, *localizer.languages.keys()):
             commands = [BotCommand(f"/{i}", _(self.commands[i], language=lang)) for i in self.commands]
             self.bot.set_my_commands(commands, language_code=lang)
 
     def edit_bot(self):
-                   
+
         name = self.bot.get_me().full_name
         limit = 64
         add_to_name = ["FunPay Bot | Бот ФанПей", "FunPay Bot", "FunPayBot", "FunPay"]
@@ -1974,7 +1974,7 @@ class TGBot:
         logger.info(_("log_tg_initialized"))
 
     def run(self):
-                   
+
         self.send_notification(_("bot_started"), notification_type=utils.NotificationTypes.bot_start)
         k_err = 0
         while True:

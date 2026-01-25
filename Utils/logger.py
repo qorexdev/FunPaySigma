@@ -20,17 +20,17 @@ FILE_TIME_FORMAT = "%d.%m.%y %H:%M:%S"
 CLEAR_RE = re.compile(r"(\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]))|(\n)|(\r)")
 
 def anonymize_text(text: str) -> str:
-           
+
     username_re = re.compile(r'@([a-zA-Z0-9_]+)')
     def replace_username(match):
         username = match.group(1)
-                           
+
         hashed = hashlib.sha256(username.encode()).hexdigest()[:8]
         return f'@{hashed}'
     return username_re.sub(replace_username, text)
 
 def add_colors(text: str) -> str:
-           
+
     colors = {
         "$YELLOW": Fore.YELLOW,
         "$CYAN": Fore.CYAN,
@@ -54,7 +54,7 @@ def add_colors(text: str) -> str:
     return text
 
 class CLILoggerFormatter(logging.Formatter):
-           
+
     def __init__(self):
         super(CLILoggerFormatter, self).__init__()
 
@@ -68,7 +68,7 @@ class CLILoggerFormatter(logging.Formatter):
         return formatter.format(record)
 
 class FileLoggerFormatter(logging.Formatter):
-           
+
     def __init__(self):
         super(FileLoggerFormatter, self).__init__()
 
@@ -88,8 +88,8 @@ LOGGER_CONFIG = {
             "level": "DEBUG",
             "formatter": "file_formatter",
             "filename": "logs/log.log",
-            "maxBytes": 5 * 1024 * 1024,                                
-            "backupCount": 5,                                   
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
             "encoding": "utf-8"
         },
 

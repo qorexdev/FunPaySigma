@@ -10,15 +10,15 @@ GITHUB_API = "https://api.github.com/repos/qorexdev/FunPaySigma"
 _start_time = int(time.time())
 _cached_stats = None
 _last_cache_time = 0
-CACHE_TTL = 300             
+CACHE_TTL = 300
 
 def get_project_stats() -> dict:
     global _cached_stats, _last_cache_time
-    
+
     current_time = time.time()
     if _cached_stats and (current_time - _last_cache_time < CACHE_TTL):
         return _cached_stats
-    
+
     result = {
         "stars": None,
         "forks": None,
@@ -26,7 +26,7 @@ def get_project_stats() -> dict:
         "open_issues": None,
         "error": None
     }
-    
+
     try:
         repo_response = requests.get(
             GITHUB_API,
@@ -42,7 +42,7 @@ def get_project_stats() -> dict:
             result["forks"] = data.get("forks_count", 0)
             result["watchers"] = data.get("subscribers_count", 0)
             result["open_issues"] = data.get("open_issues_count", 0)
-            
+
             _cached_stats = result
             _last_cache_time = current_time
         elif repo_response.status_code == 403:
@@ -53,14 +53,14 @@ def get_project_stats() -> dict:
         result["error"] = str(e)
         if _cached_stats:
             return _cached_stats
-    
+
     return result
 
 def get_instance_uptime() -> int:
     return int(time.time()) - _start_time
 
 def start_tracking(account_id: int, username: str) -> None:
-                                                         
+
     pass
 
 def stop_tracking() -> None:

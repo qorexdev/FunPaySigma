@@ -36,33 +36,33 @@ from threading import Thread
 import gc
 import sys
 
-MAX_OLD_USERS_CACHE = 1000                                                
-MAX_EXCHANGE_RATES_CACHE = 50                                        
+MAX_OLD_USERS_CACHE = 1000
+MAX_EXCHANGE_RATES_CACHE = 50
 MAX_PENDING_ORDERS = 100
 MAX_CONFIRMED_ORDERS = 200
-GC_COLLECT_INTERVAL = 60                                    
+GC_COLLECT_INTERVAL = 60
 
-gc.set_threshold(700, 10, 5)                                   
+gc.set_threshold(700, 10, 5)
 
 from builtin_features import adv_profile_stat, review_chat_reply, sras_info, chat_sync
-                                                                                                  
+
 logger = logging.getLogger("FPS")
 localizer = Localizer()
 _ = localizer.translate
 
 def get_cardinal() -> None | Cardinal:
-           
+
     if hasattr(Cardinal, "instance"):
         return getattr(Cardinal, "instance")
 
 class PluginData:
-           
-    __slots__ = ('name', 'version', 'description', 'credits', 'uuid', 'path', 
+
+    __slots__ = ('name', 'version', 'description', 'credits', 'uuid', 'path',
                  'plugin', 'settings_page', 'commands', 'delete_handler', 'enabled')
 
     def __init__(self, name: str, version: str, desc: str, credentials: str, uuid: str,
                  path: str, plugin: ModuleType, settings_page: bool, delete_handler: Callable | None, enabled: bool):
-                   
+
         self.name = name
         self.version = version
         self.description = desc
@@ -89,31 +89,31 @@ class Cardinal(object):
                  version: str):
         self.VERSION = version
         self.instance_id = random.randint(0, 999999999)
-        self.delivery_tests = {}                                                                      
+        self.delivery_tests = {}
 
         self.MAIN_CFG = main_config
         self.AD_CFG = auto_delivery_config
         self.AR_CFG = auto_response_config
         self.RAW_AR_CFG = raw_auto_response_config
-                
+
         self.proxy = {}
-        self.proxy_dict = cardinal_tools.load_proxy_dict()                                                         
+        self.proxy_dict = cardinal_tools.load_proxy_dict()
         if self.MAIN_CFG["Proxy"].getboolean("enable"):
-                                               
+
             if self.MAIN_CFG["Proxy"]["ip"] and self.MAIN_CFG["Proxy"]["port"]:
                 logger.info(_("crd_proxy_detected"))
 
                 ip, port = self.MAIN_CFG["Proxy"]["ip"], self.MAIN_CFG["Proxy"]["port"]
                 login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
                 proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
-                
+
                 proxy_type = self.MAIN_CFG["Proxy"].get("type", "HTTP")
                 if proxy_type == "SOCKS5":
                     self.proxy = {
                         "http": f"socks5://{proxy_str}",
                         "https": f"socks5://{proxy_str}"
                     }
-                else:        
+                else:
                     self.proxy = {
                         "http": f"http://{proxy_str}",
                         "https": f"http://{proxy_str}"
@@ -142,29 +142,29 @@ class Cardinal(object):
         self.start_time = int(time.time())
 
         self.balance: FunPayAPI.types.Balance | None = None
-        self.raise_time = {}                                                                      
-        self.raised_time = {}                                                                            
-        self.__exchange_rates = {}                                                             
-        self.profile: FunPayAPI.types.UserProfile | None = None                                                    
-        self.tg_profile: FunPayAPI.types.UserProfile | None = None                                    
-        self.last_tg_profile_update = datetime.datetime.now()                                                
-        self.all_lots: list = []                                                              
-        self.last_telegram_lots_update = datetime.datetime.now()                                                  
-        self.curr_profile: FunPayAPI.types.UserProfile | None = None                                                
-                                                                                
+        self.raise_time = {}
+        self.raised_time = {}
+        self.__exchange_rates = {}
+        self.profile: FunPayAPI.types.UserProfile | None = None
+        self.tg_profile: FunPayAPI.types.UserProfile | None = None
+        self.last_tg_profile_update = datetime.datetime.now()
+        self.all_lots: list = []
+        self.last_telegram_lots_update = datetime.datetime.now()
+        self.curr_profile: FunPayAPI.types.UserProfile | None = None
+
         self.curr_profile_last_tag: str | None = None
-                                                                                                    
+
         self.profile_last_tag: str | None = None
-                                                                             
+
         self.last_state_change_tag: str | None = None
-                                                                                               
+
         self.last_greeting_chat_id_threshold_change_tag: str | None = None
-        self.greeting_threshold_chat_ids = set()                                                                         
-        self.blacklist = cardinal_tools.load_blacklist()       
+        self.greeting_threshold_chat_ids = set()
+        self.blacklist = cardinal_tools.load_blacklist()
         self.old_users = cardinal_tools.load_old_users(
-            float(self.MAIN_CFG["Greetings"]["greetingsCooldown"]))                                
+            float(self.MAIN_CFG["Greetings"]["greetingsCooldown"]))
         self.greeting_chat_id_threshold = max(self.old_users.keys(), default=0)
-                                                                          
+
         self._cleanup_old_users_cache()
 
         self._gc_counter = 0
@@ -230,77 +230,78 @@ class Cardinal(object):
 
         self.plugins: dict[str, PluginData] = {}
         self.disabled_plugins = cardinal_tools.load_disabled_plugins()
-        self.builtin_tg_commands = {}                                                                        
+        self.pinned_plugins = cardinal_tools.load_pinned_plugins()
+        self.builtin_tg_commands = {}
 
     def _cleanup_old_users_cache(self) -> None:
-                   
+
         if len(self.old_users) > MAX_OLD_USERS_CACHE:
-                                                           
+
             sorted_users = sorted(self.old_users.items(), key=lambda x: x[1], reverse=True)
             self.old_users = dict(sorted_users[:MAX_OLD_USERS_CACHE])
             cardinal_tools.cache_old_users(self.old_users)
             logger.debug(f"Очищен кэш old_users: оставлено {len(self.old_users)} записей")
 
     def _cleanup_exchange_rates_cache(self) -> None:
-                   
+
         if len(self.__exchange_rates) > MAX_EXCHANGE_RATES_CACHE:
-                                                                      
+
             sorted_rates = sorted(self.__exchange_rates.items(), key=lambda x: x[1][1], reverse=True)
             self.__exchange_rates = dict(sorted_rates[:MAX_EXCHANGE_RATES_CACHE])
             logger.debug(f"Очищен кэш exchange_rates: оставлено {len(self.__exchange_rates)} записей")
 
     def _cleanup_pending_orders(self) -> None:
-                   
+
         if len(self.pending_orders) > MAX_PENDING_ORDERS:
-                                                            
-            sorted_orders = sorted(self.pending_orders.items(), 
+
+            sorted_orders = sorted(self.pending_orders.items(),
                                    key=lambda x: x[1].get('created_time', 0), reverse=True)
             self.pending_orders = dict(sorted_orders[:MAX_PENDING_ORDERS])
             self.save_pending_orders()
             logger.debug(f"Очищены pending_orders: оставлено {len(self.pending_orders)} записей")
 
     def collect_garbage(self, force: bool = False) -> int:
-                   
+
         current_time = time.time()
-        
+
         if not force and current_time - self._last_gc_time < GC_COLLECT_INTERVAL:
             return 0
-        
+
         self._last_gc_time = current_time
-        
+
         self._cleanup_old_users_cache()
         self._cleanup_exchange_rates_cache()
         self._cleanup_pending_orders()
-        
+
         collected = gc.collect(2)
-        
+
         if collected > 100:
             logger.debug(f"GC: освобождено {collected} объектов")
-        
+
         return collected
 
     def periodic_cleanup(self) -> None:
-                   
+
         self._gc_counter += 1
-        
+
         if self._gc_counter >= 100:
             self._gc_counter = 0
             self.collect_garbage()
 
     def load_pending_orders(self) -> dict:
-                   
+
         try:
             if os.path.exists(self.pending_orders_file):
                 with open(self.pending_orders_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                                                                                        
+
                     return {str(k): v for k, v in data.items()}
         except Exception as e:
             logger.warning(f"Не удалось загрузить данные о заказах из {self.pending_orders_file}: {e}")
         return {}
 
     def save_pending_orders(self) -> None:
-                   
+
         try:
             os.makedirs(os.path.dirname(self.pending_orders_file), exist_ok=True)
             with open(self.pending_orders_file, 'w', encoding='utf-8') as f:
@@ -330,10 +331,10 @@ class Cardinal(object):
         try:
             logger.info("Синхронизация неподтверждённых заказов с FunPay...")
             _, orders, _, _ = self.account.get_sales(state="paid", include_closed=False, include_refunded=False)
-            
+
             current_time = int(time.time())
             added_count = 0
-            
+
             for order in orders:
                 if order.status == types.OrderStatuses.PAID:
                     order_id = order.id
@@ -344,13 +345,13 @@ class Cardinal(object):
                             "last_reminder": 0
                         }
                         added_count += 1
-            
+
             if added_count > 0:
                 self.save_pending_orders()
                 logger.info(f"Добавлено {added_count} неподтверждённых заказов в очередь напоминаний")
             else:
                 logger.info("Все неподтверждённые заказы уже в очереди")
-            
+
             return added_count
         except Exception as e:
             logger.warning(f"Ошибка синхронизации неподтверждённых заказов: {e}")
@@ -377,7 +378,7 @@ class Cardinal(object):
 
     def _cleanup_confirmed_orders(self) -> None:
         if len(self.confirmed_orders) > MAX_CONFIRMED_ORDERS:
-            sorted_orders = sorted(self.confirmed_orders.items(), 
+            sorted_orders = sorted(self.confirmed_orders.items(),
                                    key=lambda x: x[1].get('confirmed_time', 0), reverse=True)
             self.confirmed_orders = dict(sorted_orders[:MAX_CONFIRMED_ORDERS])
             self.save_confirmed_orders()
@@ -449,7 +450,7 @@ class Cardinal(object):
         return None
 
     def __init_account(self) -> None:
-                   
+
         while True:
             try:
                 self.account.get()
@@ -474,9 +475,9 @@ class Cardinal(object):
 
     def __update_profile(self, infinite_polling: bool = True, attempts: int = 0, update_telegram_profile: bool = True,
                          update_main_profile: bool = True) -> bool:
-                   
+
         logger.info(_("crd_getting_profile_data"))
-                                      
+
         while attempts or infinite_polling:
             try:
                 profile = self.account.get_user(self.account.id)
@@ -503,7 +504,7 @@ class Cardinal(object):
             logger.info(_("crd_profile_updated", len(profile.get_lots()), len(profile.get_sorted_lots(2))))
         if update_telegram_profile:
             self.tg_profile = profile
-                                                        
+
             try:
                 logger.info("Начинаем загрузку всех лотов (включая деактивированные)...")
                 self.all_lots = self.account.get_all_my_lots(profile=profile)
@@ -516,7 +517,7 @@ class Cardinal(object):
         return True
 
     def __init_telegram(self) -> None:
-                   
+
         try:
             self.telegram = tg_bot.bot.TGBot(self)
             self.telegram.init()
@@ -531,7 +532,7 @@ class Cardinal(object):
             subcategories = self.account.get_sorted_subcategories()[FunPayAPI.enums.SubCategoryTypes.COMMON]
             if not subcategories:
                 return self.balance
-            
+
             lots = []
             while not lots and attempts > 0:
                 attempts -= 1
@@ -539,10 +540,10 @@ class Cardinal(object):
                 lots = self.account.get_subcategory_public_lots(FunPayAPI.enums.SubCategoryTypes.COMMON, subcat_id)
                 if lots:
                     break
-            
+
             if not lots:
                 return self.balance
-            
+
             balance = self.account.get_balance(random.choice(lots).id)
             return balance
         except Exception as e:
@@ -550,15 +551,15 @@ class Cardinal(object):
             return self.balance
 
     def raise_lots(self) -> int:
-                   
+
         next_call = float("inf")
 
         for subcat in sorted(list(self.profile.get_sorted_lots(2).keys()), key=lambda x: x.category.position):
             if subcat.type is SubCategoryTypes.CURRENCY:
                 continue
-                                                                                                                  
+
             if (saved_time := self.raise_time.get(subcat.category.id)) and saved_time > int(time.time()):
-                                                                               
+
                 next_call = saved_time if saved_time < next_call else next_call
                 continue
 
@@ -573,7 +574,7 @@ class Cardinal(object):
                 last_time = self.raised_time.get(subcat.category.id)
                 self.raised_time[subcat.category.id] = new_time = int(time.time())
                 last_interval = (new_time - last_time) if last_time else None
-                
+
                 wait_time = 7200
                 next_time = new_time + wait_time
                 self.raise_time[subcat.category.id] = next_time
@@ -587,11 +588,11 @@ class Cardinal(object):
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
                     time.sleep(10)
                     next_time = int(time.time()) + 1
-                
+
                 self.raise_time[subcat.category.id] = next_time
                 self.save_raise_time()
                 next_call = next_time if next_time < next_call else next_call
-                
+
                 if not raise_ok:
                     continue
             except Exception as e:
@@ -606,7 +607,7 @@ class Cardinal(object):
                 next_call = next_time if next_time < next_call else next_call
                 if not raise_ok:
                     continue
-            
+
             raise_info = {"wait_time": wait_time, "last_interval": last_interval}
             self.run_handlers(self.post_lots_raise_handlers, (self, subcat.category, raise_info))
         return next_call if next_call < float("inf") else 10
@@ -638,17 +639,17 @@ class Cardinal(object):
         for i in range(2, -1, -1):
             try:
                 obj._order = self.account.get_order(order_id)
-                logger.info(f"Получил информацию о заказе {obj._order}")          
+                logger.info(f"Получил информацию о заказе {obj._order}")
                 return obj._order
             except:
-                logger.warning(f"Произошла ошибка при получении заказа #{order_id}. Осталось {i} попыток.")          
+                logger.warning(f"Произошла ошибка при получении заказа #{order_id}. Осталось {i} попыток.")
                 logger.debug("TRACEBACK", exc_info=True)
                 time.sleep(1)
         obj._order_attempt_error = True
 
     @staticmethod
     def split_text(text: str) -> list[str]:
-                   
+
         output = []
         lines = text.split("\n")
         while lines:
@@ -659,7 +660,7 @@ class Cardinal(object):
         return output
 
     def parse_message_entities(self, msg_text: str) -> list[str | int | float]:
-                   
+
         msg_text = "\n".join(i.strip() for i in msg_text.split("\n"))
         while "\n\n" in msg_text:
             msg_text = msg_text.replace("\n\n", "\n[a][/a]\n")
@@ -858,14 +859,14 @@ class Cardinal(object):
         for order_id in orders_to_remove:
             if order_id in self.confirmed_orders:
                 del self.confirmed_orders[order_id]
-        
+
         if orders_to_remove:
             self.save_confirmed_orders()
 
     def send_message(self, chat_id: int | str, message_text: str, chat_name: str | None = None,
                      interlocutor_id: int | None = None, attempts: int = 3,
                      watermark: bool = True) -> list[FunPayAPI.types.Message] | None:
-                   
+
         if self.MAIN_CFG["Other"].get("watermark") and watermark and not message_text.strip().startswith("$photo="):
             message_text = f"{self.MAIN_CFG['Other']['watermark']}\n" + message_text
 
@@ -914,7 +915,7 @@ class Cardinal(object):
         return result
 
     def get_exchange_rate(self, base_currency: types.Currency, target_currency: types.Currency, min_interval: int = 60):
-                   
+
         assert base_currency != types.Currency.UNKNOWN and target_currency != types.Currency.UNKNOWN
         if base_currency == target_currency:
             return 1
@@ -948,7 +949,7 @@ class Cardinal(object):
         raise Exception("Не удалось получить курс обмена: превышено количество попыток.")
 
     def update_session(self, attempts: int = 3) -> bool:
-                   
+
         while attempts:
             try:
                 self.account.get(update_phpsessid=True)
@@ -970,7 +971,7 @@ class Cardinal(object):
             return False
 
     def process_events(self):
-                   
+
         instance_id = self.run_id
         events_handlers = {
             FunPayAPI.events.EventTypes.INITIAL_CHAT: self.init_message_handlers,
@@ -988,11 +989,11 @@ class Cardinal(object):
             if instance_id != self.run_id:
                 break
             self.run_handlers(events_handlers[event.type], (self, event))
-                                          
+
             self.periodic_cleanup()
 
     def lots_raise_loop(self):
-                   
+
         if not self.profile.get_lots():
             logger.info(_("crd_raise_loop_not_started"))
             return
@@ -1014,18 +1015,18 @@ class Cardinal(object):
                 logger.debug("TRACEBACK", exc_info=True)
 
     def update_session_loop(self):
-                   
+
         logger.info(_("crd_session_loop_started"))
         sleep_time = 3600
         while True:
             time.sleep(sleep_time)
             result = self.update_session()
             sleep_time = 60 if not result else 3600
-                                             
+
             self.collect_garbage(force=True)
 
     def order_reminders_loop(self):
-                   
+
         logger.info(_("crd_order_reminders_loop_started"))
         while True:
             try:
@@ -1046,9 +1047,9 @@ class Cardinal(object):
                 logger.error(f"Ошибка в цикле напоминаний об отзывах: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
             time.sleep(120)
-                           
+
     def init(self):
-                   
+
         self.add_handlers_from_plugin(handlers)
         self.add_handlers_from_plugin(announcements)
         self.load_plugins()
@@ -1065,13 +1066,13 @@ class Cardinal(object):
         self.run_handlers(self.pre_init_handlers, (self,))
 
         if self.MAIN_CFG["Telegram"].getboolean("enabled") and self.telegram:
-                                                                      
+
             self.init_builtin_features()
-            
+
             self.telegram.setup_commands()
             try:
                 self.telegram.edit_bot()
-            except AttributeError:                        
+            except AttributeError:
                 logger.warning("Произошла ошибка при изменении бота Telegram. Обновляю библиотеку...")
                 logger.debug("TRACEBACK", exc_info=True)
                 try:
@@ -1091,16 +1092,16 @@ class Cardinal(object):
         self.__update_profile()
         self.sync_pending_orders()
         self.run_handlers(self.post_init_handlers, (self,))
-        
+
         return self
 
     def check_updates_loop(self):
-                   
+
         logger.info("Запущен цикл проверки обновлений.")
         from Utils import updater
         while True:
-            time.sleep(180)                            
-            
+            time.sleep(180)
+
             try:
                 self.collect_garbage(force=True)
             except:
@@ -1108,27 +1109,27 @@ class Cardinal(object):
 
             try:
                 curr_tag = f"v{self.VERSION}"
-                                                                               
+
                 releases = updater.get_new_releases(curr_tag)
-                
+
                 if isinstance(releases, list) and releases:
                     logger.info(f"Обнаружено новое обновление: {releases[0].name}")
                     if self.telegram:
                          self.telegram.send_update_confirmation(releases[0])
-                                                                                                        
+
                          time.sleep(86400)
                 elif isinstance(releases, int):
                     pass
-                                                                                                                
+
                 else:
                     pass
-                                                                                                  
+
             except Exception as e:
                 logger.error(f"Ошибка при проверке обновлений: {e}")
                 logger.debug("TRACEBACK", exc_info=True)
 
     def run(self):
-                   
+
         self.run_id += 1
         self.start_time = int(time.time())
         self.run_handlers(self.pre_start_handlers, (self,))
@@ -1142,20 +1143,20 @@ class Cardinal(object):
         self.process_events()
 
     def start(self):
-                   
+
         self.run_id += 1
         self.run_handlers(self.pre_start_handlers, (self,))
         self.run_handlers(self.post_start_handlers, (self,))
         self.process_events()
 
     def stop(self):
-                   
+
         self.run_id += 1
         self.run_handlers(self.pre_stop_handlers, (self,))
         self.run_handlers(self.post_stop_handlers, (self,))
 
     def update_lots_and_categories(self):
-                   
+
         result = self.__update_profile(infinite_polling=False, attempts=3, update_main_profile=False)
         return result
 
@@ -1173,17 +1174,17 @@ class Cardinal(object):
 
     @staticmethod
     def save_config(config: configparser.ConfigParser, file_path: str) -> None:
-                   
+
         from Utils.config_loader import save_config as save_config_func
         save_config_func(config, file_path)
 
     def add_builtin_telegram_commands(self, module_name: str, commands: list) -> None:
-                   
+
         self.builtin_tg_commands[module_name] = commands
         logger.info(f"Добавлены команды от {module_name}: {[c[0] for c in commands]}")
 
     def init_builtin_features(self) -> None:
-                   
+
         logger.info("Инициализация встроенных модулей...")
         try:
             adv_profile_stat.init(self)
@@ -1200,7 +1201,7 @@ class Cardinal(object):
         except Exception as e:
             logger.error(f"Ошибка инициализации sras_info: {e}")
             logger.debug("TRACEBACK", exc_info=True)
-                                                                                                     
+
         try:
             from builtin_features import graphs
             graphs.init(self)
@@ -1216,7 +1217,7 @@ class Cardinal(object):
 
     @staticmethod
     def is_uuid_valid(uuid: str) -> bool:
-                   
+
         try:
             uuid_obj = UUID(uuid, version=4)
         except ValueError:
@@ -1225,7 +1226,7 @@ class Cardinal(object):
 
     @staticmethod
     def is_plugin(file: str) -> bool:
-                   
+
         with open(f"plugins/{file}", "r", encoding="utf-8") as f:
             line = f.readline()
         if line.startswith("#"):
@@ -1237,7 +1238,7 @@ class Cardinal(object):
 
     @staticmethod
     def load_plugin(from_file: str) -> tuple:
-                   
+
         spec = importlib.util.spec_from_file_location(f"plugins.{from_file[:-3]}", f"plugins/{from_file}")
         plugin = importlib.util.module_from_spec(spec)
         sys.modules[f"plugins.{from_file[:-3]}"] = plugin
@@ -1255,7 +1256,7 @@ class Cardinal(object):
         return plugin, result
 
     def load_plugins(self):
-                   
+
         if not os.path.exists("plugins"):
             logger.warning(_("crd_no_plugins_folder"))
             return
@@ -1290,7 +1291,7 @@ class Cardinal(object):
             self.plugins[data["UUID"]] = plugin_data
 
     def add_handlers_from_plugin(self, plugin, uuid: str | None = None):
-                   
+
         for name in self.handler_bind_var_names:
             try:
                 functions = getattr(plugin, name)
@@ -1302,13 +1303,13 @@ class Cardinal(object):
         logger.debug(_("crd_handlers_registered", plugin.__name__))
 
     def add_handlers(self):
-                   
+
         for i in self.plugins:
             plugin = self.plugins[i].plugin
             self.add_handlers_from_plugin(plugin, i)
 
     def run_handlers(self, handlers_list: list[Callable], args) -> None:
-                   
+
         for func in handlers_list:
             try:
                 plugin_uuid = getattr(func, "plugin_uuid", None)
@@ -1325,7 +1326,7 @@ class Cardinal(object):
                 continue
 
     def add_telegram_commands(self, uuid: str, commands: list[tuple[str, str, bool]]):
-                   
+
         if uuid not in self.plugins:
             return
 
@@ -1335,7 +1336,7 @@ class Cardinal(object):
                 self.telegram.add_command_to_menu(i[0], i[1])
 
     def toggle_plugin(self, uuid):
-                   
+
         self.plugins[uuid].enabled = not self.plugins[uuid].enabled
         if self.plugins[uuid].enabled and uuid in self.disabled_plugins:
             self.disabled_plugins.remove(uuid)
@@ -1428,30 +1429,30 @@ class Cardinal(object):
         return self.MAIN_CFG["Telegram"].getboolean("blockLogin")
 
     def toggle_proxy(self, enabled: bool) -> None:
-                   
+
         self.MAIN_CFG["Proxy"]["enable"] = "1" if enabled else "0"
         self.save_config(self.MAIN_CFG, "configs/_main.cfg")
-        
+
         if enabled:
-                                                                  
+
             ip, port = self.MAIN_CFG["Proxy"]["ip"], self.MAIN_CFG["Proxy"]["port"]
             login, password = self.MAIN_CFG["Proxy"]["login"], self.MAIN_CFG["Proxy"]["password"]
             proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
-            
+
             proxy_type = self.MAIN_CFG["Proxy"]["type"]
             if proxy_type == "SOCKS5":
                 self.proxy = {
                     "http": f"socks5://{proxy_str}",
                     "https": f"socks5://{proxy_str}"
                 }
-            else:        
+            else:
                 self.proxy = {
                     "http": f"http://{proxy_str}",
                     "https": f"http://{proxy_str}"
                 }
-            
+
             self.account.proxy = self.proxy
         else:
-                                                           
+
             self.proxy = {}
             self.account.proxy = None

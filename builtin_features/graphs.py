@@ -13,13 +13,13 @@ np = None
 _libs_loaded = False
 
 def _lazy_load_libs():
-                                                                                       
+
     global plt, pd, mplcyberpunk, np, _libs_loaded
     if _libs_loaded:
         return
-    
+
     logger.info(f"{LOGGER_PREFIX} Загрузка графических библиотек (это может занять несколько секунд)...")
-    
+
     try:
         import matplotlib
         matplotlib.use('Agg')
@@ -27,25 +27,25 @@ def _lazy_load_libs():
         plt = matplotlib.pyplot
     except ImportError:
         pass
-    
+
     try:
         import pandas
         pd = pandas
     except ImportError:
         pass
-    
+
     try:
         import mplcyberpunk as _mplcyberpunk
         mplcyberpunk = _mplcyberpunk
     except ImportError:
         pass
-    
+
     try:
         import numpy
         np = numpy
     except ImportError:
         pass
-    
+
     _libs_loaded = True
     logger.info(f"{LOGGER_PREFIX} Графические библиотеки загружены.")
 
@@ -87,14 +87,14 @@ SETTINGS = {
 in_progress = False
 
 def save_config():
-                              
+
     os.makedirs("storage/builtin", exist_ok=True)
     with open("storage/builtin/graphs_settings.json", "w", encoding="utf-8") as f:
         global SETTINGS
         f.write(json.dumps(SETTINGS, indent=4, ensure_ascii=False))
 
 def check_dependencies():
-                                         
+
     missing = []
     if plt is None:
         missing.append("matplotlib")
@@ -107,9 +107,9 @@ def check_dependencies():
     return missing
 
 def init(cardinal: Cardinal):
-                                        
+
     global SETTINGS
-    
+
     if not cardinal.telegram:
         return
     tg = cardinal.telegram
@@ -159,7 +159,7 @@ def init(cardinal: Cardinal):
 • <b>Min4Line</b> — мин. кол-во столбцов для линейного графика
 
 <i>💡 Номер графика указан в подписи к каждому изображению</i>"""
-        
+
         bot.edit_message_text(text, call.message.chat.id, call.message.id,
                               reply_markup=keyboard)
         bot.answer_callback_query(call.id)
@@ -507,15 +507,15 @@ def init(cardinal: Cardinal):
 
     def get_graphs(m: telebot.types.Message):
         global in_progress
-        
+
         _lazy_load_libs()
-        
+
         missing = check_dependencies()
         if missing:
             bot.reply_to(m, f"❌ Для работы графиков необходимо установить: {', '.join(missing)}\n\n"
                            f"Выполните: <code>pip install {' '.join(missing)}</code>")
             return
-            
+
         if in_progress:
             bot.reply_to(m, "Уже запущено. Дождитесь окончания или используйте /restart")
             return
@@ -578,12 +578,12 @@ def init(cardinal: Cardinal):
                         logger.warning(f"{LOGGER_PREFIX} Нет графиков для отправки. Проверьте настройки.")
                         bot.send_message(new_mes.chat.id, f"⚠️ Нет графиков для отправки за {int(days_count)} дн. Проверьте настройки графиков.")
                         continue
-                    
+
                     if len(photos) == 1:
                         photo = photos[0]
                         bot.send_photo(new_mes.chat.id, photo.media, caption=photo.caption, parse_mode="HTML")
                     else:
-                                                                           
+
                         for i in range(0, len(photos), 10):
                             chunk = photos[i:i+10]
                             if len(chunk) == 1:
@@ -591,7 +591,7 @@ def init(cardinal: Cardinal):
                                 bot.send_photo(new_mes.chat.id, photo.media, caption=photo.caption, parse_mode="HTML")
                             else:
                                 bot.send_media_group(new_mes.chat.id, chunk)
-                    
+
                     bot.send_message(new_mes.chat.id, f"⬆️ Изображения для {int(days_count)} дн. ({len(photos)} шт.) ⬆️")
 
                 except Exception as e:
@@ -606,7 +606,7 @@ def init(cardinal: Cardinal):
             logger.debug("TRACEBACK", exc_info=True)
             bot.edit_message_text(f"❌ Не удалось получить список заказов: {e}", new_mes.chat.id, new_mes.id)
             return
-        
+
         in_progress = False
         if periods_processed == 0:
             bot.edit_message_text("⚠️ Не найдено заказов за указанный период. Попробуйте увеличить количество дней.", new_mes.chat.id, new_mes.id)
@@ -622,9 +622,9 @@ def init(cardinal: Cardinal):
     tg.msg_handler(edited, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, f"{CBT_TEXT_EDITED}:head"))
     tg.msg_handler(edited, func=lambda m: tg.check_state(m.chat.id, m.from_user.id, f"{CBT_TEXT_EDITED}:min4line"))
     tg.cbq_handler(switch, lambda c: f"{CBT_TEXT_SWITCH}" in c.data)
-    
+
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 def get_settings_button():
-                                                                    
+
     return B("📈 Графики", callback_data=CBT_OPEN_SETTINGS)

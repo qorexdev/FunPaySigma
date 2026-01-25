@@ -15,52 +15,52 @@ import logging
 logger = logging.getLogger("FPS.ConfigLoader")
 
 def detect_config_type(config_path: str) -> str:
-           
+
     config = ConfigParser(delimiters=(":"), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
-    
+
     if config.has_section("FunPay") and config.has_option("FunPay", "golden_key"):
         golden_key = config["FunPay"]["golden_key"].strip()
         if golden_key.startswith("b64:") or golden_key.startswith("enc:"):
             return "sigma"
-    
+
     if config.has_section("Telegram") and config.has_option("Telegram", "token"):
         token = config["Telegram"]["token"].strip()
         if token.startswith("b64:") or token.startswith("enc:"):
             return "sigma"
-    
+
     return "cardinal"
 
 def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> ConfigParser:
-           
+
     config = ConfigParser(delimiters=(":"), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
-    
+
     logger.info(f"$YELLOWОбнаружен конфиг формата Cardinal, выполняю конвертацию в формат Sigma...")
-    
+
     sensitive_fields = {
         'FunPay': ['golden_key'],
         'Telegram': ['token'],
         'Proxy': ['login', 'password', 'ip', 'port']
     }
-    
+
     for section_name, fields in sensitive_fields.items():
         if section_name in config.sections():
             for field in fields:
                 if field in config[section_name]:
                     value = config[section_name][field].strip()
                     if value and not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
-                                        
+
                         encrypted = obfuscate_data(value)
                         config.set(section_name, field, f'b64:{encrypted}')
                         logger.debug(f"Зашифровано поле [{section_name}].{field}")
-    
+
     if config.has_section("Proxy") and not config.has_option("Proxy", "type"):
         config.set("Proxy", "type", "HTTP")
         logger.debug("Добавлен параметр [Proxy].type = HTTP")
-    
+
     if "OrderReminders" not in config.sections():
         config.add_section("OrderReminders")
         config.set("OrderReminders", "enabled", "0")
@@ -69,21 +69,21 @@ def convert_cardinal_to_sigma(config_path: str, output_path: str = None) -> Conf
         config.set("OrderReminders", "repeatCount", "3")
         config.set("OrderReminders", "interval", "30")
         logger.debug("Добавлена секция [OrderReminders]")
-    
+
     if config.has_section("Proxy") and not config.has_option("Proxy", "check"):
         config.set("Proxy", "check", "0")
         logger.debug("Добавлен параметр [Proxy].check = 0")
-    
+
     if output_path:
         with open(output_path, "w", encoding="utf-8") as f:
             config.write(f)
         logger.info(f"$GREENКонфиг успешно конвертирован и сохранен в {output_path}")
-    
+
     return config
 
 def check_param(param_name: str, section: SectionProxy, valid_values: list[str | None] | None = None,
                 raise_if_not_exists: bool = True) -> str | None:
-           
+
     if param_name not in list(section.keys()):
         if raise_if_not_exists:
             raise ParamNotFoundError(param_name)
@@ -121,18 +121,18 @@ def check_param(param_name: str, section: SectionProxy, valid_values: list[str |
     return value
 
 def create_config_obj(config_path: str) -> ConfigParser:
-           
+
     config = ConfigParser(delimiters=(":",), interpolation=None)
     config.optionxform = str
     config.read_file(codecs.open(config_path, "r", "utf8"))
     return config
 
 def load_main_config(config_path: str):
-           
+
     config_type = detect_config_type(config_path)
-    
+
     if config_type == "cardinal":
-                                                     
+
         config = convert_cardinal_to_sigma(config_path, config_path)
     else:
         config = create_config_obj(config_path)
@@ -227,7 +227,7 @@ def load_main_config(config_path: str):
         if section_name == "Greetings" and "cacheInitChats" in config[section_name]:
             config.remove_option(section_name, "cacheInitChats")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
-                       
+
         for param_name in values[section_name]:
 
             if section_name == "FunPay" and param_name == "oldMsgGetMode" and param_name not in config[section_name]:
@@ -329,7 +329,7 @@ def load_main_config(config_path: str):
     return config
 
 def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool = True):
-           
+
     if encrypt_sensitive:
         config_to_save = copy.deepcopy(config)
         sensitive_fields = {
@@ -344,7 +344,7 @@ def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool 
                     if field in config_to_save[section_name]:
                         value = config_to_save[section_name][field]
                         if not value.startswith('env:') and not value.startswith('enc:') and not value.startswith('b64:'):
-                                                              
+
                             encrypted = obfuscate_data(value)
                             config_to_save.set(section_name, field, f'b64:{encrypted}')
     else:
@@ -354,7 +354,7 @@ def save_config(config: ConfigParser, config_path: str, encrypt_sensitive: bool 
         config_to_save.write(f)
 
 def load_auto_response_config(config_path: str):
-           
+
     try:
         config = create_config_obj(config_path)
     except configparser.DuplicateSectionError as e:
@@ -388,11 +388,11 @@ def load_auto_response_config(config_path: str):
     return config
 
 def load_raw_auto_response_config(config_path: str):
-           
+
     return create_config_obj(config_path)
 
 def load_auto_delivery_config(config_path: str):
-           
+
     try:
         config = create_config_obj(config_path)
     except configparser.DuplicateSectionError as e:
@@ -407,7 +407,7 @@ def load_auto_delivery_config(config_path: str):
             check_param("disableAutoDisable", config[lot_title], valid_values=["0", "1"], raise_if_not_exists=False)
             check_param("disableAutoDelivery", config[lot_title], valid_values=["0", "1"], raise_if_not_exists=False)
             if products_file_name is None:
-                                                                                                                    
+
                 continue
         except (ParamNotFoundError, EmptyValueError, ValueNotValidError) as e:
             raise ConfigParseError(config_path, lot_title, e)

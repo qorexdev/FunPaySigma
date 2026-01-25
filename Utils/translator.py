@@ -7,7 +7,7 @@ logger = logging.getLogger("TGBot")
 _translator = None
 
 def _get_translator():
-                                            
+
     global _translator
     if _translator is None:
         try:
@@ -22,15 +22,15 @@ def _get_translator():
     return _translator
 
 def _run_async(coro):
-                                                  
+
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    
+
     if loop.is_running():
-                                                        
+
         import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor() as pool:
             future = pool.submit(asyncio.run, coro)
@@ -39,11 +39,11 @@ def _run_async(coro):
         return loop.run_until_complete(coro)
 
 async def _translate_async(text: str) -> str | None:
-                                     
+
     translator = _get_translator()
     if not translator:
         return None
-    
+
     try:
         result = await translator.translate(text, src='ru', dest='en')
         if result and result.text:
@@ -56,12 +56,12 @@ async def _translate_async(text: str) -> str | None:
 def translate_to_english(text: str) -> str | None:
     if not text or not text.strip():
         return text
-    
+
     translator = _get_translator()
     if not translator:
         logger.warning("Переводчик недоступен")
         return None
-    
+
     for attempt in range(3):
         try:
             try:
@@ -93,22 +93,22 @@ def translate_to_english(text: str) -> str | None:
     return None
 
 def translate_batch_to_english(texts: dict[str, str]) -> dict[str, str]:
-           
+
     if not texts:
         return {}
-    
+
     result = {}
     for key, text in texts.items():
         translated = translate_to_english(text)
         if translated:
             result[key] = translated
         else:
-            result[key] = text                                 
-    
+            result[key] = text
+
     return result
 
 def is_translation_available() -> bool:
-                                                 
+
     try:
         result = translate_to_english("тест")
         return result is not None and result.lower() == "test"

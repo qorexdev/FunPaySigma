@@ -22,7 +22,7 @@ class Localizer:
         return cls.instance
 
     def translate(self, variable_name: str, *args, language: str | None = None):
-                   
+
         text = variable_name
         for lang in self.languages.values():
             if hasattr(lang, variable_name):
@@ -42,11 +42,11 @@ class Localizer:
             return text
 
     def add_translation(self, uuid: str, variable_name: str, value: str, language: Literal["uk", "ru", "en"]):
-                                                         
+
         setattr(self.languages[language], f"{uuid}_{variable_name}", value)
 
     def plugin_translate(self, uuid: str, variable_name: str, *args, language: str | None = None):
-                                                         
+
         s = f"{uuid}_{variable_name}"
         result = self.translate(s, *args, language=language)
         if result != s:

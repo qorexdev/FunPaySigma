@@ -23,7 +23,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
     bot = tg.bot
 
     def check_plugin_exists(uuid: str, message_obj: Message) -> bool:
-                   
+
         if uuid not in cardinal.plugins:
             update_button = K().add(B(_("gl_refresh"), callback_data=f"{CBT.PLUGINS_LIST}:0"))
             bot.edit_message_text(_("pl_not_found_err", uuid), message_obj.chat.id, message_obj.id,
@@ -32,7 +32,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         return True
 
     def open_plugins_list(c: CallbackQuery, answer: bool = True):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_pl"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.plugins_list(cardinal, offset))
@@ -40,7 +40,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
             bot.answer_callback_query(c.id)
 
     def open_edit_plugin_cp(c: CallbackQuery, answer: bool = True):
-                   
+
         split = c.data.split(":")
         uuid, offset = split[1], int(split[2])
 
@@ -51,7 +51,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         plugin_data = cardinal.plugins[uuid]
         v = "v" if not plugin_data.version.lower().startswith("v") else ""
         text = f"""<b><i>{utils.escape(plugin_data.name)} {v}{utils.escape(plugin_data.version)}</i></b>
-        
+
 {utils.escape(plugin_data.description)}
 
 <b><i>UUID: </i></b><code>{utils.escape(plugin_data.uuid)}</code>
@@ -154,6 +154,29 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         c.data = f"{CBT.PLUGINS_LIST}:{offset}"
         open_plugins_list(c, answer=False)
 
+    def toggle_pin_plugin(c: CallbackQuery):
+        split = c.data.split(":")
+        uuid, offset = split[1], int(split[2])
+
+        if not check_plugin_exists(uuid, c.message):
+            bot.answer_callback_query(c.id)
+            return
+
+        if not hasattr(cardinal, 'pinned_plugins'):
+            cardinal.pinned_plugins = []
+
+        if uuid in cardinal.pinned_plugins:
+            cardinal.pinned_plugins.remove(uuid)
+        else:
+            cardinal.pinned_plugins.append(uuid)
+
+        from Utils import cardinal_tools
+        cardinal_tools.cache_pinned_plugins(cardinal.pinned_plugins)
+        logger.info(_("log_pl_pinned", c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
+        bot.answer_callback_query(c.id, text="📌", show_alert=False)
+        c.data = f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"
+        open_edit_plugin_cp(c, answer=False)
+
     def act_upload_plugin(obj: CallbackQuery | Message):
         if isinstance(obj, CallbackQuery):
             offset = int(obj.data.split(":")[1])
@@ -172,6 +195,8 @@ def init_plugins_cp(cardinal: Cardinal, *args):
     tg.cbq_handler(ask_delete_plugin, lambda c: c.data.startswith(f"{CBT.DELETE_PLUGIN}:"))
     tg.cbq_handler(cancel_delete_plugin, lambda c: c.data.startswith(f"{CBT.CANCEL_DELETE_PLUGIN}:"))
     tg.cbq_handler(delete_plugin, lambda c: c.data.startswith(f"{CBT.CONFIRM_DELETE_PLUGIN}:"))
+
+    tg.cbq_handler(toggle_pin_plugin, lambda c: c.data.startswith(f"{CBT.TOGGLE_PIN_PLUGIN}:"))
 
     tg.cbq_handler(act_upload_plugin, lambda c: c.data.startswith(f"{CBT.UPLOAD_PLUGIN}:"))
     tg.msg_handler(act_upload_plugin, commands=["upload_plugin"])

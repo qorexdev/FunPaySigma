@@ -28,14 +28,14 @@ def init_default_cp(crd: Cardinal, *args):
     bot = tg.bot
 
     def is_builtin_callback(c: CallbackQuery) -> bool:
-                                                                    
+
         for prefix in BUILTIN_CALLBACK_PREFIXES:
             if c.data.startswith(prefix):
                 return True
         return False
 
     def default_callback_answer(c: CallbackQuery):
-                   
+
         bot.answer_callback_query(c.id, text=_(c.data), show_alert=True)
 
     tg.cbq_handler(default_callback_answer, lambda c: not is_builtin_callback(c))
