@@ -36,7 +36,7 @@ localizer = Localizer()
 _ = localizer.translate
 
 def count_products(path: str) -> int:
-           
+
     if not os.path.exists(path):
         return 0
     with open(path, "r", encoding="utf-8") as f:
@@ -46,7 +46,7 @@ def count_products(path: str) -> int:
     return len(products)
 
 def cache_blacklist(blacklist: list[str]) -> None:
-           
+
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
 
@@ -54,7 +54,7 @@ def cache_blacklist(blacklist: list[str]) -> None:
         f.write(json.dumps(blacklist, indent=4))
 
 def load_blacklist() -> list[str]:
-           
+
     if not os.path.exists("storage/cache/blacklist.json"):
         return []
 
@@ -68,10 +68,10 @@ def load_blacklist() -> list[str]:
         return blacklist
 
 def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
-           
+
     original_socket = socket._original_socket if hasattr(socket, '_original_socket') else socket.socket
     last_error = ""
-    
+
     for attempt in range(max_retries):
         if attempt > 0:
             logger.info(f"Повторная проверка прокси ({attempt + 1}/{max_retries})...")
@@ -82,7 +82,7 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
         try:
             socket.socket = original_socket
             socks.set_default_proxy()
-            
+
             if any("socks5" in proxy.get(key, "") for key in proxy.keys()):
                 proxy_url = proxy.get("http") or proxy.get("https")
                 if proxy_url and "socks5" in proxy_url:
@@ -92,12 +92,12 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
                         socks.set_default_proxy(socks.SOCKS5, parsed.hostname, parsed.port,
                                                 username=parsed.username, password=parsed.password)
                         socket.socket = socks.socksocket
-                        
+
                         response = requests.get("https://api.ipify.org/", timeout=10)
-                        
+
                         socket.socket = original_socket
                         socks.set_default_proxy()
-                        
+
                         logger.info(_("crd_proxy_success", response.content.decode()))
                         return True
             else:
@@ -112,7 +112,7 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
                 socks.set_default_proxy()
             except:
                 pass
-            
+
     logger.error(_("crd_proxy_err"))
     logger.debug("TRACEBACK", exc_info=True)
     try:
@@ -123,7 +123,7 @@ def check_proxy(proxy: dict, max_retries: int = 3, delay: int = 3) -> bool:
     return False
 
 def validate_proxy(proxy: str):
-           
+
     try:
         if "@" in proxy:
             login_password, ip_port = proxy.split("@")
@@ -135,11 +135,11 @@ def validate_proxy(proxy: str):
         if not all([0 <= int(i) < 256 for i in ip.split(".")]) or ip.count(".") != 3                or not ip.replace(".", "").isdigit() or not 0 <= int(port) <= 65535:
             raise Exception()
     except:
-        raise ValueError("Прокси должны иметь формат login:password@ip:port или ip:port")          
+        raise ValueError("Прокси должны иметь формат login:password@ip:port или ip:port")
     return login, password, ip, port
 
 def cache_proxy_dict(proxy_dict: dict[int, str]) -> None:
-           
+
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
 
@@ -147,7 +147,7 @@ def cache_proxy_dict(proxy_dict: dict[int, str]) -> None:
         f.write(json.dumps(proxy_dict, indent=4))
 
 def load_proxy_dict() -> dict[int, str]:
-           
+
     if not os.path.exists("storage/cache/proxy_dict.json"):
         return {}
 
@@ -162,7 +162,7 @@ def load_proxy_dict() -> dict[int, str]:
         return proxy
 
 def cache_disabled_plugins(disabled_plugins: list[str]) -> None:
-           
+
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
 
@@ -170,11 +170,30 @@ def cache_disabled_plugins(disabled_plugins: list[str]) -> None:
         f.write(json.dumps(disabled_plugins))
 
 def load_disabled_plugins() -> list[str]:
-           
+
     if not os.path.exists("storage/cache/disabled_plugins.json"):
         return []
 
     with open("storage/cache/disabled_plugins.json", "r", encoding="utf-8") as f:
+        try:
+            return json.loads(f.read())
+        except json.decoder.JSONDecodeError:
+            return []
+
+def cache_pinned_plugins(pinned: list[str]) -> None:
+
+    if not os.path.exists("storage/cache"):
+        os.makedirs("storage/cache")
+
+    with open("storage/cache/pinned_plugins.json", "w", encoding="utf-8") as f:
+        f.write(json.dumps(pinned))
+
+def load_pinned_plugins() -> list[str]:
+
+    if not os.path.exists("storage/cache/pinned_plugins.json"):
+        return []
+
+    with open("storage/cache/pinned_plugins.json", "r", encoding="utf-8") as f:
         try:
             return json.loads(f.read())
         except json.decoder.JSONDecodeError:
@@ -192,7 +211,7 @@ def cache_old_users(old_users: dict[int, float]):
         logger.warning(f"Ошибка записи old_users.json: {e}")
 
 def load_old_users(greetings_cooldown: float) -> dict[int, float]:
-           
+
     if not os.path.exists(f"storage/cache/old_users.json"):
         return dict()
     with open(f"storage/cache/old_users.json", "r", encoding="utf-8") as f:
@@ -201,7 +220,7 @@ def load_old_users(greetings_cooldown: float) -> dict[int, float]:
         users = json.loads(users)
     except json.decoder.JSONDecodeError:
         return dict()
-                                                                
+
     if type(users) == list:
         users = {user: time.time() for user in users}
     else:
@@ -211,12 +230,12 @@ def load_old_users(greetings_cooldown: float) -> dict[int, float]:
     return users
 
 def create_greeting_text(cardinal: Cardinal):
-           
+
     account = cardinal.account
     balance = cardinal.balance
     current_time = datetime.now()
     if current_time.hour < 4:
-        greetings = "Какая прекрасная ночь"          
+        greetings = "Какая прекрасная ночь"
     elif current_time.hour < 12:
         greetings = "Доброе утро"
     elif current_time.hour < 17:
@@ -242,13 +261,13 @@ def create_greeting_text(cardinal: Cardinal):
     return greetings_text
 
 def time_to_str(time_: int):
-           
+
     days = time_ // 86400
     hours = (time_ - days * 86400) // 3600
     minutes = (time_ - days * 86400 - hours * 3600) // 60
     seconds = time_ - days * 86400 - hours * 3600 - minutes * 60
 
-    if not any([days, hours, minutes, seconds]):          
+    if not any([days, hours, minutes, seconds]):
         return "0 сек"
     time_str = ""
     if days:
@@ -262,19 +281,19 @@ def time_to_str(time_: int):
     return time_str.strip()
 
 def get_month_name(month_number: int) -> str:
-           
+
     months = [
         "Января", "Февраля", "Марта",
         "Апреля", "Мая", "Июня",
         "Июля", "Августа", "Сентября",
         "Октября", "Ноября", "Декабря"
-    ]                    
+    ]
     if month_number > len(months):
         return months[0]
     return months[month_number - 1]
 
 def get_products(path: str, amount: int = 1) -> list[list[str] | int] | None:
-           
+
     with open(path, "r", encoding="utf-8") as f:
         products = f.read()
 
@@ -298,7 +317,7 @@ def get_products(path: str, amount: int = 1) -> list[list[str] | int] | None:
     return [got_products, amount]
 
 def add_products(path: str, products: list[str], at_zero_position=False):
-           
+
     if not at_zero_position:
         with open(path, "a", encoding="utf-8") as f:
             f.write("\n" + "\n".join(products))
@@ -312,12 +331,12 @@ def safe_text(text: str):
     return "⁣".join(text)
 
 def format_msg_text(text: str, obj: FunPayAPI.types.Message | FunPayAPI.types.ChatShortcut) -> str:
-           
+
     date_obj = datetime.now()
     month_name = get_month_name(date_obj.month)
     date = date_obj.strftime("%d.%m.%Y")
     str_date = f"{date_obj.day} {month_name}"
-    str_full_date = str_date + f" {date_obj.year} года"          
+    str_full_date = str_date + f" {date_obj.year} года"
 
     time_ = date_obj.strftime("%H:%M")
     time_full = date_obj.strftime("%H:%M:%S")
@@ -343,12 +362,12 @@ def format_msg_text(text: str, obj: FunPayAPI.types.Message | FunPayAPI.types.Ch
     return text
 
 def format_order_text(text: str, order: FunPayAPI.types.OrderShortcut | FunPayAPI.types.Order) -> str:
-           
+
     date_obj = datetime.now()
     month_name = get_month_name(date_obj.month)
     date = date_obj.strftime("%d.%m.%Y")
     str_date = f"{date_obj.day} {month_name}"
-    str_full_date = str_date + f" {date_obj.year} года"          
+    str_full_date = str_date + f" {date_obj.year} года"
     time_ = date_obj.strftime("%H:%M")
     time_full = date_obj.strftime("%H:%M:%S")
     game = subcategory_fullname = subcategory = ""
@@ -361,7 +380,7 @@ def format_order_text(text: str, order: FunPayAPI.types.OrderShortcut | FunPayAP
             game = order.subcategory.category.name
             subcategory = order.subcategory.name
     except:
-        logger.warning("Произошла ошибка при парсинге игры из заказа")          
+        logger.warning("Произошла ошибка при парсинге игры из заказа")
         logger.debug("TRACEBACK", exc_info=True)
     description = order.description if isinstance(order,
                                                   FunPayAPI.types.OrderShortcut) else order.short_description if order.short_description else ""
@@ -390,7 +409,7 @@ def format_order_text(text: str, order: FunPayAPI.types.OrderShortcut | FunPayAP
     return text
 
 def restart_program():
-           
+
     python = sys.executable
     os.execl(python, python, *sys.argv)
     try:
@@ -403,7 +422,7 @@ def restart_program():
         pass
 
 def shut_down():
-           
+
     try:
         process = psutil.Process()
         process.terminate()
@@ -411,9 +430,9 @@ def shut_down():
         pass
 
 def set_console_title(title: str) -> None:
-           
+
     try:
-        if os.name == 'nt':           
+        if os.name == 'nt':
             import ctypes
             ctypes.windll.kernel32.SetConsoleTitleW(title)
     except:
@@ -421,13 +440,13 @@ def set_console_title(title: str) -> None:
         logger.debug("TRACEBACK", exc_info=True)
 
 def hash_password(password: str) -> str:
-                                         
+
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode(), salt)
-    return hashed_password.decode()                             
+    return hashed_password.decode()
 
 def check_password(password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed_password.encode())                         
+    return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -442,12 +461,12 @@ USER_AGENTS = [
 ]
 
 def get_random_user_agent() -> str:
-           
+
     import random
     return random.choice(USER_AGENTS)
 
 def get_encryption_key() -> bytes:
-           
+
     key = os.getenv('FPS_ENCRYPTION_KEY')
     if not key and os.path.exists(".env"):
         try:
@@ -466,37 +485,37 @@ def get_encryption_key() -> bytes:
             pass
 
     key = Fernet.generate_key()
-                      
+
     try:
         with open('.env', 'a', encoding="utf-8") as f:
             f.write(f'\nFPS_ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}\n')
     except Exception as e:
         logger.error(f"Не удалось сохранить ключ шифрования в .env: {e}")
-    
+
     return key
 
 def encrypt_data(data: str) -> str:
-           
+
     f = Fernet(get_encryption_key())
     encrypted = f.encrypt(data.encode())
     return base64.urlsafe_b64encode(encrypted).decode()
 
 def decrypt_data(encrypted_data: str) -> str:
-           
+
     try:
         f = Fernet(get_encryption_key())
         decrypted = f.decrypt(base64.urlsafe_b64decode(encrypted_data.encode()))
         return decrypted.decode()
     except Exception as e:
         logger.error(f"Ошибка дешифрования: {e}")
-        return encrypted_data                                                     
+        return encrypted_data
 
 def obfuscate_data(data: str) -> str:
-           
+
     return base64.urlsafe_b64encode(data.encode()).decode()
 
 def deobfuscate_data(obfuscated_data: str) -> str:
-           
+
     try:
         return base64.urlsafe_b64decode(obfuscated_data.encode()).decode()
     except Exception as e:

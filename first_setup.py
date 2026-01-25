@@ -96,7 +96,7 @@ def create_configs():
             ...
 
 def create_config_obj(settings) -> ConfigParser:
-           
+
     config = ConfigParser(delimiters=(":",), interpolation=None)
     config.optionxform = str
     config.read_dict(settings)

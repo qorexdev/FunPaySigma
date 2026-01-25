@@ -19,7 +19,7 @@ localizer = Localizer()
 _ = localizer.translate
 
 def get_last_tag() -> str | None:
-           
+
     if not os.path.exists("storage/cache/announcement_tag.txt"):
         return None
     with open("storage/cache/announcement_tag.txt", "r", encoding="UTF-8") as f:
@@ -30,7 +30,7 @@ REQUESTS_DELAY = 600
 LAST_TAG = get_last_tag()
 
 def save_last_tag():
-           
+
     global LAST_TAG
     if not os.path.exists("storage/cache"):
         os.makedirs("storage/cache")
@@ -38,15 +38,15 @@ def save_last_tag():
         f.write(LAST_TAG)
 
 def get_announcement(ignore_last_tag: bool = False) -> dict | None:
-           
+
     return None
 
 def download_photo(url: str) -> bytes | None:
-           
+
     return None
 
 def get_notification_type(data: dict) -> NotificationTypes:
-           
+
     types = {
         0: NotificationTypes.ad,
         1: NotificationTypes.announcement,
@@ -55,23 +55,23 @@ def get_notification_type(data: dict) -> NotificationTypes:
     return types[data.get("type")] if data.get("type") in types else NotificationTypes.critical
 
 def get_photo(data: dict) -> bytes | None:
-           
+
     if not (photo := data.get("ph")):
         return None
     return download_photo(u"{}".format(photo))
 
 def get_text(data: dict) -> str | None:
-           
+
     if not (text := data.get("text")):
         return None
     return u"{}".format(text)
 
 def get_pin(data: dict) -> bool:
-           
+
     return bool(data.get("pin"))
 
 def get_keyboard(data: dict) -> K | None:
-           
+
     if not (kb_data := data.get("kb")):
         return None
 
@@ -116,11 +116,11 @@ def announcements_loop_iteration(crd: Cardinal, ignore_last_tag: bool = False):
                daemon=True).start()
 
 def announcements_loop(crd: Cardinal):
-           
+
     return
 
 def main(crd: Cardinal):
-           
+
     pass
 
 BIND_TO_POST_INIT = []

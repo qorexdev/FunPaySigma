@@ -26,7 +26,7 @@ def init_proxy_cp(crd: Cardinal, *args):
 
     def check_one_proxy(proxy: str):
         try:
-                                                
+
             proxy_type = crd.MAIN_CFG["Proxy"]["type"]
             if proxy_type == "SOCKS5":
                 d = {
@@ -53,13 +53,13 @@ def init_proxy_cp(crd: Cardinal, *args):
                 time.sleep(60)
 
     Thread(target=check_proxies, daemon=True).start()
-    
+
     if not crd.MAIN_CFG["Proxy"].get("type"):
         crd.MAIN_CFG["Proxy"]["type"] = "HTTP"
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
 
     def open_proxy_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         text = f'\n\nПрокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("enable") else "выкл."}\n'               f'Проверка прокси: {"вкл." if crd.MAIN_CFG["Proxy"].getboolean("check") else "выкл."}\n'               f'Тип прокси: {crd.MAIN_CFG["Proxy"]["type"]}\n\n'               f'⚠️ <b>Изменения вступят в силу только после перезапуска бота (/restart)!</b>'
         try:
@@ -71,14 +71,14 @@ def init_proxy_cp(crd: Cardinal, *args):
                 logger.debug("TRACEBACK", exc_info=True)
 
     def act_add_proxy(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[-1])
         result = bot.send_message(c.message.chat.id, _("act_proxy"), reply_markup=skb.CLEAR_STATE_BTN())
         crd.telegram.set_state(result.chat.id, result.id, c.from_user.id, CBT.ADD_PROXY, {"offset": offset})
         bot.answer_callback_query(c.id)
 
     def add_proxy(m: Message):
-                   
+
         offset = tg.get_state(m.chat.id, m.from_user.id)["data"]["offset"]
         kb = K().add(B(_("gl_back"), callback_data=f"{CBT.PROXY}:{offset}"))
         tg.clear_state(m.chat.id, m.from_user.id, True)
@@ -101,7 +101,7 @@ def init_proxy_cp(crd: Cardinal, *args):
             logger.debug("TRACEBACK", exc_info=True)
 
     def choose_proxy(c: CallbackQuery):
-                   
+
         q, offset, proxy_id = c.data.split(":")
         offset = int(offset)
         proxy_id = int(proxy_id)
@@ -113,7 +113,7 @@ def init_proxy_cp(crd: Cardinal, *args):
 
         login, password, ip, port = validate_proxy(proxy)
         proxy_str = f"{f'{login}:{password}@' if login and password else ''}{ip}:{port}"
-        
+
         crd.MAIN_CFG["Proxy"].update({
             "ip": ip,
             "port": port,
@@ -121,12 +121,12 @@ def init_proxy_cp(crd: Cardinal, *args):
             "password": password
         })
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")
-        
+
         bot.answer_callback_query(c.id, "✅ Настройки сохранены. Перезапустите бота для применения изменений.", show_alert=True)
         open_proxy_list(c)
 
     def delete_proxy(c: CallbackQuery):
-                   
+
         q, offset, proxy_id = c.data.split(":")
         offset = int(offset)
         proxy_id = int(proxy_id)
@@ -152,10 +152,10 @@ def init_proxy_cp(crd: Cardinal, *args):
         open_proxy_list(c)
 
     def change_proxy_type(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         current_type = crd.MAIN_CFG["Proxy"]["type"]
-                                         
+
         new_type = "SOCKS5" if current_type != "SOCKS5" else "HTTP"
         crd.MAIN_CFG["Proxy"]["type"] = new_type
         crd.save_config(crd.MAIN_CFG, "configs/_main.cfg")

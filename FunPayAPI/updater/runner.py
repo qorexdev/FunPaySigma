@@ -16,41 +16,41 @@ from .events import *
 logger = logging.getLogger("FunPayAPI.runner")
 
 class Runner:
-           
+
     def __init__(self, account: Account, disable_message_requests: bool = False,
                  disabled_order_requests: bool = False):
-                                                                                    
+
         if not account.is_initiated:
             raise exceptions.AccountNotInitiatedError()
         if account.runner:
-            raise Exception("К аккаунту уже привязан Runner!")        
+            raise Exception("К аккаунту уже привязан Runner!")
 
         self.make_msg_requests: bool = False if disable_message_requests else True
-                                                                                           
+
         self.make_order_requests: bool = False if disabled_order_requests else True
-                                                                               
+
         self.__first_request = True
         self.__last_msg_event_tag = utils.random_tag()
         self.__last_order_event_tag = utils.random_tag()
 
         self.saved_orders: dict[str, types.OrderShortcut] = {}
-                                                                                         
+
         self.runner_last_messages: dict[int, list[int, int, str | None]] = {}
-                                                                       
+
         self.by_bot_ids: dict[int, list[int]] = {}
-                                                                                                              
+
         self.last_messages_ids: dict[int, int] = {}
-                                                                                  
+
         self.buyers_viewing: dict[int, types.BuyerViewing] = {}
-                                                                   
-        self.runner_len: int = 10
-                                                                                
+
+        self.runner_len: int = 50
+
         self.account: Account = account
-                                                             
+
         self.account.runner = self
 
     def get_updates(self) -> dict:
-                   
+
         orders = {
             "type": "orders_counters",
             "id": self.account.id,
@@ -82,9 +82,9 @@ class Runner:
     def parse_updates(self, updates: dict) -> list[InitialChatEvent | ChatsListChangedEvent |
                                                    LastChatMessageChangedEvent | NewMessageEvent | InitialOrderEvent |
                                                    OrdersListChangedEvent | NewOrderEvent | OrderStatusChangedEvent]:
-                   
+
         events = []
-                                                                                                                           
+
         for obj in sorted(updates["objects"], key=lambda x: x.get("type") == "orders_counters", reverse=True):
             if obj.get("type") == "chat_bookmarks":
                 events.extend(self.parse_chat_updates(obj))
@@ -96,7 +96,7 @@ class Runner:
 
     def parse_chat_updates(self, obj) -> list[InitialChatEvent | ChatsListChangedEvent | LastChatMessageChangedEvent |
                                               NewMessageEvent]:
-                   
+
         events, lcmc_events = [], []
         self.__last_msg_event_tag = obj.get("tag")
         parser = BeautifulSoup(obj["data"]["html"], "lxml")
@@ -104,7 +104,7 @@ class Runner:
 
         for chat in chats:
             chat_id = int(chat["data-id"])
-                                              
+
             if not (last_msg_text := chat.find("div", {"class": "contact-item-message"})):
                 continue
 
@@ -120,13 +120,13 @@ class Runner:
             elif last_msg_text.startswith(self.account.old_bot_character):
                 last_msg_text = last_msg_text[1:]
                 by_vertex = True
-                                                                                                            
+
             prev_node_msg_id, prev_user_msg_id, prev_text = self.runner_last_messages.get(chat_id) or [-1, -1, None]
             last_msg_text_or_none = None if last_msg_text in ("Изображение", "Зображення", "Image") else last_msg_text
             if node_msg_id <= prev_node_msg_id:
                 continue
             elif not prev_node_msg_id and not prev_user_msg_id and prev_text == last_msg_text_or_none:
-                                                                                                     
+
                 self.runner_last_messages[chat_id] = [node_msg_id, user_msg_id, last_msg_text_or_none]
                 continue
             unread = True if "unread" in chat.get("class") else False
@@ -178,7 +178,7 @@ class Runner:
         return events
 
     def generate_new_message_events(self, chats_data: dict[int, str]) -> dict[int, list[NewMessageEvent]]:
-                   
+
         attempts = 3
         while attempts:
             attempts -= 1
@@ -218,8 +218,8 @@ class Runner:
                 messages = [m for m in messages if
                             m.id > min(self.last_messages_ids.values(), default=10 ** 20)] or messages[-1:]
 
-            self.last_messages_ids[cid] = messages[-1].id                                          
-            self.by_bot_ids[cid] = [i for i in self.by_bot_ids[cid] if i > self.last_messages_ids[cid]]                 
+            self.last_messages_ids[cid] = messages[-1].id
+            self.by_bot_ids[cid] = [i for i in self.by_bot_ids[cid] if i > self.last_messages_ids[cid]]
 
             for msg in messages:
                 event = NewMessageEvent(self.__last_msg_event_tag, msg, stack)
@@ -229,7 +229,7 @@ class Runner:
 
     def parse_order_updates(self, obj) -> list[InitialOrderEvent | OrdersListChangedEvent | NewOrderEvent |
                                                OrderStatusChangedEvent]:
-                   
+
         events = []
         self.__last_order_event_tag = obj.get("tag")
         if not self.__first_request:
@@ -242,7 +242,7 @@ class Runner:
         while attempts:
             attempts -= 1
             try:
-                orders_list = self.account.get_sales()                                                                           
+                orders_list = self.account.get_sales()
                 break
             except exceptions.RequestFailedError as e:
                 logger.error(e)
@@ -271,11 +271,11 @@ class Runner:
         return events
 
     def update_last_message(self, chat_id: int, message_id: int, message_text: str | None):
-                   
+
         self.runner_last_messages[chat_id] = [message_id, message_id, message_text]
 
     def mark_as_by_bot(self, chat_id: int, message_id: int):
-                   
+
         if self.by_bot_ids.get(chat_id) is None:
             self.by_bot_ids[chat_id] = [message_id]
         else:
@@ -286,7 +286,7 @@ class Runner:
                                                             LastChatMessageChangedEvent | NewMessageEvent |
                                                             InitialOrderEvent | OrdersListChangedEvent | NewOrderEvent |
                                                             OrderStatusChangedEvent]:
-                   
+
         while True:
             start_time = time.time()
             try:

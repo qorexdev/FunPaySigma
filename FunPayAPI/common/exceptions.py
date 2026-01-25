@@ -2,7 +2,7 @@ import requests
 from .. import types
 
 class AccountNotInitiatedError(Exception):
-           
+
     def __init__(self):
         pass
 
@@ -10,9 +10,9 @@ class AccountNotInitiatedError(Exception):
         return "Необходимо получить данные об аккаунте с помощью метода Account.get()"
 
 class RequestFailedError(Exception):
-           
+
     def __init__(self, response: requests.Response):
-                   
+
         self.response = response
         self.status_code = response.status_code
         self.url = response.request.url
@@ -32,7 +32,7 @@ class RequestFailedError(Exception):
         return msg
 
 class UnauthorizedError(RequestFailedError):
-           
+
     def __init__(self, response):
         super(UnauthorizedError, self).__init__(response)
 
@@ -40,7 +40,7 @@ class UnauthorizedError(RequestFailedError):
         return "Не авторизирован (возможно, введен неверный golden_key?)."
 
 class WithdrawError(RequestFailedError):
-           
+
     def __init__(self, response, error_message: str | None):
         super(WithdrawError, self).__init__(response)
         self.error_message = error_message
@@ -51,7 +51,7 @@ class WithdrawError(RequestFailedError):
         return f"Произошла ошибка при выводе средств с аккаунта{f': {self.error_message}' if self.error_message else '.'}"
 
 class RaiseError(RequestFailedError):
-           
+
     def __init__(self, response, category: types.Category, error_message: str | None, wait_time: int | None):
         super(RaiseError, self).__init__(response)
         self.category = category
@@ -62,7 +62,7 @@ class RaiseError(RequestFailedError):
         return f"Не удалось поднять лоты категории \"{self.category.name}\""               f"{f': {self.error_message}' if self.error_message else '.'}"
 
 class ImageUploadError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None):
         super(ImageUploadError, self).__init__(response)
         self.error_message = error_message
@@ -73,7 +73,7 @@ class ImageUploadError(RequestFailedError):
         return f"Произошла ошибка при выгрузке изображения{f': {self.error_message}' if self.error_message else '.'}"
 
 class MessageNotDeliveredError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None, chat_id: int):
         super(MessageNotDeliveredError, self).__init__(response)
         self.error_message = error_message
@@ -85,7 +85,7 @@ class MessageNotDeliveredError(RequestFailedError):
         return f"Не удалось отправить сообщение в чат {self.chat_id}"               f"{f': {self.error_message}' if self.error_message else '.'}"
 
 class FeedbackEditingError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None, order_id: str):
         super(FeedbackEditingError, self).__init__(response)
         self.error_message = error_message
@@ -97,7 +97,7 @@ class FeedbackEditingError(RequestFailedError):
         return f"Не удалось изменить состояние отзыва / ответа на отзыв на заказ {self.order_id}"               f"{f': {self.error_message}' if self.error_message else '.'}"
 
 class LotParsingError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None, lot_id: int):
         super(LotParsingError, self).__init__(response)
         self.error_message = error_message
@@ -109,7 +109,7 @@ class LotParsingError(RequestFailedError):
         return f"Не удалось получить данные лота {self.lot_id}"               f"{f': {self.error_message}' if self.error_message else '.'}"
 
 class LotSavingError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None, lot_id: int, errors: dict[str, str]):
         super(LotSavingError, self).__init__(response)
         self.error_message = error_message
@@ -122,7 +122,7 @@ class LotSavingError(RequestFailedError):
         return f"Не удалось сохранить лот {self.lot_id}"               f"{f': {self.error_message}' if self.error_message else '.'}"
 
 class RefundError(RequestFailedError):
-           
+
     def __init__(self, response: requests.Response, error_message: str | None, order_id: str):
         super(RefundError, self).__init__(response)
         self.error_message = error_message

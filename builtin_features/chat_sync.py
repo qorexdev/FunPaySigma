@@ -29,7 +29,7 @@ localizer = Localizer()
 _ = localizer.translate
 
 SPECIAL_SYMBOL = "⁢"
-MIN_BOTS = 1                                         
+MIN_BOTS = 1
 BOT_DELAY = 4
 PLUGIN_FOLDER = "storage/builtin/chat_sync/"
 
@@ -43,7 +43,7 @@ CBT_OPEN_SETTINGS = "sync.settings"
 PLUGIN_NO_BUTTON = "sync.no"
 
 def templates_kb(cs):
-                                         
+
     if not cs.settings["templates"]:
         return telebot.types.ReplyKeyboardRemove()
     btns = [KeyboardButton(f"{SPECIAL_SYMBOL}{i}){SPECIAL_SYMBOL} {tpl}") for i, tpl
@@ -76,7 +76,7 @@ def switchers_kb(cs, offset):
     return kb
 
 def plugin_settings_kb(cs, offset):
-                                       
+
     kb = K()
     if cs.ready:
         kb.add(B(_("pl_settings"), callback_data=f"{CBT_SWITCHERS}:{offset}"))
@@ -92,7 +92,7 @@ def plugin_settings_kb(cs, offset):
     return kb
 
 class ChatSync:
-                                                                  
+
     def __init__(self, crd: Cardinal):
         self.cardinal = crd
         self.settings = None
@@ -273,7 +273,7 @@ class ChatSync:
                     f"{LOGGER_PREFIX} Решение: Дайте боту права администратора с разрешением 'Manage Topics' "
                     f"(Управлять темами) в настройках группы."
                 )
-                                                                 
+
                 if self.tgbot and self.cardinal.telegram:
                     try:
                         for admin_id in self.cardinal.telegram.authorized_users:
@@ -291,9 +291,9 @@ class ChatSync:
                                 "После этого синхронизация заработает автоматически.",
                                 parse_mode="HTML"
                             )
-                            break                                                     
+                            break
                     except Exception:
-                        pass                                 
+                        pass
             elif "chat not found" in error_msg or "chat_not_found" in error_msg:
                 logger.error(f"{LOGGER_PREFIX} Группа синхронизации не найдена. Проверьте настройки.")
             elif "bot was kicked" in error_msg or "bot is not a member" in error_msg:
@@ -657,7 +657,7 @@ class ChatSync:
 cs_obj = None
 
 def init(cardinal: Cardinal):
-                                                   
+
     global cs_obj
 
     cs = ChatSync(cardinal)
@@ -719,9 +719,9 @@ def init(cardinal: Cardinal):
 
 <b>📊 Статус:</b>
 • <b>Группа:</b> {chat_name or '<code>Не установлена</code>'}
-• <b>Ботов:</b> {len(cs.bots)} / {MIN_BOTS}+ 
+• <b>Ботов:</b> {len(cs.bots)} / {MIN_BOTS}+
 • <b>Статус:</b> {instructions}"""
-        
+
         bot.edit_message_text(stats, call.message.chat.id, call.message.id,
                              reply_markup=plugin_settings_kb(cs, 0), disable_web_page_preview=True)
 
@@ -1100,12 +1100,12 @@ def init(cardinal: Cardinal):
     logger.debug(f"{LOGGER_PREFIX} Модуль инициализирован.")
 
 def message_hook(cardinal: Cardinal, e: NewMessageEvent):
-                                                          
+
     global cs_obj
     if cs_obj is None or not cs_obj.ready:
         return
     cs_obj.ingoing_message_handler(cardinal, e)
 
 def get_settings_button():
-                                                     
+
     return B("🔄 Синхронизация чатов", callback_data=CBT_OPEN_SETTINGS)

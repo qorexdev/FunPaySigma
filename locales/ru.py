@@ -272,6 +272,10 @@ pl_activate = "▶️ Включить"
 pl_deactivate = "⏸️ Выключить"
 pl_commands = "⌨️ Команды"
 pl_settings = "⚙️ Настройки"
+pl_pin = "Закрепить"
+pl_unpin = "Открепить"
+
+ar_toggle_command = "{} Команда"
 
 cfg_download_main = "⬇️ Скачать main"
 cfg_download_ar = "⬇️ Скачать auto_response"
@@ -363,13 +367,13 @@ sys_info = """📊 <b>Что по железу:</b>
 💻 <b>CPU:</b>
 {}
     Я жру: <code>{}%</code>
-    
+
 🧠 <b>RAM:</b>
     Всего:  <code>{} MB</code>
     Занято:  <code>{} MB</code>
     Свободно:  <code>{} MB</code>
     Моя доля:  <code>{} MB</code>
-    
+
 ⏱️ <b>Аптайм:</b> <code>{}</code>
 🆔 <b>Chat ID:</b> <code>{}</code>"""
 
@@ -757,6 +761,7 @@ log_pl_activated = "$MAGENTA@{} (ID: {})$RESET: вкл плагин $YELLOW{}$RE
 log_pl_deactivated = "$MAGENTA@{} (ID: {})$RESET: выкл плагин $YELLOW{}$RESET."
 log_pl_deleted = "$MAGENTA@{} (ID: {})$RESET: удалил плагин $YELLOW{}$RESET."
 log_pl_delete_handler_err = "Ошибка удаления плагина $YELLOW{}$RESET."
+log_pl_pinned = "$MAGENTA@{} (ID: {})$RESET: закрепил/открепил плагин $YELLOW{}$RESET."
 
 log_new_msg = "$MAGENTA📩$RESET СМС от $YELLOW{} (CID: {}):"
 log_sending_greetings = "Новичок $YELLOW{} (CID: {})$RESET. Шлю привет."

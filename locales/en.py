@@ -128,6 +128,10 @@ pl_activate = "Activate"
 pl_deactivate = "Deactivate"
 pl_commands = "⌨️ Commands"
 pl_settings = "⚙️ Settings"
+pl_pin = "Pin"
+pl_unpin = "Unpin"
+
+ar_toggle_command = "{} Command"
 
 cfg_download_main = "⤵️ Download main config"
 cfg_download_ar = "⤵️ Download autoresponse config"

@@ -20,13 +20,13 @@ def init_authorized_users_cp(crd: Cardinal, *args):
     bot = tg.bot
 
     def open_authorized_users_list(c: CallbackQuery):
-                   
+
         offset = int(c.data.split(":")[1])
         bot.edit_message_text(_("desc_au"), c.message.chat.id, c.message.id,
                               reply_markup=kb.authorized_users(crd, offset))
 
     def open_authorized_user_settings(c: CallbackQuery):
-                   
+
         __, user_id, offset = c.data.split(":")
         user_id = int(user_id)
         offset = int(offset)
