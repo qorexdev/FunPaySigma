@@ -1440,7 +1440,10 @@ class Account:
         result.update({field["name"]: "on" for field in bs.find_all("input", {"type": "checkbox"}, checked=True)})
         subcategory = self.get_subcategory(enums.SubCategoryTypes.COMMON, int(result.get("node_id", 0)))
         self.csrf_token = result.get("csrf_token") or self.csrf_token
-        currency = utils.parse_currency(bs.find("span", class_="form-control-feedback").text)
+        currency_span = bs.find("span", class_="form-control-feedback")
+        if not currency_span:
+            raise exceptions.LotParsingError(response, "Лот не найден или недоступен", lot_id)
+        currency = utils.parse_currency(currency_span.text)
         if self.currency != currency:
             self.currency = currency
         bs_buyer_prices = bs.find("table", class_="table-buyers-prices").find_all("tr")

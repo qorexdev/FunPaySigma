@@ -99,6 +99,10 @@ class Runner:
 
         events, lcmc_events = [], []
         self.__last_msg_event_tag = obj.get("tag")
+
+        if not isinstance(obj.get("data"), dict):
+            return events
+
         parser = BeautifulSoup(obj["data"]["html"], "lxml")
         chats = parser.find_all("a", {"class": "contact-item"})
 
@@ -233,8 +237,9 @@ class Runner:
         events = []
         self.__last_order_event_tag = obj.get("tag")
         if not self.__first_request:
-            events.append(OrdersListChangedEvent(self.__last_order_event_tag,
-                                                 obj["data"]["buyer"], obj["data"]["seller"]))
+            if isinstance(obj.get("data"), dict):
+                events.append(OrdersListChangedEvent(self.__last_order_event_tag,
+                                                     obj["data"]["buyer"], obj["data"]["seller"]))
         if not self.make_order_requests:
             return events
 
