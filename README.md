@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&duration=3000&pause=1000&color=4FC3F7&center=true&vCenter=true&width=600&lines=⚡+FunPay+Sigma;Автоматизация+FunPay+24%2F7;Быстро.+Стабильно.+Гибко." alt="Typing SVG" />
-
-<br/>
+# ⚡ FunPay Sigma
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/Версия-2.11.0-4FC3F7?style=for-the-badge)](https://github.com/qorexdev/FunPaySigma/releases)
