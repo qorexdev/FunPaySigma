@@ -77,7 +77,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         keyboard = K().row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ar"),
                            B(_("ar_add_more"), callback_data=CBT.ADD_CMD),
                            B(_("gl_configure"), callback_data=f"{CBT.EDIT_CMD}:{command_index}:{offset}"))
-        logger.info(_("log_ar_added", m.from_user.username, m.from_user.id, raw_command))
+        logger.info(_("log_ar_added", m.from_user.username or str(m.from_user.id), m.from_user.id, raw_command))
         bot.reply_to(m, _("ar_cmd_added", utils.escape(raw_command)), reply_markup=keyboard)
 
     def open_edit_command_cp(c: CallbackQuery, answer: bool = True):
@@ -133,7 +133,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
             cardinal.AR_CFG.set(cmd, "response", response_text)
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
 
-        logger.info(_("log_ar_response_text_changed", m.from_user.username, m.from_user.id, command, response_text))
+        logger.info(_("log_ar_response_text_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, command, response_text))
         keyboard = K().row(B(_("gl_back"), callback_data=f"{CBT.EDIT_CMD}:{command_index}:{offset}"),
                            B(_("gl_edit"), callback_data=f"{CBT.EDIT_CMD_RESPONSE_TEXT}:{command_index}:{offset}"))
         bot.reply_to(m, _("ar_response_text_changed", utils.escape(command), utils.escape(response_text)),
@@ -172,7 +172,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
 
         logger.info(
-            _("log_ar_notification_text_changed", m.from_user.username, m.from_user.id, command, notification_text))
+            _("log_ar_notification_text_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, command, notification_text))
         keyboard = K().row(B(_("gl_back"), callback_data=f"{CBT.EDIT_CMD}:{command_index}:{offset}"),
                            B(_("gl_edit"), callback_data=f"{CBT.EDIT_CMD_NOTIFICATION_TEXT}:{command_index}:{offset}"))
         bot.reply_to(m, _("ar_notification_text_changed", utils.escape(command), utils.escape(notification_text)),
@@ -198,7 +198,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         for cmd in commands:
             cardinal.AR_CFG.set(cmd, "telegramNotification", value)
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
-        logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, command, value))
+        logger.info(_("log_param_changed", c.from_user.username or str(c.from_user.id), c.from_user.id, command, value))
         open_edit_command_cp(c, answer=False)
 
     def del_command(c: CallbackQuery):
@@ -215,7 +215,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         for cmd in commands:
             cardinal.AR_CFG.remove_section(cmd)
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
-        logger.info(_("log_ar_cmd_deleted", c.from_user.username, c.from_user.id, command))
+        logger.info(_("log_ar_cmd_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, command))
         bot.edit_message_text(_("desc_ar_list"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.commands_list(cardinal, offset))
         bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
@@ -237,7 +237,7 @@ def init_auto_response_cp(cardinal: Cardinal, *args):
         for cmd in commands:
             cardinal.AR_CFG.set(cmd, "disabled", new_value)
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
-        logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, command, "disabled", new_value))
+        logger.info(_("log_param_changed", c.from_user.username or str(c.from_user.id), c.from_user.id, command, "disabled", new_value))
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
         open_edit_command_cp(c, answer=False)
 

@@ -81,7 +81,7 @@ def init_uploader(cardinal: Cardinal):
 
         keyboard = types.InlineKeyboardMarkup()            .add(Button("✏️ Редактировать файл", callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_number}:0"))
 
-        logger.info(f"Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
+        logger.info(f"Пользователь $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота файл с товарами $YELLOWstorage/products/{m.document.file_name}$RESET.")
 
         bot.send_message(m.chat.id,
@@ -121,7 +121,7 @@ def init_uploader(cardinal: Cardinal):
             return
 
         cardinal.save_config(new_config, "configs/_main.cfg")
-        logger.info(f"Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
+        logger.info(f"Пользователь $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота основной конфиг.")
         bot.send_message(m.chat.id, "✅ Основной конфиг успешно загружен. \n"
                                     "Необходимо перезагрузить бота, что бы применить изменения. \n"
@@ -162,7 +162,7 @@ def init_uploader(cardinal: Cardinal):
         cardinal.RAW_AR_CFG, cardinal.AR_CFG = raw_new_config, new_config
         cardinal.save_config(cardinal.RAW_AR_CFG, "configs/auto_response.cfg")
 
-        logger.info(f"Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
+        logger.info(f"Пользователь $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота и установил конфиг автоответчика.")
         bot.send_message(m.chat.id, "✅ Конфиг автоответчика успешно применен.")
 
@@ -200,7 +200,7 @@ def init_uploader(cardinal: Cardinal):
         cardinal.AD_CFG = new_config
         cardinal.save_config(cardinal.AD_CFG, "configs/auto_delivery.cfg")
 
-        logger.info(f"Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
+        logger.info(f"Пользователь $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота и установил конфиг автовыдачи.")
         bot.send_message(m.chat.id, "✅ Конфиг автовыдачи успешно применен.")
 
@@ -213,7 +213,7 @@ def init_uploader(cardinal: Cardinal):
                              custom_path=f"plugins"):
             return
 
-        logger.info(f"[IMPORTANT] Пользователь $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET "
+        logger.info(f"[IMPORTANT] Пользователь $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET "
                     f"загрузил в бота плагин $YELLOWplugins/{m.document.file_name}$RESET.")
 
         keyboard = types.InlineKeyboardMarkup()            .add(Button("◀️Назад", callback_data=f"{CBT.PLUGINS_LIST}:{offset}"))

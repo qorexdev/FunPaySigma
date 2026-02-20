@@ -93,7 +93,7 @@ def init_auto_delivery_cp(crd: Cardinal, *args):
 Вот твой товар:
 $product""")
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
-        logger.info(_("log_ad_linked", m.from_user.username, m.from_user.id, lot))
+        logger.info(_("log_ad_linked", m.from_user.username or str(m.from_user.id), m.from_user.id, lot))
 
         lot_index = len(crd.AD_CFG.sections()) - 1
         ad_lot_offset = utils.get_offset(lot_index, MENU_CFG.AD_BTNS_AMOUNT)
@@ -150,7 +150,7 @@ $product""")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:ad"),
                  B(_("gf_create_more"), callback_data=CBT.CREATE_PRODUCTS_FILE),
                  B(_("gl_configure"), callback_data=f"{CBT.EDIT_PRODUCTS_FILE}:{file_index}:{offset}"))
-        logger.info(_("log_gf_created", m.from_user.username, m.from_user.id, file_name))
+        logger.info(_("log_gf_created", m.from_user.username or str(m.from_user.id), m.from_user.id, file_name))
         bot.send_message(m.chat.id, _("gf_created", file_name), reply_markup=keyboard)
 
     def open_edit_lot_cp(c: CallbackQuery):
@@ -201,7 +201,7 @@ $product""")
 
         crd.AD_CFG.set(lot, "response", new_response)
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
-        logger.info(_("log_ad_text_changed", m.from_user.username, m.from_user.id, lot, new_response))
+        logger.info(_("log_ad_text_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, lot, new_response))
         bot.reply_to(m, _("ad_text_changed", utils.escape(lot), utils.escape(new_response)), reply_markup=keyboard)
 
     def act_link_gf(c: CallbackQuery):
@@ -237,7 +237,7 @@ $product""")
         if file_name == "-":
             crd.AD_CFG.remove_option(lot, "productsFileName")
             crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
-            logger.info(_("log_gf_unlinked", m.from_user.username, m.from_user.id, lot))
+            logger.info(_("log_gf_unlinked", m.from_user.username or str(m.from_user.id), m.from_user.id, lot))
             bot.reply_to(m, _("ad_gf_unlinked", utils.escape(lot)), reply_markup=keyboard)
             return
 
@@ -263,10 +263,10 @@ $product""")
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
 
         if exists:
-            logger.info(_("log_gf_linked", m.from_user.username, m.from_user.id, file_name, lot))
+            logger.info(_("log_gf_linked", m.from_user.username or str(m.from_user.id), m.from_user.id, file_name, lot))
             bot.reply_to(m, _("ad_gf_linked", file_name, utils.escape(lot)), reply_markup=keyboard)
         else:
-            logger.info(_("log_gf_created_and_linked", m.from_user.username, m.from_user.id, file_name, lot))
+            logger.info(_("log_gf_created_and_linked", m.from_user.username or str(m.from_user.id), m.from_user.id, file_name, lot))
             bot.reply_to(m, _("ad_gf_created_and_linked", file_name, utils.escape(lot)), reply_markup=keyboard)
 
     def switch_lot_setting(c: CallbackQuery):
@@ -282,7 +282,7 @@ $product""")
         value = str(int(not lot_obj.getboolean(param)))
         crd.AD_CFG.set(lot, param, value)
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
-        logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, param, lot, value))
+        logger.info(_("log_param_changed", c.from_user.username or str(c.from_user.id), c.from_user.id, param, lot, value))
         bot.edit_message_text(utils.generate_lot_info_text(lot_obj), c.message.chat.id, c.message.id,
                               reply_markup=kb.edit_lot(crd, lot_number, offset))
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
@@ -300,7 +300,7 @@ $product""")
         key = "".join(random.sample(string.ascii_letters + string.digits, 50))
         crd.delivery_tests[key] = lot_name
 
-        logger.info(_("log_new_ad_key", c.from_user.username, c.from_user.id, lot_name, key))
+        logger.info(_("log_new_ad_key", c.from_user.username or str(c.from_user.id), c.from_user.id, lot_name, key))
 
         keyboard = K().row(B(_("gl_back"), callback_data=f"{CBT.EDIT_AD_LOT}:{lot_index}:{offset}"),
                            B(_("ea_more_test"), callback_data=f"test_auto_delivery:{lot_index}:{offset}"))
@@ -321,7 +321,7 @@ $product""")
         crd.AD_CFG.remove_section(lot)
         crd.save_config(crd.AD_CFG, "configs/auto_delivery.cfg")
 
-        logger.info(_("log_ad_deleted", c.from_user.username, c.from_user.id, lot))
+        logger.info(_("log_ad_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, lot))
         bot.edit_message_text(_("desc_ad_list"), c.message.chat.id, c.message.id,
                               reply_markup=kb.lots_list(crd, offset))
         bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
@@ -369,7 +369,7 @@ $product""")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.FP_LOTS_LIST}:{fp_lots_offset}"),
                  B(_("gl_configure"), callback_data=f"{CBT.EDIT_AD_LOT}:{ad_lot_index}:{ad_lots_offset}"))
 
-        logger.info(_("log_ad_linked", c.from_user.username, c.from_user.id, lot.title))
+        logger.info(_("log_ad_linked", c.from_user.username or str(c.from_user.id), c.from_user.id, lot.title))
 
         bot.send_message(c.message.chat.id, _("ad_lot_linked", utils.escape(lot.title)), reply_markup=keyboard)
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
@@ -453,7 +453,7 @@ $product""")
             bot.reply_to(m, _("gf_add_goods_err"), reply_markup=keyboard)
             return
 
-        logger.info(_("log_gf_new_goods", m.from_user.username, m.from_user.id, len(products), file_name))
+        logger.info(_("log_gf_new_goods", m.from_user.username or str(m.from_user.id), m.from_user.id, len(products), file_name))
         keyboard = K().row(back_btn, add_more_btn)
         bot.reply_to(m, _("gf_new_goods", len(products), file_name), reply_markup=keyboard)
 
@@ -473,7 +473,7 @@ $product""")
                 bot.answer_callback_query(c.id, _("gf_empty_error", file_name), show_alert=True)
                 return
 
-            logger.info(_("log_gf_downloaded", c.from_user.username, c.from_user.id, file_name))
+            logger.info(_("log_gf_downloaded", c.from_user.username or str(c.from_user.id), c.from_user.id, file_name))
             f.seek(0)
             bot.send_document(c.message.chat.id, f)
             bot.answer_callback_query(c.id)
@@ -513,7 +513,7 @@ $product""")
         try:
             os.remove(f"storage/products/{file_name}")
 
-            logger.info(_("log_gf_deleted", c.from_user.username, c.from_user.id, file_name))
+            logger.info(_("log_gf_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, file_name))
             bot.edit_message_text(_("desc_gf"), c.message.chat.id, c.message.id,
                                   reply_markup=kb.products_files_list(offset))
 

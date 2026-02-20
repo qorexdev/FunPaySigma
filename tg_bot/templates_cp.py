@@ -82,7 +82,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
 
         tg.answer_templates.append(template)
         utils.save_answer_templates(tg.answer_templates)
-        logger.info(_("log_tmplt_added", m.from_user.username, m.from_user.id, template))
+        logger.info(_("log_tmplt_added", m.from_user.username or str(m.from_user.id), m.from_user.id, template))
 
         keyboard = K().row(B(_("gl_back"), callback_data=f"{CBT.TMPLT_LIST}:{offset}"),
                            B(_("tmplt_add_more"), callback_data=f"{CBT.ADD_TMPLT}:{offset}"))
@@ -98,7 +98,7 @@ def init_templates_cp(cardinal: Cardinal, *args):
         template = tg.answer_templates[template_index]
         tg.answer_templates.pop(template_index)
         utils.save_answer_templates(tg.answer_templates)
-        logger.info(_("log_tmplt_deleted", c.from_user.username, c.from_user.id, template))
+        logger.info(_("log_tmplt_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, template))
         bot.edit_message_text(_("desc_tmplt"), c.message.chat.id, c.message.id,
                               reply_markup=keyboards.templates_list(cardinal, offset))
         bot.answer_callback_query(c.id)

@@ -32,7 +32,7 @@ def init_config_loader_cp(cardinal: Cardinal, *args):
         config_type = c.data.split(":")[1]
         if config_type == "main":
             logger.info(
-                f"[IMPORTANT] Получаю основной конфиг по запросу пользователя $MAGENTA@{c.from_user.username} (id: {c.from_user.id})$RESET.")
+                f"[IMPORTANT] Получаю основной конфиг по запросу пользователя $MAGENTA@{c.from_user.username or str(c.from_user.id)} (id: {c.from_user.id})$RESET.")
             path, text = "configs/_main.cfg", _("cfg_main")
         elif config_type == "autoResponse":
             path, text = "configs/auto_response.cfg", _("cfg_ar")
@@ -56,7 +56,7 @@ def init_config_loader_cp(cardinal: Cardinal, *args):
             f.seek(0)
             bot.send_document(c.message.chat.id, f, caption=text, reply_markup=back_button)
 
-        logger.info(_("log_cfg_downloaded", c.from_user.username, c.from_user.id, path))
+        logger.info(_("log_cfg_downloaded", c.from_user.username or str(c.from_user.id), c.from_user.id, path))
         bot.answer_callback_query(c.id)
 
     tg.cbq_handler(open_config_loader, lambda c: c.data == CBT.CONFIG_LOADER)

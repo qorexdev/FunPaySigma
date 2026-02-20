@@ -98,7 +98,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
         cardinal.toggle_plugin(uuid)
         c.data = f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"
         logger.info(_("log_pl_activated" if cardinal.plugins[uuid].enabled else "log_pl_deactivated",
-                      c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
+                      c.from_user.username or str(c.from_user.id), c.from_user.id, cardinal.plugins[uuid].name))
         bot.answer_callback_query(c.id, text="✅", show_alert=False)
         open_edit_plugin_cp(c, answer=False)
 
@@ -147,7 +147,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
                 logger.debug("TRACEBACK", exc_info=True)
 
         os.remove(cardinal.plugins[uuid].path)
-        logger.info(_("log_pl_deleted", c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
+        logger.info(_("log_pl_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, cardinal.plugins[uuid].name))
         cardinal.plugins.pop(uuid)
 
         bot.answer_callback_query(c.id, text="🗑️", show_alert=False)
@@ -172,7 +172,7 @@ def init_plugins_cp(cardinal: Cardinal, *args):
 
         from Utils import cardinal_tools
         cardinal_tools.cache_pinned_plugins(cardinal.pinned_plugins)
-        logger.info(_("log_pl_pinned", c.from_user.username, c.from_user.id, cardinal.plugins[uuid].name))
+        logger.info(_("log_pl_pinned", c.from_user.username or str(c.from_user.id), c.from_user.id, cardinal.plugins[uuid].name))
         bot.answer_callback_query(c.id, text="📌", show_alert=False)
         c.data = f"{CBT.EDIT_PLUGIN}:{uuid}:{offset}"
         open_edit_plugin_cp(c, answer=False)

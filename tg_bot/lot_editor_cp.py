@@ -717,7 +717,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         if errors > 0:
             result_text += f"\n{_('le_bulk_error', errors)}"
 
-        logger.info(_("log_le_bulk_action", c.from_user.username, c.from_user.id, action, full_name, success))
+        logger.info(_("log_le_bulk_action", c.from_user.username or str(c.from_user.id), c.from_user.id, action, full_name, success))
 
         crd.update_lots_and_categories()
 
@@ -941,7 +941,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
 
             _lot_fields_cache[lot_id] = lot_fields
 
-            logger.info(_("log_le_field_changed", m.from_user.username, m.from_user.id, field_name, lot_id))
+            logger.info(_("log_le_field_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, field_name, lot_id))
 
             field_names = {
                 "price": "Цена",
@@ -974,7 +974,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         lot_fields.active = not lot_fields.active
         _lot_fields_cache[lot_id] = lot_fields
 
-        logger.info(_("log_le_lot_toggled", c.from_user.username, c.from_user.id, "active", lot_id, lot_fields.active))
+        logger.info(_("log_le_lot_toggled", c.from_user.username or str(c.from_user.id), c.from_user.id, "active", lot_id, lot_fields.active))
 
         text = generate_lot_edit_text(lot_fields)
 
@@ -995,7 +995,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         lot_fields.deactivate_after_sale = not lot_fields.deactivate_after_sale
         _lot_fields_cache[lot_id] = lot_fields
 
-        logger.info(_("log_le_lot_toggled", c.from_user.username, c.from_user.id, "deactivate_after_sale", lot_id, lot_fields.deactivate_after_sale))
+        logger.info(_("log_le_lot_toggled", c.from_user.username or str(c.from_user.id), c.from_user.id, "deactivate_after_sale", lot_id, lot_fields.deactivate_after_sale))
 
         text = generate_lot_edit_text(lot_fields)
 
@@ -1068,7 +1068,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         lot_fields.edit_fields({field_key: option_value})
         _lot_fields_cache[lot_id] = lot_fields
 
-        logger.info(_("log_le_field_changed", c.from_user.username, c.from_user.id, field_key, lot_id))
+        logger.info(_("log_le_field_changed", c.from_user.username or str(c.from_user.id), c.from_user.id, field_key, lot_id))
 
         text = generate_lot_edit_text(lot_fields)
         bot.edit_message_text(text, c.message.chat.id, c.message.id,
@@ -1103,7 +1103,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             _lot_fields_cache[lot_id] = lot_fields
 
             field_name = lot_fields.field_labels.get(field_key, field_key)
-            logger.info(_("log_le_field_changed", m.from_user.username, m.from_user.id, field_key, lot_id))
+            logger.info(_("log_le_field_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, field_key, lot_id))
             bot.reply_to(m, _("le_field_updated", field_name), reply_markup=keyboard)
 
         except Exception as e:
@@ -1218,7 +1218,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                     del _lot_drafts[original_lot_id]
                     save_drafts()
 
-                logger.info(_("log_le_lot_created", c.from_user.username, c.from_user.id, real_id))
+                logger.info(_("log_le_lot_created", c.from_user.username or str(c.from_user.id), c.from_user.id, real_id))
                 if real_id:
                     success_msg = f"✅ Лот создан! ID: <code>#{real_id}</code>"
                 else:
@@ -1226,7 +1226,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
                 clear_lot_cache(original_lot_id)
                 lot_id = real_id if real_id else original_lot_id
             else:
-                logger.info(_("log_le_lot_saved", c.from_user.username, c.from_user.id, lot_id))
+                logger.info(_("log_le_lot_saved", c.from_user.username or str(c.from_user.id), c.from_user.id, lot_id))
                 success_msg = _("le_saved")
                 crd.update_lots_and_categories()
 
@@ -1297,7 +1297,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         _lot_templates[template_name] = template_data
         save_templates()
 
-        logger.info(f"@{m.from_user.username} (ID: {m.from_user.id}) сохранил шаблон '{template_name}'")
+        logger.info(f"@{m.from_user.username or str(m.from_user.id)} (ID: {m.from_user.id}) сохранил шаблон '{template_name}'")
 
         keyboard = K().add(B(_("gl_back"), callback_data=f"{CBT.FP_LOT_EDIT}:{lot_id}:{offset}"))
         bot.reply_to(m, _("le_template_saved", template_name), reply_markup=keyboard)
@@ -1470,7 +1470,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
             new_lot_fields.lot_id = temp_id
             _lot_fields_cache[temp_id] = new_lot_fields
 
-            logger.info(f"@{c.from_user.username} (ID: {c.from_user.id}) дублировал лот #{lot_id}")
+            logger.info(f"@{c.from_user.username or str(c.from_user.id)} (ID: {c.from_user.id}) дублировал лот #{lot_id}")
 
             text = generate_lot_edit_text(new_lot_fields)
             bot.edit_message_text(text, c.message.chat.id, c.message.id,
@@ -1514,7 +1514,7 @@ def init_lot_editor_cp(crd: Cardinal, *args):
         try:
             crd.account.delete_lot(lot_id)
 
-            logger.info(_("log_le_lot_deleted", c.from_user.username, c.from_user.id, lot_id))
+            logger.info(_("log_le_lot_deleted", c.from_user.username or str(c.from_user.id), c.from_user.id, lot_id))
 
             clear_lot_cache(lot_id)
 

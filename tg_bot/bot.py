@@ -201,7 +201,7 @@ class TGBot:
         if m.chat.type != "private" or (self.attempts.get(m.from_user.id, 0) >= 5) or m.text is None:
             return
         if not self.cardinal.block_tg_login and                cardinal_tools.check_password(m.text, self.cardinal.MAIN_CFG["Telegram"]["secretKeyHash"]):
-            self.send_notification(text=_("access_granted_notification", m.from_user.username, m.from_user.id),
+            self.send_notification(text=_("access_granted_notification", m.from_user.username or str(m.from_user.id), m.from_user.id),
                                    notification_type=NotificationTypes.critical, pin=True)
             self.authorized_users[m.from_user.id] = {}
             utils.save_authorized_users(self.authorized_users)
@@ -215,7 +215,7 @@ class TGBot:
             logger.warning(_("log_access_granted", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id))
         else:
             self.attempts[m.from_user.id] = self.attempts.get(m.from_user.id, 0) + 1
-            text = _("access_denied", m.from_user.username, language=lang)
+            text = _("access_denied", m.from_user.username or str(m.from_user.id), language=lang)
             kb_links = kb.LINKS_KB(language=lang)
             logger.warning(_("log_access_attempt", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id))
         self.bot.send_message(m.chat.id, text, reply_markup=kb_links)
@@ -377,10 +377,10 @@ class TGBot:
         self.cardinal.MAIN_CFG["Other"]["watermark"] = watermark
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         if watermark:
-            logger.info(_("log_watermark_changed", m.from_user.username, m.from_user.id, watermark))
+            logger.info(_("log_watermark_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, watermark))
             self.bot.reply_to(m, preview + _("watermark_changed", watermark))
         else:
-            logger.info(_("log_watermark_deleted", m.from_user.username, m.from_user.id))
+            logger.info(_("log_watermark_deleted", m.from_user.username or str(m.from_user.id), m.from_user.id))
             self.bot.reply_to(m, preview + _("watermark_deleted"))
 
     def send_logs(self, m: Message):
@@ -413,7 +413,7 @@ class TGBot:
     def del_logs(self, m: Message):
 
         logger.info(
-            f"[IMPORTANT] Удаляю логи по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
+            f"[IMPORTANT] Удаляю логи по запросу пользователя $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET.")
         deleted = 0
         for file in os.listdir("logs"):
             if not file.endswith(".log"):
@@ -503,7 +503,7 @@ class TGBot:
 
     def get_backup(self, m: Message):
         logger.info(
-            f"[IMPORTANT] Получаю бэкап по запросу пользователя $MAGENTA@{m.from_user.username} (id: {m.from_user.id})$RESET.")
+            f"[IMPORTANT] Получаю бэкап по запросу пользователя $MAGENTA@{m.from_user.username or str(m.from_user.id)} (id: {m.from_user.id})$RESET.")
         if os.path.exists("backup.zip"):
             file_path = "backup.zip"
             modification_time = os.path.getmtime(file_path)
@@ -693,7 +693,7 @@ class TGBot:
     def edit_greetings_text(self, m: Message):
         self.clear_state(m.chat.id, m.from_user.id, True)
         self.cardinal.MAIN_CFG["Greetings"]["greetingsText"] = m.text
-        logger.info(_("log_greeting_changed", m.from_user.username, m.from_user.id, m.text))
+        logger.info(_("log_greeting_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_GREETINGS_TEXT))
@@ -713,7 +713,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["Greetings"]["greetingsCooldown"] = str(cooldown)
-        logger.info(_("log_greeting_cooldown_changed", m.from_user.username, m.from_user.id, m.text))
+        logger.info(_("log_greeting_cooldown_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:gr"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_GREETINGS_COOLDOWN))
@@ -731,7 +731,7 @@ class TGBot:
     def edit_order_confirm_reply_text(self, m: Message):
         self.clear_state(m.chat.id, m.from_user.id, True)
         self.cardinal.MAIN_CFG["OrderConfirm"]["replyText"] = m.text
-        logger.info(_("log_order_confirm_changed", m.from_user.username, m.from_user.id, m.text))
+        logger.info(_("log_order_confirm_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:oc"),
                  B(_("gl_edit"), callback_data=CBT.EDIT_ORDER_CONFIRM_REPLY_TEXT))
@@ -753,7 +753,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["OrderReminders"]["timeout"] = str(timeout)
-        logger.info(_("log_order_reminders_timeout_changed", m.from_user.username, m.from_user.id, timeout))
+        logger.info(_("log_order_reminders_timeout_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, timeout))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("order_reminders_timeout_changed", timeout), reply_markup=keyboard)
@@ -770,7 +770,7 @@ class TGBot:
     def edit_order_reminders_template(self, m: Message):
         self.clear_state(m.chat.id, m.from_user.id, True)
         self.cardinal.MAIN_CFG["OrderReminders"]["template"] = m.text
-        logger.info(_("log_order_reminders_template_changed", m.from_user.username, m.from_user.id, m.text))
+        logger.info(_("log_order_reminders_template_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("order_reminders_template_changed"), reply_markup=keyboard)
@@ -791,7 +791,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["OrderReminders"]["repeatCount"] = str(repeat_count)
-        logger.info(_("log_order_reminders_repeat_count_changed", m.from_user.username, m.from_user.id, repeat_count))
+        logger.info(_("log_order_reminders_repeat_count_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, repeat_count))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("order_reminders_repeat_count_changed", repeat_count), reply_markup=keyboard)
@@ -812,7 +812,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["OrderReminders"]["interval"] = str(interval)
-        logger.info(_("log_order_reminders_interval_changed", m.from_user.username, m.from_user.id, interval))
+        logger.info(_("log_order_reminders_interval_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, interval))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.order_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("order_reminders_interval_changed", interval), reply_markup=keyboard)
@@ -1228,7 +1228,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["ReviewReminders"]["timeout"] = str(timeout)
-        logger.info(_("log_review_reminders_timeout_changed", m.from_user.username, m.from_user.id, timeout))
+        logger.info(_("log_review_reminders_timeout_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, timeout))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("review_reminders_timeout_changed", timeout), reply_markup=keyboard)
@@ -1245,7 +1245,7 @@ class TGBot:
     def edit_review_reminders_template(self, m: Message):
         self.clear_state(m.chat.id, m.from_user.id, True)
         self.cardinal.MAIN_CFG["ReviewReminders"]["template"] = m.text
-        logger.info(_("log_review_reminders_template_changed", m.from_user.username, m.from_user.id))
+        logger.info(_("log_review_reminders_template_changed", m.from_user.username or str(m.from_user.id), m.from_user.id))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("review_reminders_template_changed"), reply_markup=keyboard)
@@ -1266,7 +1266,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["ReviewReminders"]["repeatCount"] = str(repeat_count)
-        logger.info(_("log_review_reminders_repeat_count_changed", m.from_user.username, m.from_user.id, repeat_count))
+        logger.info(_("log_review_reminders_repeat_count_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, repeat_count))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("review_reminders_repeat_count_changed", repeat_count), reply_markup=keyboard)
@@ -1287,7 +1287,7 @@ class TGBot:
             self.bot.reply_to(m, _("gl_error_try_again"))
             return
         self.cardinal.MAIN_CFG["ReviewReminders"]["interval"] = str(interval)
-        logger.info(_("log_review_reminders_interval_changed", m.from_user.username, m.from_user.id, interval))
+        logger.info(_("log_review_reminders_interval_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, interval))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = kb.review_reminders_settings(self.cardinal)
         self.bot.reply_to(m, _("review_reminders_interval_changed", interval), reply_markup=keyboard)
@@ -1480,7 +1480,7 @@ class TGBot:
         stars = self.get_state(m.chat.id, m.from_user.id)["data"]["stars"]
         self.clear_state(m.chat.id, m.from_user.id, True)
         self.cardinal.MAIN_CFG["ReviewReply"][f"star{stars}ReplyText"] = m.text
-        logger.info(_("log_review_reply_changed", m.from_user.username, m.from_user.id, stars, m.text))
+        logger.info(_("log_review_reply_changed", m.from_user.username or str(m.from_user.id), m.from_user.id, stars, m.text))
         self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
         keyboard = K()            .row(B(_("gl_back"), callback_data=f"{CBT.CATEGORY}:rr"),
                  B(_("gl_edit"), callback_data=f"{CBT.EDIT_REVIEW_REPLY_TEXT}:{stars}"))
@@ -1656,7 +1656,7 @@ class TGBot:
         else:
             self.bot.edit_message_reply_markup(c.message.chat.id, c.message.id,
                                                reply_markup=sections[section](self.cardinal))
-        logger.info(_("log_param_changed", c.from_user.username, c.from_user.id, option, section,
+        logger.info(_("log_param_changed", c.from_user.username or str(c.from_user.id), c.from_user.id, option, section,
                       self.cardinal.MAIN_CFG[section][option]))
         self.bot.answer_callback_query(c.id, text="✅", show_alert=False)
 
@@ -1665,7 +1665,7 @@ class TGBot:
         chat_id, notification_type = int(split[1]), split[2]
 
         result = self.toggle_notification(chat_id, notification_type)
-        logger.info(_("log_notification_switched", c.from_user.username, c.from_user.id,
+        logger.info(_("log_notification_switched", c.from_user.username or str(c.from_user.id), c.from_user.id,
                       notification_type, c.message.chat.id, result))
         keyboard = kb.announcements_settings if notification_type in [utils.NotificationTypes.announcement,
                                                                       utils.NotificationTypes.ad]            else kb.notifications_settings
