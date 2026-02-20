@@ -7,7 +7,7 @@ from FunPayAPI.common.enums import SubCategoryTypes
 if TYPE_CHECKING:
     from configparser import ConfigParser
 
-from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader,    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp, support_tickets_cp
+from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader,    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp, support_tickets_cp, withdraw_cp
 from types import ModuleType
 import Utils.exceptions
 from uuid import UUID
@@ -1060,7 +1060,7 @@ class Cardinal(object):
             if self.telegram:
                 for module in [auto_response_cp, auto_delivery_cp, config_loader_cp, templates_cp, plugins_cp,
                                file_uploader, authorized_users_cp, proxy_cp, lot_editor_cp, support_tickets_cp,
-                               default_cp]:
+                               default_cp, withdraw_cp]:
                     self.add_handlers_from_plugin(module)
 
         self.run_handlers(self.pre_init_handlers, (self,))

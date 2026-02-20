@@ -28,7 +28,7 @@ def SETTINGS_SECTIONS_3() -> K:
     return K()        .row(B(_("mm_graphs"), callback_data="graphs_Settings"),
              B(_("mm_chat_sync"), callback_data="sync.settings"))        .row(B(_("mm_rating_limits"), callback_data="sras_info.settings"),
              B(_("mm_support_tickets"), callback_data=CBT.SUPPORT_TICKETS))        .row(B(_("mm_authorized_users"), callback_data=f"{CBT.AUTHORIZED_USERS}:0"),
-             B(_("mm_proxy"), callback_data=f"{CBT.PROXY}:0"))        .row(B(_("mm_configs"), callback_data=CBT.CONFIG_LOADER))        .add(B(_("gl_back"), callback_data=CBT.MAIN2))
+             B(_("mm_proxy"), callback_data=f"{CBT.PROXY}:0"))        .row(B(_("mm_configs"), callback_data=CBT.CONFIG_LOADER))        .add(B("💰 Вывод средств", callback_data="wd.menu"))        .add(B(_("gl_back"), callback_data=CBT.MAIN2))
 
 def AR_SETTINGS() -> K:
     return K()        .row(B(_("ar_edit_commands"), callback_data=f"{CBT.CMD_LIST}:0"),
