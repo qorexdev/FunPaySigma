@@ -212,17 +212,17 @@ class TGBot:
                 utils.save_notification_settings(self.notification_settings)
             text = _("access_granted", language=lang)
             kb_links = None
-            logger.warning(_("log_access_granted", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id))
+            logger.warning(_("log_access_granted", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id))
         else:
             self.attempts[m.from_user.id] = self.attempts.get(m.from_user.id, 0) + 1
             text = _("access_denied", m.from_user.username, language=lang)
             kb_links = kb.LINKS_KB(language=lang)
-            logger.warning(_("log_access_attempt", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id))
+            logger.warning(_("log_access_attempt", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id))
         self.bot.send_message(m.chat.id, text, reply_markup=kb_links)
 
     def ignore_unauthorized_users(self, c: CallbackQuery):
 
-        logger.warning(_("log_click_attempt", hashlib.sha256(c.from_user.username.encode()).hexdigest()[:8], c.from_user.id, hashlib.sha256(c.message.chat.username.encode()).hexdigest()[:8] if c.message.chat.username else None,
+        logger.warning(_("log_click_attempt", hashlib.sha256((c.from_user.username or str(c.from_user.id)).encode()).hexdigest()[:8], c.from_user.id, hashlib.sha256(c.message.chat.username.encode()).hexdigest()[:8] if c.message.chat.username else None,
                           c.message.chat.id))
         self.attempts[c.from_user.id] = self.attempts.get(c.from_user.id, 0) + 1
         if self.attempts[c.from_user.id] <= 5:
@@ -311,7 +311,7 @@ class TGBot:
         key = "".join(random.sample(string.ascii_letters + string.digits, 50))
         self.cardinal.delivery_tests[key] = lot_name
 
-        logger.info(_("log_new_ad_key", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, lot_name, key))
+        logger.info(_("log_new_ad_key", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id, lot_name, key))
         self.bot.send_message(m.chat.id, _("test_ad_key_created", utils.escape(lot_name), key))
 
     def act_ban(self, m: Message):
@@ -330,7 +330,7 @@ class TGBot:
 
         self.cardinal.blacklist.append(nickname)
         cardinal_tools.cache_blacklist(self.cardinal.blacklist)
-        logger.info(_("log_user_blacklisted", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, nickname))
+        logger.info(_("log_user_blacklisted", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id, nickname))
         self.bot.send_message(m.chat.id, _("user_blacklisted", nickname))
 
     def act_unban(self, m: Message):
@@ -347,7 +347,7 @@ class TGBot:
             return
         self.cardinal.blacklist.remove(nickname)
         cardinal_tools.cache_blacklist(self.cardinal.blacklist)
-        logger.info(_("log_user_unbanned", hashlib.sha256(m.from_user.username.encode()).hexdigest()[:8], m.from_user.id, nickname))
+        logger.info(_("log_user_unbanned", hashlib.sha256((m.from_user.username or str(m.from_user.id)).encode()).hexdigest()[:8], m.from_user.id, nickname))
         self.bot.send_message(m.chat.id, _("user_unbanned", nickname))
 
     def send_ban_list(self, m: Message):

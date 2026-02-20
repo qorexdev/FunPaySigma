@@ -53,13 +53,6 @@ def _mask(wallet) -> str:
     return f"{d[:4]}••••{d[-4:]}" if len(d) > 8 else d
 
 
-def _get_lot_id(cardinal: "Cardinal"):
-    """Возвращает любой lot_id для запроса баланса."""
-    if cardinal.account.lots:
-        return next(iter(cardinal.account.lots))
-    return None
-
-
 def _calc_preview(cardinal: "Cardinal", wallet, amount: float):
     """
     Делает запрос preview=1 к withdraw/withdraw.
@@ -102,9 +95,11 @@ def init_withdraw_cp(cardinal: "Cardinal", *args):
         Показывает главную страницу вывода.
         edit=True → редактируем сообщение, edit=False → отправляем новое.
         """
-        lot_id = _get_lot_id(cardinal)
-        if lot_id is None:
-            text = "❌ <b>Нет активных лотов</b>\n\nНевозможно получить баланс FunPay.\nСначала добавьте хотя бы один лот."
+        try:
+            balance = cardinal.get_balance() or cardinal.balance
+            wallets = cardinal.account.get_wallets()
+        except Exception as e:
+            text = f"❌ <b>Ошибка получения данных:</b>\n<code>{e}</code>"
             kb = K().add(B("◀️ Назад", callback_data=CBT.MAIN3))
             if edit:
                 bot.edit_message_text(text, chat_id, message_id, parse_mode="HTML", reply_markup=kb)
@@ -112,11 +107,8 @@ def init_withdraw_cp(cardinal: "Cardinal", *args):
                 bot.send_message(chat_id, text, parse_mode="HTML", reply_markup=kb)
             return
 
-        try:
-            balance = cardinal.account.get_balance(lot_id)
-            wallets = cardinal.account.get_wallets()
-        except Exception as e:
-            text = f"❌ <b>Ошибка получения данных:</b>\n<code>{e}</code>"
+        if balance is None:
+            text = "❌ <b>Баланс недоступен</b>\n\nНе удалось получить баланс. Попробуйте позже."
             kb = K().add(B("◀️ Назад", callback_data=CBT.MAIN3))
             if edit:
                 bot.edit_message_text(text, chat_id, message_id, parse_mode="HTML", reply_markup=kb)
