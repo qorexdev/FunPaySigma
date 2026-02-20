@@ -33,7 +33,8 @@ class Runner:
         self.__last_msg_event_tag = utils.random_tag()
         self.__last_order_event_tag = utils.random_tag()
 
-        self.saved_orders: dict[str, types.OrderShortcut] = {}
+        self.saved_orders: dict[str, types.OrderShortcut] | None = None
+        """Сохраненные состояния заказов ({ID заказа: экземпляр types.OrderShortcut})."""
 
         self.runner_last_messages: dict[int, list[int, int, str | None]] = {}
 
@@ -41,9 +42,19 @@ class Runner:
 
         self.last_messages_ids: dict[int, int] = {}
 
+        self.chat_node_tags: dict[int, str] = {}
+        """Теги прочитанных чатов ({ID чата: тег})"""
+
+        self.users_ids: dict[int, int] = {}
+        """ID чата - ID собеседника"""
+
         self.buyers_viewing: dict[int, types.BuyerViewing] = {}
 
-        self.runner_len: int = 50
+        self.runner_len: int = 10
+        """Количество событий, на которое успешно отвечает funpay.com/runner/"""
+
+        self.__chat_nodes: dict = {}
+        """Кэш узлов чатов для оптимизации запросов"""
 
         self.account: Account = account
 
@@ -157,16 +168,31 @@ class Runner:
 
         if not self.make_msg_requests:
             events.extend(lcmc_events)
+            self.__chat_nodes = {}
             return events
 
         lcmc_events_without_new_mess = []
         lcmc_events_with_new_mess = []
+        lcmc_events_with_chat_node = []
+
         for lcmc_event in lcmc_events:
             if lcmc_event.chat.node_msg_id <= self.last_messages_ids.get(lcmc_event.chat.id, -1):
                 lcmc_events_without_new_mess.append(lcmc_event)
+            elif lcmc_event.chat.node_msg_id <= self.__chat_nodes.get(lcmc_event.chat.id, ({}, -1))[-1]:
+                lcmc_events_with_chat_node.append(lcmc_event)
             else:
                 lcmc_events_with_new_mess.append(lcmc_event)
         events.extend(lcmc_events_without_new_mess)
+
+        # Чаты, уже загруженные в кэш — обрабатываем без нового запроса
+        if lcmc_events_with_chat_node:
+            chats_data = {i.chat.id: i.chat.name for i in lcmc_events_with_chat_node}
+            chats = [self.__chat_nodes.pop(i.chat.id, ({}, -1))[0] for i in lcmc_events_with_chat_node]
+            new_msg_events = self.generate_new_message_events(chats_data)
+            for event in lcmc_events_with_chat_node:
+                events.append(event)
+                if new_msg_events.get(event.chat.id):
+                    events.extend(new_msg_events[event.chat.id])
 
         while lcmc_events_with_new_mess:
             chats_pack = lcmc_events_with_new_mess[:self.runner_len]
@@ -223,6 +249,10 @@ class Runner:
                             m.id > min(self.last_messages_ids.values(), default=10 ** 20)] or messages[-1:]
 
             self.last_messages_ids[cid] = messages[-1].id
+            if hasattr(messages[-1], 'tag') and messages[-1].tag is not None:
+                self.chat_node_tags[cid] = messages[-1].tag
+            if hasattr(messages[-1], 'interlocutor_id') and messages[-1].interlocutor_id is not None:
+                self.users_ids[cid] = messages[-1].interlocutor_id
             self.by_bot_ids[cid] = [i for i in self.by_bot_ids[cid] if i > self.last_messages_ids[cid]]
 
             for msg in messages:
@@ -262,14 +292,12 @@ class Runner:
         saved_orders = {}
         for order in orders_list[1]:
             saved_orders[order.id] = order
-            if order.id not in self.saved_orders:
-                if self.__first_request:
-                    events.append(InitialOrderEvent(self.__last_order_event_tag, order))
-                else:
-                    events.append(NewOrderEvent(self.__last_order_event_tag, order))
-                    if order.status == types.OrderStatuses.CLOSED:
-                        events.append(OrderStatusChangedEvent(self.__last_order_event_tag, order))
-
+            if self.saved_orders is None:
+                events.append(InitialOrderEvent(self.__last_order_event_tag, order))
+            elif order.id not in self.saved_orders:
+                events.append(NewOrderEvent(self.__last_order_event_tag, order))
+                if order.status == types.OrderStatuses.CLOSED:
+                    events.append(OrderStatusChangedEvent(self.__last_order_event_tag, order))
             elif order.status != self.saved_orders[order.id].status:
                 events.append(OrderStatusChangedEvent(self.__last_order_event_tag, order))
         self.saved_orders = saved_orders

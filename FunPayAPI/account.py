@@ -834,6 +834,57 @@ class Account:
             raise exceptions.WithdrawError(response, error_message)
         return float(json_response.get("amount_ext"))
 
+    def get_wallets(self) -> list[types.Wallet]:
+        """Получение сохранённых кошельков со страницы https://funpay.com/account/wallets"""
+        if not self.is_initiated:
+            raise exceptions.AccountNotInitiatedError()
+        response = self.method("get", "account/wallets", {}, {}, raise_not_200=True)
+        bs = BeautifulSoup(response.content.decode(), "lxml")
+        bs = bs.find("form", class_="details-editor")
+        result = []
+        if not bs:
+            return result
+        for el in bs.find_all("div", class_="form-group"):
+            data_n = int(el.get("data-n"))
+            detail_id = int(el.find("input", {"name": f"details[{data_n}][detail_id]"})["value"])
+            if not detail_id:
+                continue
+            is_masked = bool(int(el.find("input", {"name": f"details[{data_n}][is_masked]"})["value"]))
+            data = el.find("input", {"name": f"details[{data_n}][data]"})["value"]
+            type_id_el = el.find("select", {"name": f"details[{data_n}][type_id]"}).find("option", selected=True)
+            result.append(types.Wallet(type_id_el["value"], data, data_n, detail_id, is_masked, type_id_el.text))
+        return result
+
+    def save_wallets(self, wallets: list[types.Wallet]):
+        """Сохранение кошельков на странице https://funpay.com/account/wallets"""
+        if not self.is_initiated:
+            raise exceptions.AccountNotInitiatedError()
+        payload = {"csrf_token": self.csrf_token, "cat_id": "wallets"}
+        max_n = max([i.data_n for i in wallets if i.data_n is not None], default=-1) + 1
+        for wallet in wallets:
+            if wallet.data_n is None:
+                i = max_n
+                max_n += 1
+            else:
+                i = wallet.data_n
+            payload.update({f"details[{i}][detail_id]": wallet.detail_id or 0,
+                            f"details[{i}][is_masked]": int(wallet.is_masked)})
+            if not wallet.is_masked:
+                payload[f"details[{i}][type_id]"] = wallet.type_id
+                payload[f"details[{i}][data]"] = wallet.data
+        payload.update({f"details[{max_n}][detail_id]": 0,
+                        f"details[{max_n}][is_masked]": 0,
+                        f"details[{max_n}][type_id]": "",
+                        f"details[{max_n}][data]": ""})
+        headers = {
+            "accept": "*/*",
+            "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "x-requested-with": "XMLHttpRequest",
+        }
+        r = self.method("post", "account/details", headers, payload, raise_not_200=True)
+        if r.json().get("error"):
+            raise Exception(r.json().get("msg"))
+
     def get_raise_modal(self, category_id: int) -> dict:
 
         if not self.is_initiated:
