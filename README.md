@@ -3,7 +3,7 @@
 # ⚡ FunPay Sigma
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/Версия-2.11.0-4FC3F7?style=for-the-badge)](https://github.com/qorexdev/FunPaySigma/releases)
+[![Version](https://img.shields.io/badge/Версия-2.11.1-4FC3F7?style=for-the-badge)](https://github.com/qorexdev/FunPaySigma/releases)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-Чат-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/FunPaySigmaChat)
 [![Plugins](https://img.shields.io/badge/Плагины-Каталог-orange?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/fps_plugins)
@@ -162,6 +162,14 @@
 ---
 
 ## 📥 Установка и запуск
+
+### ☁️ Нужен сервер для круглосуточной работы?
+
+Бот потребляет **<150 МБ ОЗУ** — хватит самого дешёвого тарифа. Берите **Ubuntu**, минимальный план — справится без проблем.
+
+> 🖥 **[OneDash](https://rdp-onedash.ru/r/7d277)** — доступный хостинг, на котором можно поднять бота за пару минут. Быстрые SSD, стабильный аптайм, поддержка.
+
+---
 
 ### 🐧 Linux (Ubuntu / Debian) — рекомендуется
 
