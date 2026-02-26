@@ -14,6 +14,7 @@ import sys
 import time
 import random
 import string
+from threading import Thread
 import psutil
 import hashlib
 import telebot
@@ -71,6 +72,11 @@ class TGBot:
             "del_logs": "cmd_del_logs",
             "power_off": "cmd_power_off",
             "watermark": "cmd_watermark",
+            "timezone": "cmd_timezone",
+            "schedule": "cmd_schedule",
+            "mute": "cmd_mute",
+            "lots_bulk": "cmd_lots_bulk",
+            "discount": "cmd_discount",
             "activity": "cmd_activity",
         }
         self.__default_notification_settings = {
@@ -243,6 +249,12 @@ class TGBot:
         result = self.bot.send_message(m.chat.id, _("act_change_golden_key"), reply_markup=skb.CLEAR_STATE_BTN())
         self.set_state(m.chat.id, result.id, m.from_user.id, CBT.CHANGE_GOLDEN_KEY)
 
+    def act_change_cookie_cb(self, c: CallbackQuery):
+
+        result = self.bot.send_message(c.message.chat.id, _("act_change_golden_key"), reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.CHANGE_GOLDEN_KEY)
+        self.bot.answer_callback_query(c.id)
+
     def change_cookie(self, m: Message):
 
         self.clear_state(m.chat.id, m.from_user.id, True)
@@ -382,6 +394,277 @@ class TGBot:
         else:
             logger.info(_("log_watermark_deleted", m.from_user.username or str(m.from_user.id), m.from_user.id))
             self.bot.reply_to(m, preview + _("watermark_deleted"))
+
+    def act_edit_timezone(self, m: Message):
+        current_tz = self.cardinal.MAIN_CFG["Other"].get("timezone", "")
+        current_tz_text = f"\n<code>{utils.escape(current_tz)}</code>" if current_tz else " не задана (серверное время)"
+        result = self.bot.send_message(m.chat.id,
+                                       f"🕐 Текущая таймзона:{current_tz_text}\n\n"
+                                       f"Введи название таймзоны (например: <code>Europe/Moscow</code>, "
+                                       f"<code>Asia/Yekaterinburg</code>, <code>Europe/Kiev</code>).\n"
+                                       f"Отправь <code>-</code> чтобы сбросить на серверное время.",
+                                       reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(m.chat.id, result.id, m.from_user.id, CBT.EDIT_TIMEZONE)
+
+    def edit_timezone(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        tz_name = m.text.strip() if m.text.strip() != "-" else ""
+        if tz_name:
+            try:
+                from zoneinfo import ZoneInfo
+                ZoneInfo(tz_name)
+            except Exception:
+                self.bot.reply_to(m, f"❌ Неизвестная таймзона: <code>{utils.escape(tz_name)}</code>\n"
+                                    f"Примеры: <code>Europe/Moscow</code>, <code>Asia/Novosibirsk</code>")
+                return
+        self.cardinal.MAIN_CFG["Other"]["timezone"] = tz_name
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        from Utils import cardinal_tools
+        cardinal_tools.set_timezone(tz_name)
+        if tz_name:
+            self.bot.reply_to(m, f"✅ Таймзона изменена на <code>{utils.escape(tz_name)}</code>")
+        else:
+            self.bot.reply_to(m, "✅ Таймзона сброшена. Используется серверное время.")
+
+    def act_schedule(self, m: Message):
+        cfg = self.cardinal.MAIN_CFG["Schedule"]
+        enabled = cfg.getboolean("enabled")
+        start = cfg["workHoursStart"]
+        end = cfg["workHoursEnd"]
+        dis_resp = cfg.getboolean("disableAutoResponse")
+        dis_deliv = cfg.getboolean("disableAutoDelivery")
+        offline_msg = cfg["offlineMessage"]
+        working = self.cardinal.is_working_hours()
+
+        status = "🟢 Сейчас рабочее время" if working else "🔴 Сейчас нерабочее время"
+        if not enabled:
+            status = "⏸ Расписание выключено"
+
+        text = (f"📅 <b>Расписание работы</b>\n\n"
+                f"Статус: {status}\n"
+                f"Режим: {'✅ Вкл' if enabled else '❌ Выкл'}\n"
+                f"Часы работы: <code>{start}</code> — <code>{end}</code>\n\n"
+                f"<b>В нерабочее время:</b>\n"
+                f"{'🔇' if dis_resp else '🔊'} Автоответ: {'выкл' if dis_resp else 'вкл'}\n"
+                f"{'🔇' if dis_deliv else '🔊'} Автовыдача: {'выкл' if dis_deliv else 'вкл'}\n"
+                f"💬 Сообщение: {f'<code>{utils.escape(offline_msg)}</code>' if offline_msg else '<i>не задано</i>'}")
+
+        kb = K()
+        toggle_text = "❌ Выключить" if enabled else "✅ Включить"
+        kb.add(B(toggle_text, callback_data=CBT.TOGGLE_SCHEDULE))
+        kb.add(B("🕐 Изменить часы", callback_data=CBT.EDIT_SCHEDULE_HOURS))
+        kb.add(B("💬 Изменить сообщение", callback_data=CBT.EDIT_SCHEDULE_MSG))
+        self.bot.send_message(m.chat.id, text, reply_markup=kb)
+
+    def toggle_schedule(self, c: CallbackQuery):
+        cfg = self.cardinal.MAIN_CFG["Schedule"]
+        new_val = "0" if cfg.getboolean("enabled") else "1"
+        cfg["enabled"] = new_val
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        self.bot.answer_callback_query(c.id, f"Расписание {'включено' if new_val == '1' else 'выключено'}")
+        self.bot.delete_message(c.message.chat.id, c.message.id)
+        self.act_schedule(c.message)
+
+    def act_edit_schedule_hours(self, c: CallbackQuery):
+        start = self.cardinal.MAIN_CFG["Schedule"]["workHoursStart"]
+        end = self.cardinal.MAIN_CFG["Schedule"]["workHoursEnd"]
+        result = self.bot.send_message(c.message.chat.id,
+                                       f"🕐 Текущие часы работы: <code>{start}</code> — <code>{end}</code>\n\n"
+                                       f"Введи новые часы в формате <code>HH:MM-HH:MM</code>\n"
+                                       f"Например: <code>09:00-23:00</code> или <code>22:00-08:00</code> (ночная смена)",
+                                       reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_SCHEDULE_HOURS)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_schedule_hours(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        text = m.text.strip()
+        import re as _re
+        match = _re.match(r'^(\d{2}:\d{2})\s*[-–]\s*(\d{2}:\d{2})$', text)
+        if not match:
+            self.bot.reply_to(m, "❌ Неверный формат. Используй <code>HH:MM-HH:MM</code>")
+            return
+        start, end = match.group(1), match.group(2)
+        for t in (start, end):
+            h, mn = t.split(":")
+            if not (0 <= int(h) <= 23 and 0 <= int(mn) <= 59):
+                self.bot.reply_to(m, f"❌ Некорректное время: <code>{t}</code>")
+                return
+        self.cardinal.MAIN_CFG["Schedule"]["workHoursStart"] = start
+        self.cardinal.MAIN_CFG["Schedule"]["workHoursEnd"] = end
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        self.bot.reply_to(m, f"✅ Часы работы: <code>{start}</code> — <code>{end}</code>")
+
+    def act_edit_schedule_msg(self, c: CallbackQuery):
+        current = self.cardinal.MAIN_CFG["Schedule"]["offlineMessage"]
+        current_text = f"\n<code>{utils.escape(current)}</code>" if current else " <i>не задано</i>"
+        result = self.bot.send_message(c.message.chat.id,
+                                       f"💬 Текущее сообщение нерабочего времени:{current_text}\n\n"
+                                       f"Введи новое сообщение, которое будет отправлено покупателям "
+                                       f"в нерабочее время.\n"
+                                       f"Отправь <code>-</code> чтобы отключить.",
+                                       reply_markup=skb.CLEAR_STATE_BTN())
+        self.set_state(c.message.chat.id, result.id, c.from_user.id, CBT.EDIT_SCHEDULE_MSG)
+        self.bot.answer_callback_query(c.id)
+
+    def edit_schedule_msg(self, m: Message):
+        self.clear_state(m.chat.id, m.from_user.id, True)
+        msg = m.text.strip() if m.text.strip() != "-" else ""
+        self.cardinal.MAIN_CFG["Schedule"]["offlineMessage"] = msg
+        self.cardinal.save_config(self.cardinal.MAIN_CFG, "configs/_main.cfg")
+        if msg:
+            self.bot.reply_to(m, f"✅ Сообщение обновлено:\n<code>{utils.escape(msg)}</code>")
+        else:
+            self.bot.reply_to(m, "✅ Сообщение нерабочего времени отключено.")
+
+    def act_lots_bulk(self, m: Message):
+        if not self.cardinal.profile:
+            self.bot.send_message(m.chat.id, "❌ Профиль не загружен.")
+            return
+        lots = self.cardinal.all_lots if self.cardinal.all_lots else self.cardinal.profile.get_lots()
+        active = sum(1 for l in lots if l.active)
+        inactive = len(lots) - active
+        text = (f"📦 <b>Массовые операции с лотами</b>\n\n"
+                f"Всего лотов: <b>{len(lots)}</b>\n"
+                f"✅ Активных: <b>{active}</b>\n"
+                f"❌ Неактивных: <b>{inactive}</b>\n\n"
+                f"Выберите действие:")
+        kb = K()
+        kb.add(B("✅ Включить все лоты", callback_data=CBT.BULK_LOTS_ACTIVATE))
+        kb.add(B("❌ Выключить все лоты", callback_data=CBT.BULK_LOTS_DEACTIVATE))
+        self.bot.send_message(m.chat.id, text, reply_markup=kb)
+
+    def bulk_lots_toggle(self, c: CallbackQuery):
+        activate = c.data == CBT.BULK_LOTS_ACTIVATE
+        action = "активации" if activate else "деактивации"
+        self.bot.answer_callback_query(c.id, f"⏳ Начинаю {action} лотов...")
+        self.bot.edit_message_text(f"⏳ <b>{action.capitalize()} лотов...</b>", c.message.chat.id, c.message.id)
+
+        def _do_bulk():
+            lots = self.cardinal.all_lots if self.cardinal.all_lots else self.cardinal.profile.get_lots()
+            success, failed = 0, 0
+            for lot in lots:
+                try:
+                    lot_fields = self.cardinal.account.get_lot_fields(lot.id)
+                    if lot_fields.active == activate:
+                        continue
+                    lot_fields.active = activate
+                    self.cardinal.account.save_lot(lot_fields)
+                    success += 1
+                    import time as _t
+                    _t.sleep(0.5)
+                except Exception as ex:
+                    failed += 1
+                    logger.warning(f"Bulk lot toggle error (lot {lot.id}): {ex}")
+            status = "✅ включены" if activate else "❌ выключены"
+            text = (f"📦 <b>Массовая операция завершена</b>\n\n"
+                    f"Лоты {status}.\n"
+                    f"Успешно: <b>{success}</b>\n"
+                    f"Ошибок: <b>{failed}</b>")
+            try:
+                self.bot.edit_message_text(text, c.message.chat.id, c.message.id)
+            except:
+                self.bot.send_message(c.message.chat.id, text)
+
+        Thread(target=_do_bulk, daemon=True).start()
+
+    def act_mute_categories(self, m: Message):
+        muted = self.cardinal.muted_notification_categories
+        if not self.cardinal.profile:
+            self.bot.send_message(m.chat.id, "❌ Профиль не загружен.")
+            return
+
+        categories = []
+        for subcat in self.cardinal.profile.get_sorted_lots(2).keys():
+            categories.append(subcat)
+
+        if not categories:
+            self.bot.send_message(m.chat.id, "Нет доступных категорий.")
+            return
+
+        kb = K()
+        for subcat in categories:
+            name = subcat.name if hasattr(subcat, 'name') else str(subcat)
+            is_muted = name in muted
+            icon = "🔇" if is_muted else "🔔"
+            kb.add(B(f"{icon} {name}", callback_data=f"{CBT.TOGGLE_MUTE_CATEGORY}:{name}"))
+
+        text = ("🔔 <b>Фильтр уведомлений по категориям</b>\n\n"
+                "Нажми на категорию, чтобы заглушить/включить уведомления о заказах и выдаче.\n"
+                f"Заглушено: {len(muted)} категорий")
+        self.bot.send_message(m.chat.id, text, reply_markup=kb)
+
+    def toggle_mute_category(self, c: CallbackQuery):
+        parts = c.data.split(":", 1)
+        if len(parts) < 2:
+            self.bot.answer_callback_query(c.id, "Ошибка")
+            return
+        cat_name = parts[1]
+        if cat_name in self.cardinal.muted_notification_categories:
+            self.cardinal.muted_notification_categories.discard(cat_name)
+            self.bot.answer_callback_query(c.id, f"🔔 {cat_name} — уведомления включены")
+        else:
+            self.cardinal.muted_notification_categories.add(cat_name)
+            self.bot.answer_callback_query(c.id, f"🔇 {cat_name} — уведомления заглушены")
+        self.cardinal.save_muted_categories()
+        self.bot.delete_message(c.message.chat.id, c.message.id)
+        self.act_mute_categories(c.message)
+
+    def act_discount(self, m: Message):
+        """Управление автоскидкой."""
+        cfg = self.cardinal.MAIN_CFG
+        if not cfg.has_section("AutoDiscount"):
+            self.bot.send_message(m.chat.id, "❌ Секция AutoDiscount не найдена в конфиге.")
+            return
+
+        enabled = cfg["AutoDiscount"].getboolean("enabled", fallback=False)
+        command = cfg["AutoDiscount"].get("command", "!скидка")
+        percent = cfg["AutoDiscount"].get("discountPercent", "5")
+        duration = cfg["AutoDiscount"].get("durationMinutes", "10")
+        cooldown = cfg["AutoDiscount"].get("cooldownMinutes", "30")
+
+        active = self.cardinal.active_discounts
+        active_text = ""
+        if active:
+            active_text = "\n\n<b>🏷️ Активные скидки:</b>\n"
+            for lot_id, info in active.items():
+                remaining = max(0, int((info["expires"] - time.time()) / 60))
+                active_text += (f"• Лот <code>{lot_id}</code>: "
+                               f"{info['original_price']} → {info['new_price']} "
+                               f"(осталось ~{remaining} мин.)\n")
+
+        status_icon = "✅" if enabled else "❌"
+        text = (f"🏷️ <b>Автоскидка по команде</b>\n\n"
+                f"Статус: {status_icon} {'Включено' if enabled else 'Выключено'}\n"
+                f"Команда: <code>{command} &lt;ID лота&gt;</code>\n"
+                f"Скидка: <b>{percent}%</b>\n"
+                f"Длительность: <b>{duration} мин.</b>\n"
+                f"Кулдаун: <b>{cooldown} мин.</b>"
+                f"{active_text}")
+
+        kb = K()
+        toggle_text = "❌ Выключить" if enabled else "✅ Включить"
+        kb.add(B(toggle_text, callback_data=CBT.TOGGLE_DISCOUNT))
+        if active:
+            kb.add(B("🔄 Отменить все скидки", callback_data=CBT.CANCEL_ALL_DISCOUNTS))
+        self.bot.send_message(m.chat.id, text, reply_markup=kb)
+
+    def toggle_discount(self, c: CallbackQuery):
+        cfg = self.cardinal.MAIN_CFG
+        current = cfg["AutoDiscount"].getboolean("enabled", fallback=False)
+        cfg.set("AutoDiscount", "enabled", "0" if current else "1")
+        from Utils.config_loader import save_config
+        save_config(cfg, "configs/_main.cfg", encrypt_sensitive=False)
+        status = "выключена" if current else "включена"
+        self.bot.answer_callback_query(c.id, f"Автоскидка {status}")
+        self.bot.delete_message(c.message.chat.id, c.message.id)
+        self.act_discount(c.message)
+
+    def cancel_all_discounts(self, c: CallbackQuery):
+        count = self.cardinal.cancel_all_discounts()
+        self.bot.answer_callback_query(c.id, f"Отменено скидок: {count}")
+        self.bot.delete_message(c.message.chat.id, c.message.id)
+        self.act_discount(c.message)
 
     def send_logs(self, m: Message):
 
@@ -1764,6 +2047,7 @@ class TGBot:
         self.msg_handler(self.act_change_cookie, commands=["change_cookie", "golden_key"])
         self.msg_handler(self.change_cookie, func=lambda m: self.check_state(m.chat.id, m.from_user.id,
                                                                              CBT.CHANGE_GOLDEN_KEY))
+        self.cbq_handler(self.act_change_cookie_cb, lambda c: c.data.startswith(f"{CBT.CHANGE_GOLDEN_KEY}:"))
         self.cbq_handler(self.update_profile, lambda c: c.data == CBT.UPDATE_PROFILE)
         self.msg_handler(self.act_manual_delivery_test, commands=["test_lot"])
         self.msg_handler(self.act_upload_image, commands=["upload_chat_img", "upload_offer_img"])
@@ -1852,6 +2136,24 @@ class TGBot:
         self.msg_handler(self.act_edit_watermark, commands=["watermark"])
         self.msg_handler(self.edit_watermark,
                          func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_WATERMARK))
+        self.msg_handler(self.act_edit_timezone, commands=["timezone"])
+        self.msg_handler(self.edit_timezone,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_TIMEZONE))
+        self.msg_handler(self.act_schedule, commands=["schedule"])
+        self.cbq_handler(self.toggle_schedule, lambda c: c.data == CBT.TOGGLE_SCHEDULE)
+        self.cbq_handler(self.act_edit_schedule_hours, lambda c: c.data == CBT.EDIT_SCHEDULE_HOURS)
+        self.msg_handler(self.edit_schedule_hours,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_SCHEDULE_HOURS))
+        self.cbq_handler(self.act_edit_schedule_msg, lambda c: c.data == CBT.EDIT_SCHEDULE_MSG)
+        self.msg_handler(self.edit_schedule_msg,
+                         func=lambda m: self.check_state(m.chat.id, m.from_user.id, CBT.EDIT_SCHEDULE_MSG))
+        self.msg_handler(self.act_mute_categories, commands=["mute"])
+        self.cbq_handler(self.toggle_mute_category, lambda c: c.data.startswith(f"{CBT.TOGGLE_MUTE_CATEGORY}:"))
+        self.msg_handler(self.act_lots_bulk, commands=["lots_bulk"])
+        self.cbq_handler(self.bulk_lots_toggle, lambda c: c.data in (CBT.BULK_LOTS_ACTIVATE, CBT.BULK_LOTS_DEACTIVATE))
+        self.msg_handler(self.act_discount, commands=["discount"])
+        self.cbq_handler(self.toggle_discount, lambda c: c.data == CBT.TOGGLE_DISCOUNT)
+        self.cbq_handler(self.cancel_all_discounts, lambda c: c.data == CBT.CANCEL_ALL_DISCOUNTS)
         self.msg_handler(self.send_logs, commands=["logs"])
         self.msg_handler(self.del_logs, commands=["del_logs"])
         self.msg_handler(self.about, commands=["about"])

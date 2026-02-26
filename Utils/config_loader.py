@@ -213,10 +213,28 @@ def load_main_config(config_path: str):
             "check": ["0", "1"]
         },
 
+        "Schedule": {
+            "enabled": ["0", "1"],
+            "workHoursStart": "any",
+            "workHoursEnd": "any",
+            "disableAutoResponse": ["0", "1"],
+            "disableAutoDelivery": ["0", "1"],
+            "offlineMessage": "any+empty"
+        },
+
+        "AutoDiscount": {
+            "enabled": ["0", "1"],
+            "command": "any",
+            "discountPercent": "any",
+            "durationMinutes": "any",
+            "cooldownMinutes": "any"
+        },
+
         "Other": {
             "watermark": "any+empty",
             "requestsDelay": [str(i) for i in range(1, 101)],
-            "language": ["ru", "en", "uk"]
+            "language": ["ru", "en", "uk"],
+            "timezone": "any+empty"
         }
     }
 
@@ -274,6 +292,9 @@ def load_main_config(config_path: str):
                 section_name]:
                 config.set("Greetings", "onlyNewChats", "0")
                 save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
+            elif section_name == "Other" and param_name == "timezone" and param_name not in config[section_name]:
+                config.set("Other", "timezone", "")
+                save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
         if "OrderReminders" not in config.sections():
             config.add_section("OrderReminders")
@@ -291,6 +312,25 @@ def load_main_config(config_path: str):
             config.set("ReviewReminders", "template", "Привет! Надеюсь, тебе всё понравилось. Если не сложно, оставь отзыв — зайди в Мои покупки, найди заказ #$order_id и пролистай вниз")
             config.set("ReviewReminders", "repeatCount", "1")
             config.set("ReviewReminders", "interval", "4320")
+            save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
+
+        if "Schedule" not in config.sections():
+            config.add_section("Schedule")
+            config.set("Schedule", "enabled", "0")
+            config.set("Schedule", "workHoursStart", "09:00")
+            config.set("Schedule", "workHoursEnd", "23:00")
+            config.set("Schedule", "disableAutoResponse", "1")
+            config.set("Schedule", "disableAutoDelivery", "0")
+            config.set("Schedule", "offlineMessage", "")
+            save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
+
+        if "AutoDiscount" not in config.sections():
+            config.add_section("AutoDiscount")
+            config.set("AutoDiscount", "enabled", "0")
+            config.set("AutoDiscount", "command", "!скидка")
+            config.set("AutoDiscount", "discountPercent", "5")
+            config.set("AutoDiscount", "durationMinutes", "10")
+            config.set("AutoDiscount", "cooldownMinutes", "30")
             save_config(config, "configs/_main.cfg", encrypt_sensitive=False)
 
             try:

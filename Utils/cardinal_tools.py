@@ -19,6 +19,7 @@ if not hasattr(socket, '_original_socket'):
     socket._original_socket = socket.socket
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import Utils.exceptions
 import itertools
 import psutil
@@ -34,6 +35,23 @@ ENTITY_RE = re.compile(r"\$photo=\d+|\$new|(\$sleep=(\d+\.\d+|\d+))")
 logger = logging.getLogger("FPS.cardinal_tools")
 localizer = Localizer()
 _ = localizer.translate
+
+_configured_tz: ZoneInfo | None = None
+
+def set_timezone(tz_name: str) -> None:
+    global _configured_tz
+    try:
+        _configured_tz = ZoneInfo(tz_name) if tz_name else None
+        if _configured_tz:
+            logger.info(f"Timezone set to {tz_name}")
+    except Exception:
+        logger.warning(f"Invalid timezone '{tz_name}', using system default")
+        _configured_tz = None
+
+def get_now() -> datetime:
+    if _configured_tz:
+        return datetime.now(_configured_tz)
+    return datetime.now()
 
 def count_products(path: str) -> int:
 
@@ -332,7 +350,7 @@ def safe_text(text: str):
 
 def format_msg_text(text: str, obj: FunPayAPI.types.Message | FunPayAPI.types.ChatShortcut) -> str:
 
-    date_obj = datetime.now()
+    date_obj = get_now()
     month_name = get_month_name(date_obj.month)
     date = date_obj.strftime("%d.%m.%Y")
     str_date = f"{date_obj.day} {month_name}"
@@ -363,7 +381,7 @@ def format_msg_text(text: str, obj: FunPayAPI.types.Message | FunPayAPI.types.Ch
 
 def format_order_text(text: str, order: FunPayAPI.types.OrderShortcut | FunPayAPI.types.Order) -> str:
 
-    date_obj = datetime.now()
+    date_obj = get_now()
     month_name = get_month_name(date_obj.month)
     date = date_obj.strftime("%d.%m.%Y")
     str_date = f"{date_obj.day} {month_name}"

@@ -79,10 +79,28 @@ default_config = {
         "check": "0"
     },
 
+    "Schedule": {
+        "enabled": "0",
+        "workHoursStart": "09:00",
+        "workHoursEnd": "23:00",
+        "disableAutoResponse": "1",
+        "disableAutoDelivery": "0",
+        "offlineMessage": ""
+    },
+
+    "AutoDiscount": {
+        "enabled": "0",
+        "command": "!скидка",
+        "discountPercent": "5",
+        "durationMinutes": "10",
+        "cooldownMinutes": "30"
+    },
+
     "Other": {
         "watermark": "🐦",
         "requestsDelay": "4",
-        "language": "ru"
+        "language": "ru",
+        "timezone": ""
     }
 }
 

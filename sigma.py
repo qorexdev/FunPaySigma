@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from configparser import ConfigParser
 
 from tg_bot import auto_response_cp, config_loader_cp, auto_delivery_cp, templates_cp, plugins_cp, file_uploader,    authorized_users_cp, proxy_cp, default_cp, lot_editor_cp, support_tickets_cp, withdraw_cp
+from tg_bot import CBT
+from tg_bot import utils
 from types import ModuleType
 import Utils.exceptions
 from uuid import UUID
@@ -31,6 +33,8 @@ from FunPayAPI import utils as fp_utils
 from Utils import cardinal_tools, activity_tracker
 import tg_bot.bot
 
+from telebot.types import InlineKeyboardMarkup as K, InlineKeyboardButton as B
+import threading
 from threading import Thread
 
 import gc
@@ -170,6 +174,16 @@ class Cardinal(object):
         self._gc_counter = 0
         self._last_gc_time = time.time()
 
+        self.golden_key_last_success: float = time.time()
+        self.golden_key_fail_count: int = 0
+        self.golden_key_notified: bool = False
+
+        self.muted_notifications_file = "storage/cache/muted_categories.json"
+        self.muted_notification_categories: set[str] = self._load_muted_categories()
+
+        self.active_discounts: dict[int, dict] = {}
+        self._discount_cooldowns: dict[int, float] = {}
+
         self.pending_orders_file = "storage/pending_orders.json"
         self.pending_orders = self.load_pending_orders()
 
@@ -259,6 +273,137 @@ class Cardinal(object):
             self.pending_orders = dict(sorted_orders[:MAX_PENDING_ORDERS])
             self.save_pending_orders()
             logger.debug(f"Очищены pending_orders: оставлено {len(self.pending_orders)} записей")
+
+    def _load_muted_categories(self) -> set[str]:
+        try:
+            if os.path.exists(self.muted_notifications_file):
+                with open(self.muted_notifications_file, 'r', encoding='utf-8') as f:
+                    return set(json.load(f))
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить muted categories: {e}")
+        return set()
+
+    def save_muted_categories(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.muted_notifications_file), exist_ok=True)
+            with open(self.muted_notifications_file, 'w', encoding='utf-8') as f:
+                json.dump(list(self.muted_notification_categories), f)
+        except Exception as e:
+            logger.error(f"Не удалось сохранить muted categories: {e}")
+
+    def is_category_muted(self, subcategory_name: str) -> bool:
+        return subcategory_name in self.muted_notification_categories
+
+    def apply_discount(self, lot_id: int, chat_id: int, chat_name: str) -> str | None:
+        """Применяет скидку к лоту. Возвращает текст ответа или None при ошибке."""
+        cfg = self.MAIN_CFG["AutoDiscount"]
+        percent = cfg.getfloat("discountPercent", fallback=5.0)
+        duration = cfg.getint("durationMinutes", fallback=10)
+        cooldown = cfg.getint("cooldownMinutes", fallback=30)
+
+        if lot_id in self.active_discounts:
+            info = self.active_discounts[lot_id]
+            remaining = int((info["expires"] - time.time()) / 60) + 1
+            return f"⏳ Скидка уже активна на этот лот! Осталось ~{remaining} мин."
+
+        now = time.time()
+        last_used = self._discount_cooldowns.get(lot_id, 0)
+        if now - last_used < cooldown * 60:
+            remaining = int((cooldown * 60 - (now - last_used)) / 60) + 1
+            return f"⏳ Скидка на этот лот будет доступна через ~{remaining} мин."
+
+        try:
+            lot_fields = self.account.get_lot_fields(lot_id)
+        except Exception as e:
+            logger.error(f"[AutoDiscount] Не удалось получить лот {lot_id}: {e}")
+            return None
+
+        original_price = lot_fields.price
+        if not original_price or original_price <= 0:
+            return None
+
+        new_price = round(original_price * (1 - percent / 100), 2)
+        if new_price <= 0:
+            new_price = 0.01
+
+        try:
+            lot_fields.edit_fields({"price": str(new_price)})
+            self.account.save_lot(lot_fields)
+        except Exception as e:
+            logger.error(f"[AutoDiscount] Не удалось сохранить скидку для лота {lot_id}: {e}")
+            return None
+
+        expires = time.time() + duration * 60
+        self.active_discounts[lot_id] = {
+            "original_price": original_price,
+            "new_price": new_price,
+            "expires": expires,
+            "chat_id": chat_id,
+            "chat_name": chat_name,
+            "lot_title": lot_fields.title_ru or lot_fields.title_en or str(lot_id)
+        }
+        self._discount_cooldowns[lot_id] = now
+
+        timer = threading.Timer(duration * 60, self._restore_price, args=(lot_id,))
+        timer.daemon = True
+        timer.start()
+        self.active_discounts[lot_id]["timer"] = timer
+
+        logger.info(f"[AutoDiscount] Скидка {percent}% на лот {lot_id}: {original_price} → {new_price} на {duration} мин.")
+
+        if self.telegram:
+            text = (f"🏷️ <b>Скидка активирована</b>\n\n"
+                    f"Лот: <code>{utils.escape(lot_fields.title_ru or lot_fields.title_en or str(lot_id))}</code>\n"
+                    f"Цена: <b>{original_price}</b> → <b>{new_price}</b> (-{percent}%)\n"
+                    f"Покупатель: <b>{utils.escape(chat_name)}</b>\n"
+                    f"Восстановится через: <b>{duration} мин.</b>")
+            try:
+                Thread(target=self.telegram.bot.send_message, args=(self.telegram.authorized_users[0], text),
+                       kwargs={"parse_mode": "HTML"}, daemon=True).start()
+            except Exception:
+                pass
+
+        return f"✅ Скидка {percent}% активирована! Цена: {original_price} → {new_price}. Действует {duration} мин."
+
+    def _restore_price(self, lot_id: int) -> None:
+        """Восстанавливает оригинальную цену лота после истечения скидки."""
+        info = self.active_discounts.pop(lot_id, None)
+        if not info:
+            return
+
+        original_price = info["original_price"]
+        try:
+            lot_fields = self.account.get_lot_fields(lot_id)
+            lot_fields.edit_fields({"price": str(original_price)})
+            self.account.save_lot(lot_fields)
+            logger.info(f"[AutoDiscount] Цена лота {lot_id} восстановлена: {original_price}")
+        except Exception as e:
+            logger.error(f"[AutoDiscount] Не удалось восстановить цену лота {lot_id}: {e}")
+            return
+
+        if self.telegram:
+            text = (f"🏷️ <b>Скидка истекла</b>\n\n"
+                    f"Лот: <code>{utils.escape(info.get('lot_title', str(lot_id)))}</code>\n"
+                    f"Цена восстановлена: <b>{original_price}</b>")
+            try:
+                Thread(target=self.telegram.bot.send_message, args=(self.telegram.authorized_users[0], text),
+                       kwargs={"parse_mode": "HTML"}, daemon=True).start()
+            except Exception:
+                pass
+
+    def cancel_all_discounts(self) -> int:
+        """Отменяет все активные скидки, возвращает количество отменённых."""
+        count = 0
+        lot_ids = list(self.active_discounts.keys())
+        for lot_id in lot_ids:
+            info = self.active_discounts.get(lot_id)
+            if info:
+                timer = info.get("timer")
+                if timer:
+                    timer.cancel()
+                self._restore_price(lot_id)
+                count += 1
+        return count
 
     def collect_garbage(self, force: bool = False) -> int:
 
@@ -599,6 +744,10 @@ class Cardinal(object):
                 t = 10
                 if isinstance(e, FunPayAPI.exceptions.RequestFailedError) and e.status_code in (503, 403, 429):
                     t = 60
+                    if e.status_code == 403:
+                        logger.warning(_("crd_raise_403_retry"))
+                        if self.update_session(attempts=2):
+                            t = 5
                 else:
                     logger.error(_("crd_raise_unexpected_err", subcat.category.name))
                 logger.debug("TRACEBACK", exc_info=True)
@@ -949,16 +1098,30 @@ class Cardinal(object):
         raise Exception("Не удалось получить курс обмена: превышено количество попыток.")
 
     def update_session(self, attempts: int = 3) -> bool:
+        unauthorized = False
 
         while attempts:
             try:
                 self.account.get(update_phpsessid=True)
                 logger.info(_("crd_session_updated"))
+                self.golden_key_last_success = time.time()
+                self.golden_key_fail_count = 0
+                if self.golden_key_notified:
+                    self.golden_key_notified = False
+                    if self.telegram:
+                        self.telegram.send_notification(
+                            _("gk_recovered"),
+                            notification_type=utils.NotificationTypes.critical
+                        )
                 return True
             except TimeoutError:
                 logger.warning(_("crd_session_timeout_err"))
-            except (FunPayAPI.exceptions.UnauthorizedError, FunPayAPI.exceptions.RequestFailedError) as e:
-                logger.error(e.short_str)
+            except FunPayAPI.exceptions.UnauthorizedError as e:
+                logger.error(e.short_str())
+                logger.debug(e)
+                unauthorized = True
+            except FunPayAPI.exceptions.RequestFailedError as e:
+                logger.error(e.short_str())
                 logger.debug(e)
             except:
                 logger.error(_("crd_session_unexpected_err"))
@@ -966,9 +1129,26 @@ class Cardinal(object):
             attempts -= 1
             logger.warning(_("crd_try_again_in_n_secs", 2))
             time.sleep(2)
-        else:
-            logger.error(_("crd_session_no_more_attempts_err"))
-            return False
+
+        logger.error(_("crd_session_no_more_attempts_err"))
+        self.golden_key_fail_count += 1
+
+        if unauthorized and not self.golden_key_notified and self.telegram:
+            self.golden_key_notified = True
+            kb = K()
+            kb.add(B(_("gk_update_btn"), callback_data=f"{CBT.CHANGE_GOLDEN_KEY}:"))
+            self.telegram.send_notification(
+                _("gk_expired"),
+                keyboard=kb,
+                notification_type=utils.NotificationTypes.critical
+            )
+        elif self.golden_key_fail_count >= 3 and not unauthorized and self.telegram:
+            self.telegram.send_notification(
+                _("gk_session_fail", self.golden_key_fail_count),
+                notification_type=utils.NotificationTypes.critical
+            )
+
+        return False
 
     def process_events(self):
 
@@ -999,6 +1179,7 @@ class Cardinal(object):
             return
 
         logger.info(_("crd_raise_loop_started"))
+        consecutive_errors = 0
         while True:
             try:
                 if not self.MAIN_CFG["FunPay"].getboolean("autoRaise"):
@@ -1006,13 +1187,25 @@ class Cardinal(object):
                     self.periodic_cleanup()
                     continue
                 next_time = self.raise_lots()
+                consecutive_errors = 0
                 delay = next_time - int(time.time())
                 if delay <= 0:
                     continue
                 time.sleep(delay)
                 self.periodic_cleanup()
-            except:
+            except Exception as e:
+                consecutive_errors += 1
+                logger.error(_("crd_raise_loop_err", str(e)))
                 logger.debug("TRACEBACK", exc_info=True)
+
+                if consecutive_errors == 5 and self.telegram:
+                    self.telegram.send_notification(
+                        _("crd_raise_loop_fail_notify", consecutive_errors),
+                        notification_type=utils.NotificationTypes.critical
+                    )
+
+                backoff = min(30 * consecutive_errors, 300)
+                time.sleep(backoff)
 
     def update_session_loop(self):
 
@@ -1021,7 +1214,13 @@ class Cardinal(object):
         while True:
             time.sleep(sleep_time)
             result = self.update_session()
-            sleep_time = 60 if not result else 3600
+
+            if not result and self.golden_key_fail_count <= 3:
+                sleep_time = 60
+            elif not result:
+                sleep_time = 300
+            else:
+                sleep_time = 3600
 
             self.collect_garbage(force=True)
 
@@ -1049,6 +1248,7 @@ class Cardinal(object):
             time.sleep(120)
 
     def init(self):
+        cardinal_tools.set_timezone(self.MAIN_CFG["Other"].get("timezone", ""))
 
         self.add_handlers_from_plugin(handlers)
         self.add_handlers_from_plugin(announcements)
@@ -1253,6 +1453,9 @@ class Cardinal(object):
             except AttributeError:
                 raise Utils.exceptions.FieldNotExistsError(i, from_file)
             result[i] = value
+
+        result["DEPENDS_ON"] = getattr(plugin, "DEPENDS_ON", [])
+        result["MIN_VERSION"] = getattr(plugin, "MIN_VERSION", None)
         return plugin, result
 
     def load_plugins(self):
@@ -1266,29 +1469,78 @@ class Cardinal(object):
             return
 
         sys.path.append("plugins")
+        plugin_queue = []
+        failed_plugins = []
+
         for file in plugins:
             try:
                 if not self.is_plugin(file):
                     continue
                 plugin, data = self.load_plugin(file)
-            except:
+            except Exception as e:
                 logger.error(_("crd_plugin_load_err", file))
                 logger.debug("TRACEBACK", exc_info=True)
+                failed_plugins.append((file, str(e)))
                 continue
 
             if not self.is_uuid_valid(data["UUID"]):
                 logger.error(_("crd_invalid_uuid", file))
+                failed_plugins.append((file, "invalid UUID"))
                 continue
 
+            if data["UUID"] in [d["UUID"] for _, d in plugin_queue]:
+                logger.error(_("crd_uuid_already_registered", data['UUID'], data['NAME']))
+                continue
+
+            if data.get("MIN_VERSION") and data["MIN_VERSION"] > self.VERSION:
+                logger.warning(_("crd_plugin_version_mismatch", data["NAME"], data["MIN_VERSION"], self.VERSION))
+                failed_plugins.append((data["NAME"], f"requires >= {data['MIN_VERSION']}"))
+                continue
+
+            data["_file"] = file
+            plugin_queue.append((plugin, data))
+
+        loaded_uuids = set()
+        sorted_queue = []
+        remaining = list(plugin_queue)
+        max_passes = len(remaining) + 1
+        for _ in range(max_passes):
+            if not remaining:
+                break
+            still_remaining = []
+            for plugin, data in remaining:
+                deps = data.get("DEPENDS_ON", [])
+                if all(d in loaded_uuids for d in deps):
+                    sorted_queue.append((plugin, data))
+                    loaded_uuids.add(data["UUID"])
+                else:
+                    still_remaining.append((plugin, data))
+            if len(still_remaining) == len(remaining):
+                for plugin, data in still_remaining:
+                    missing = [d for d in data.get("DEPENDS_ON", []) if d not in loaded_uuids]
+                    logger.error(_("crd_plugin_deps_missing", data["NAME"], ", ".join(missing)))
+                    failed_plugins.append((data["NAME"], f"missing deps: {', '.join(missing)}"))
+                break
+            remaining = still_remaining
+
+        for plugin, data in sorted_queue:
             if data["UUID"] in self.plugins:
                 logger.error(_("crd_uuid_already_registered", data['UUID'], data['NAME']))
                 continue
 
             plugin_data = PluginData(data["NAME"], data["VERSION"], data["DESCRIPTION"], data["CREDITS"], data["UUID"],
-                                     f"plugins/{file}", plugin, data["SETTINGS_PAGE"], data["BIND_TO_DELETE"],
+                                     f"plugins/{data['_file']}",
+                                     plugin, data["SETTINGS_PAGE"], data["BIND_TO_DELETE"],
                                      False if data["UUID"] in self.disabled_plugins else True)
 
             self.plugins[data["UUID"]] = plugin_data
+
+        if failed_plugins and self.telegram:
+            lines = [f"• <b>{name}</b>: {reason}" for name, reason in failed_plugins[:10]]
+            self.telegram.send_notification(
+                _("crd_plugins_failed_notify", len(failed_plugins), "\n".join(lines)),
+                notification_type=utils.NotificationTypes.critical
+            )
 
     def add_handlers_from_plugin(self, plugin, uuid: str | None = None):
 
@@ -1316,13 +1568,28 @@ class Cardinal(object):
                 if plugin_uuid is None or (plugin_uuid in self.plugins and self.plugins[plugin_uuid].enabled):
                     func(*args)
             except Exception as ex:
+                plugin_uuid = getattr(func, "plugin_uuid", None)
                 text = _("crd_handler_err")
                 try:
                     text += f" {ex.short_str()}"
                 except:
-                    pass
+                    text += f" {ex}"
                 logger.error(text)
                 logger.debug("TRACEBACK", exc_info=True)
+
+                if plugin_uuid and plugin_uuid in self.plugins:
+                    pd = self.plugins[plugin_uuid]
+                    if not hasattr(pd, '_error_count'):
+                        pd._error_count = 0
+                    pd._error_count += 1
+                    if pd._error_count >= 10 and pd.enabled:
+                        pd.enabled = False
+                        logger.error(_("crd_plugin_auto_disabled", pd.name, pd._error_count))
+                        if self.telegram:
+                            self.telegram.send_notification(
+                                _("crd_plugin_auto_disabled_notify", pd.name, pd._error_count),
+                                notification_type=utils.NotificationTypes.critical
+                            )
                 continue
 
     def add_telegram_commands(self, uuid: str, commands: list[tuple[str, str, bool]]):
@@ -1343,6 +1610,22 @@ class Cardinal(object):
         elif not self.plugins[uuid].enabled and uuid not in self.disabled_plugins:
             self.disabled_plugins.append(uuid)
         cardinal_tools.cache_disabled_plugins(self.disabled_plugins)
+
+    @property
+    def schedule_enabled(self) -> bool:
+        return self.MAIN_CFG["Schedule"].getboolean("enabled")
+
+    def is_working_hours(self) -> bool:
+        if not self.schedule_enabled:
+            return True
+        now = cardinal_tools.get_now()
+        current_time = now.strftime("%H:%M")
+        start = self.MAIN_CFG["Schedule"]["workHoursStart"]
+        end = self.MAIN_CFG["Schedule"]["workHoursEnd"]
+        if start <= end:
+            return start <= current_time < end
+        else:
+            return current_time >= start or current_time < end
 
     @property
     def autoraise_enabled(self) -> bool:

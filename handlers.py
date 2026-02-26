@@ -21,6 +21,8 @@ import re
 
 LAST_STACK_ID = ""
 MSG_LOG_LAST_STACK_ID = ""
+_ar_cooldowns: dict[str, float] = {}
+_ar_regex_cache: dict[str, re.Pattern | None] = {}
 
 logger = logging.getLogger("FPS.handlers")
 localizer = Localizer()
@@ -203,6 +205,68 @@ def add_old_user_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChange
     c.old_users[chat_id] = int(time.time())
     cardinal_tools.cache_old_users(c.old_users)
 
+def _find_ar_command(c: Cardinal, text: str) -> str | None:
+    command = text.strip().lower()
+    if command in c.AR_CFG:
+        return command
+
+    for section in c.AR_CFG.sections():
+        if not section.startswith("re:"):
+            continue
+        pattern_str = section[3:]
+        if pattern_str not in _ar_regex_cache:
+            try:
+                _ar_regex_cache[pattern_str] = re.compile(pattern_str, re.IGNORECASE)
+            except re.error:
+                logger.warning(f"Невалидный regex в автоответе: {pattern_str}")
+                _ar_regex_cache[pattern_str] = None
+        pat = _ar_regex_cache.get(pattern_str)
+        if pat and pat.search(command):
+            return section
+    return None
+
+
+def discount_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
+    """Обработчик команды скидки в чатах FunPay."""
+    if not c.MAIN_CFG.has_section("AutoDiscount"):
+        return
+    if not c.MAIN_CFG["AutoDiscount"].getboolean("enabled", fallback=False):
+        return
+
+    if not c.old_mode_enabled:
+        if isinstance(e, LastChatMessageChangedEvent):
+            return
+        mtext = str(e.message).strip()
+        chat_id, chat_name = e.message.chat_id, e.message.chat_name
+    else:
+        mtext = str(e.chat).strip()
+        chat_id, chat_name = e.chat.id, e.chat.name
+
+    discount_cmd = c.MAIN_CFG["AutoDiscount"].get("command", "!скидка").strip().lower()
+    parts = mtext.lower().split()
+    if not parts or parts[0] != discount_cmd:
+        return
+
+    if len(parts) < 2:
+        Thread(target=c.send_message,
+               args=(chat_id, f"Укажите ID лота: {discount_cmd} <ID>", chat_name), daemon=True).start()
+        return
+
+    try:
+        lot_id = int(parts[1])
+    except ValueError:
+        Thread(target=c.send_message,
+               args=(chat_id, "❌ Неверный ID лота. Используйте число.", chat_name), daemon=True).start()
+        return
+
+    def _apply():
+        result = c.apply_discount(lot_id, chat_id, chat_name)
+        if result:
+            c.send_message(chat_id, result, chat_name)
+
+    Thread(target=_apply, daemon=True).start()
+
+
 def send_response_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChangedEvent):
 
     if not c.autoresponse_enabled:
@@ -217,12 +281,27 @@ def send_response_handler(c: Cardinal, e: NewMessageEvent | LastChatMessageChang
         chat_id, chat_name, username = obj.id, obj.name, obj.name
 
     mtext = mtext.replace("\n", "")
-    command = mtext.strip().lower()
-    if command not in c.AR_CFG:
+    command = _find_ar_command(c, mtext)
+    if command is None:
         return
     if c.AR_CFG[command].getboolean("disabled", fallback=False):
         return
     if c.bl_response_enabled and username in c.blacklist:
+        return
+
+    cooldown = c.AR_CFG[command].getint("cooldown", fallback=0)
+    if cooldown > 0:
+        cooldown_key = f"{command}:{chat_id}"
+        now = time.time()
+        last_sent = _ar_cooldowns.get(cooldown_key, 0)
+        if now - last_sent < cooldown * 60:
+            return
+        _ar_cooldowns[cooldown_key] = now
+
+    if not c.is_working_hours() and c.MAIN_CFG["Schedule"].getboolean("disableAutoResponse"):
+        offline_msg = c.MAIN_CFG["Schedule"]["offlineMessage"]
+        if offline_msg:
+            Thread(target=c.send_message, args=(chat_id, offline_msg, chat_name), daemon=True).start()
         return
 
     logger.info(_("log_new_cmd", command, chat_name, chat_id))
@@ -586,6 +665,8 @@ def send_new_order_notification_handler(c: Cardinal, e: NewOrderEvent, *args):
         return
     if e.order.buyer_username in c.blacklist and c.MAIN_CFG["BlockList"].getboolean("blockNewOrderNotification"):
         return
+    if c.is_category_muted(e.order.subcategory_name):
+        return
     if not (config_obj := getattr(e, "config_section_obj")):
         delivery_info = _("ntfc_new_order_not_in_cfg")
     else:
@@ -644,6 +725,9 @@ def deliver_product_handler(c: Cardinal, e: NewOrderEvent, *args) -> None:
 
     if not c.MAIN_CFG["FunPay"].getboolean("autoDelivery"):
         return
+    if not c.is_working_hours() and c.MAIN_CFG["Schedule"].getboolean("disableAutoDelivery"):
+        logger.info(f"Автовыдача отложена (нерабочее время). $YELLOW(ID: {e.order.id})$RESET")
+        return
     if e.order.buyer_username in c.blacklist and c.bl_delivery_enabled:
         logger.info(f"Пользователь {e.order.buyer_username} находится в ЧС и включена блокировка автовыдачи. "
                     f"$YELLOW(ID: {e.order.id})$RESET")
@@ -662,6 +746,8 @@ def deliver_product_handler(c: Cardinal, e: NewOrderEvent, *args) -> None:
 def send_delivery_notification_handler(c: Cardinal, e: NewOrderEvent):
 
     if c.telegram is None:
+        return
+    if c.is_category_muted(e.order.subcategory_name):
         return
 
     if getattr(e, "error"):
@@ -862,6 +948,7 @@ BIND_TO_LAST_CHAT_MESSAGE_CHANGED = [old_log_msg_handler,
                                      greetings_handler,
                                      update_threshold_on_last_message_change,
                                      add_old_user_handler,
+                                     discount_handler,
                                      send_response_handler,
                                      process_review_handler,
                                      old_send_new_msg_notification_handler,
@@ -872,6 +959,7 @@ BIND_TO_NEW_MESSAGE = [log_msg_handler,
                        greetings_handler,
                        update_threshold_on_last_message_change,
                        add_old_user_handler,
+                       discount_handler,
                        send_response_handler,
                        process_review_handler,
                        send_new_msg_notification_handler,
