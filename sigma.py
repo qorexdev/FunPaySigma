@@ -1504,7 +1504,7 @@ class Cardinal(object):
         sorted_queue = []
         remaining = list(plugin_queue)
         max_passes = len(remaining) + 1
-        for _ in range(max_passes):
+        for _pass in range(max_passes):
             if not remaining:
                 break
             still_remaining = []
